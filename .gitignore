@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/app/generated/prisma
+
+# lokale SQLite-Datenbank (Migrationen werden committet, die Daten nicht)
+*.db
+*.db-journal

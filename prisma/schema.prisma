@@ -1,0 +1,63 @@
+// Datenmodell — siehe SPEC.md, Abschnitt 4.
+// Abweichung: DB ist SQLite. Prisma kennt für SQLite keine `enum`-Typen,
+// deshalb ist `Attempt.status` ein String mit Default "OPEN" (Werte: OPEN,
+// ANSWERED, SKIPPED) und wird an den Grenzen über Zod erzwungen.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// M0: nur id und email. createdAt, masteries und TopicMastery kommen in M2.
+model User {
+  id       String    @id @default(cuid())
+  email    String    @unique
+  sessions Session[]
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  topicFilter String? // z.B. "kombinatorik" oder "kombinatorik.permutation"
+  startedAt   DateTime  @default(now())
+  endedAt     DateTime?
+  attempts    Attempt[]
+}
+
+model Attempt {
+  id        String  @id @default(cuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  // Reproduzierbarkeit
+  templateId      String
+  templateVersion Int
+  seed            String
+  params          Json // gewürfelte, konkrete Werte
+  questionText    String // gerendert, so wie angezeigt
+
+  // Lösung — NIE an den Client, solange status = OPEN
+  expectedAnswer Json
+  answerType     String
+
+  // Nutzereingabe
+  userAnswer String?
+  imageUrl   String? // M4
+  transcript String? // M4
+
+  // Urteil
+  status        String   @default("OPEN") // OPEN | ANSWERED | SKIPPED
+  isCorrect     Boolean?
+  reviewVerdict Json? // M4: LLM-Schritturteil
+  durationMs    Int?
+
+  createdAt  DateTime  @default(now())
+  answeredAt DateTime?
+
+  @@index([sessionId])
+}
