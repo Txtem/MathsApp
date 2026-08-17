@@ -14,9 +14,11 @@ steht in `SPEC.md` im Repo-Root. Lies sie, bevor du an `lib/engine`, `content/te
 
 - Meilenstein: **M0 (Skelett)**
 - Fertig: Next.js-Scaffold (App Router, TS, Tailwind v4); Prisma 7 + SQLite,
-  Modelle `User` (nur id/email), `Session`, `Attempt`, Migration `init` angewendet
-- Als Nächstes: `lib/db/client.ts` (Singleton), Compute-Registry mit
-  `arithmetik.add` / `arithmetik.subtract`
+  Modelle `User` (nur id/email), `Session`, `Attempt`, Migration `init` angewendet;
+  `lib/db/client.ts` (Singleton + better-sqlite3-Adapter); Compute-Registry mit
+  `arithmetik.add` / `arithmetik.subtract`; Vitest aufgesetzt
+- Als Nächstes: `lib/engine/instantiate.ts` und `lib/engine/grade/` in der minimalen
+  Form (`answer_type: integer`), dann die zwei Dev-Templates
 
 ## Befehle
 
@@ -63,8 +65,16 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
   Prisma kennt für SQLite keine `enum`-Typen: `Attempt.status` ist ein `String`
   mit Default `"OPEN"`, gültige Werte `OPEN | ANSWERED | SKIPPED`, erzwungen über Zod.
 - **Prisma 7.** Konfiguration liegt in `prisma.config.ts`, nicht mehr im Schema; `.env`
-  wird nur über `import "dotenv/config"` dort geladen. Der generierte Client liegt unter
-  `app/generated/prisma` (nicht `@prisma/client`) und ist gitignored.
+  wird nur über `import "dotenv/config"` dort geladen.
+- **Prisma-Client importieren aus `@/lib/generated/prisma/client`**, nie aus
+  `@prisma/client`. Der Client wird generiert, ist gitignored und entsteht über das
+  `postinstall`-Skript nach jedem `npm install` neu.
+- **Prisma 7 braucht einen Driver Adapter.** Für SQLite ist das
+  `@prisma/adapter-better-sqlite3` (Treiber: `better-sqlite3`). Der Adapter wird im
+  `PrismaClient`-Konstruktor übergeben, siehe `lib/db/client.ts`.
+- **`Attempt.status` und `Attempt.answerType` sind `String`**, keine Enums. Erlaubte Werte
+  (`OPEN | ANSWERED | SKIPPED` bzw. die `answer_type`-Liste aus SPEC.md Abschnitt 5)
+  werden über Zod geprüft, nicht von der Datenbank.
 
 ## Konventionen
 

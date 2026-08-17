@@ -40,7 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-/app/generated/prisma
+# generierter Prisma-Client (entsteht bei jedem `npm install` neu, siehe postinstall)
+/lib/generated
 
 # lokale SQLite-Datenbank (Migrationen werden committet, die Daten nicht)
 *.db
