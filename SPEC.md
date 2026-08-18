@@ -50,7 +50,7 @@ Diese Regeln gelten in jeder Phase. Verstöße sind Bugs, keine Trade-offs.
 | Validierung | Zod | Contracts an allen Grenzen (API, Content, LLM-Output) |
 | Styling | Tailwind CSS | — |
 | Mathe-Rendering | KaTeX (`react-katex`) | Schneller als MathJax, reicht für Formelsatz |
-| Ausdrucks-Parsing | `mathjs` (nur `parse` + `evaluate` mit leerem Scope) | Für den Antwortvergleich |
+| Ausdrucks-Parsing | eigener Parser in `lib/engine/expr` (BigInt-exakt, leerer Scope) | Für den Antwortvergleich; siehe Entscheidung E-01 in Abschnitt 7 |
 | Tests | Vitest | Engine-Unit-Tests sind Pflicht |
 | LLM | `@anthropic-ai/sdk` | Erst ab Meilenstein M3 relevant |
 | Auth | Auth.js (Credentials + optional GitHub) | Erst ab M2 |
@@ -99,10 +99,17 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   │   │   ├── registry.ts             # compute_ref -> Funktion (Whitelist)
 │   │   │   ├── kombinatorik.ts
 │   │   │   └── arithmetik.ts
+│   │   ├── expr/                       # Ausdrucks-Kern, von grade UND constraints genutzt
+│   │   │   ├── bigmath.ts              # factorial, binomial, permutations (BigInt)
+│   │   │   ├── numeric.ts              # Zahlwert: exakt in BigInt, float nur als Rückfall
+│   │   │   ├── tokenize.ts
+│   │   │   ├── parse.ts                # feste Grammatik, kein eval
+│   │   │   └── evaluate.ts             # expliziter Scope + Funktions-Whitelist
 │   │   ├── generate/
 │   │   │   ├── rng.ts                  # seeded PRNG (mulberry32 o.ä.)
 │   │   │   ├── sample.ts               # Parameter würfeln
 │   │   │   └── constraints.ts          # Constraint-Auswertung
+│   │   ├── errors.ts                   # TemplateUnsatisfiableError, ExpressionError, …
 │   │   ├── render/
 │   │   │   └── interpolate.ts          # {n} -> Wert, strikt
 │   │   ├── grade/
@@ -329,8 +336,12 @@ falsch konfiguriert — dann soll es laut scheitern, nicht still eine kaputte Au
 
 Constraint-Auswertung: **kein `eval`.** Ein Mini-Parser für die Grammatik
 `<expr> <op> <expr>` mit `op ∈ {<, <=, >, >=, ==, !=}` und `expr` aus Variablen,
-Zahlen und `+ - * /`. Mehr wird nicht gebraucht; `mathjs.evaluate` mit explizitem
-Scope ist ebenfalls akzeptabel.
+Zahlen und `+ - * /`. Mehr wird nicht gebraucht. Umgesetzt in
+`lib/engine/generate/constraints.ts` auf demselben Parser wie die Bewertung
+(`lib/engine/expr/`, siehe Entscheidung E-01 in Abschnitt 7) — der Scope wird explizit
+übergeben. Ein Constraint mit unbekanntem Namen oder kaputter Syntax wirft
+`TemplateConfigError`; es darf nicht still als „nicht erfüllt" durchgehen, sonst läuft der
+Generator stumm in `TemplateUnsatisfiableError`.
 
 Compute-Registry:
 
@@ -370,11 +381,21 @@ export function grade(userInput: string, expected: unknown, type: AnswerType): G
 | `tuple` | trennen, Reihenfolge behalten | elementweise |
 | `choice` | — | ID-Vergleich |
 
-Auswertung von Nutzerausdrücken über `mathjs.parse` + `evaluate` mit **leerem Scope**
-(keine Variablen, keine Funktionsdefinitionen). Nur Whitelist an Funktionen:
+Auswertung von Nutzerausdrücken mit **leerem Scope** (keine Variablen, keine
+Funktionsdefinitionen). Nur Whitelist an Funktionen:
 `factorial`, `combinations`, `permutations`, `sqrt`, `abs`, Grundrechenarten.
 Bei Parse-Fehler: `{ ok: false, reason: "unparseable" }` — das ist *nicht* dasselbe wie
 „falsch" und soll dem Nutzer auch anders angezeigt werden.
+
+> **Entscheidung E-01 (2026-08-19, M0): eigener Parser statt `mathjs`.**
+> Die ursprüngliche Fassung schrieb hier `mathjs.parse` + `evaluate` vor. Umgesetzt ist
+> stattdessen ein eigener Tokenizer/Parser/Evaluator in `lib/engine/expr/`. Grund:
+> `mathjs` rechnet in float64 — ab `21!` wäre der Vergleich still falsch, was Invariante 1
+> und die BigInt-Regel bricht. Zusätzlich hätten die `MathNode`-Typen `as`-Casts erzwungen.
+> Der eigene Parser hält alle inhaltlichen Vorgaben ein: kein `eval`, feste Grammatik,
+> Funktions-Whitelist, leerer Scope, exakt über `BigInt`, `unparseable` ≠ falsch.
+> Für `numeric` und `fraction` (M1) kann `mathjs` zusätzlich hinzukommen — das ist dann
+> eine neue Entscheidung, kein Rückbau von `expr/`.
 
 Dieses Modul bekommt eine Tabellen-Testsuite mit mindestens 40 Fällen pro Typ.
 

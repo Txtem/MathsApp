@@ -27,8 +27,10 @@ Mocks testbar bleibt.
 - Der Generator arbeitet mit Rejection Sampling gegen das `constraints`-Array,
   maximal 50 Versuche. Danach `TemplateUnsatisfiableError` werfen — nicht still
   eine kaputte Aufgabe zurückgeben.
-- Constraints werden **nicht** mit `eval` ausgewertet. Entweder der Mini-Parser für
-  `<expr> <op> <expr>` oder `mathjs.evaluate` mit explizit übergebenem Scope.
+- Constraints werden **nicht** mit `eval` ausgewertet, sondern über den Parser in
+  `lib/engine/expr/` mit explizit übergebenem Scope (Grammatik `<expr> <op> <expr>`).
+- Ein Constraint mit unbekanntem Namen oder kaputter Syntax wirft `TemplateConfigError`.
+  Niemals still `false` liefern — sonst sieht der Bug wie ein unerfüllbares Template aus.
 - Constraints werden zweimal geprüft: einmal auf den Parametern, einmal nach der
   Berechnung inklusive `result` (für Grenzen wie `result <= 1000000`).
 
@@ -46,11 +48,17 @@ Der Build bricht ab, wenn eines davon verletzt ist:
 
 Immer zweistufig: erst normalisieren, dann vergleichen. Nie direkter String-Vergleich.
 
-- Nutzerausdrücke über `mathjs.parse` + `evaluate` mit **leerem Scope**, Whitelist an
-  Funktionen (`factorial`, `combinations`, `permutations`, `sqrt`, `abs`, Grundrechenarten).
+- Nutzerausdrücke über `lib/engine/expr/` mit **leerem Scope**, Whitelist an Funktionen
+  (`factorial`, `combinations`, `permutations`, `sqrt`, `abs`, Grundrechenarten).
+  **Kein `mathjs`** — siehe Entscheidung E-01 in `SPEC.md` Abschnitt 7: float64 macht den
+  Vergleich ab `21!` still falsch. Wer den Parser ersetzen will, muss die BigInt-Exaktheit
+  erhalten.
 - `120`, `5!` und `5*4*3*2*1` müssen als dieselbe Antwort gelten.
 - Ein Parse-Fehler ist **nicht** dasselbe wie „falsch": `{ ok: false, reason: "unparseable" }`
   zurückgeben, damit die UI anders reagieren kann.
+- Normalisierung ist pro `answer_type` verschieden. Bei `integer` bleibt `,` der
+  Argumenttrenner (`combinations(10,3)`); die Regel `,` → `.` gehört laut SPEC-Tabelle
+  ausschließlich zu `numeric`.
 
 ## Tests
 

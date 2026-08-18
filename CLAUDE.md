@@ -14,11 +14,31 @@ steht in `SPEC.md` im Repo-Root. Lies sie, bevor du an `lib/engine`, `content/te
 
 - Meilenstein: **M0 (Skelett)**
 - Fertig: Next.js-Scaffold (App Router, TS, Tailwind v4); Prisma 7 + SQLite,
-  Modelle `User` (nur id/email), `Session`, `Attempt`, Migration `init` angewendet;
+  Modelle `User` (nur id/email), `Session`, `Attempt`, Migration `init`;
   `lib/db/client.ts` (Singleton + better-sqlite3-Adapter); Compute-Registry mit
-  `arithmetik.add` / `arithmetik.subtract`; Vitest aufgesetzt
-- Als Nächstes: `lib/engine/instantiate.ts` und `lib/engine/grade/` in der minimalen
-  Form (`answer_type: integer`), dann die zwei Dev-Templates
+  `arithmetik.add` / `arithmetik.subtract`; Vitest aufgesetzt.
+  Engine-Kern: `lib/engine/expr/` (eigener Tokenizer/Parser/Evaluator auf BigInt,
+  Funktions-Whitelist), `generate/` (seeded RNG, Sampling, Constraint-Prüfung),
+  `render/interpolate.ts`, `grade/` für `answer_type: integer`,
+  `instantiate.ts` mit Rejection Sampling (`MAX_TRIES = 50`);
+  zwei Dev-Templates in `lib/content/dev-templates.ts` (Addition, Subtraktion) —
+  301 Tests grün
+- Als Nächstes: die Routen `POST /api/session`, `POST /api/session/[id]/next` und
+  `POST /api/attempt/[id]/answer`, danach die Practice-Seite. Beides braucht eine
+  lauffähige SQLite-Datei, siehe „Lokale Einrichtung"
+
+### Lokale Einrichtung
+
+`.env` und die SQLite-Datei sind gitignored und entstehen nicht beim Clone:
+
+```bash
+echo 'DATABASE_URL="file:./prisma/dev.db"' > .env
+npm install          # baut better-sqlite3 nativ — braucht Python + Build Tools
+npx prisma migrate dev
+```
+
+Ohne Python/Build Tools bleibt `npm install --ignore-scripts` + `npx prisma generate`:
+Die Engine und ihre Tests laufen damit, die Datenbank nicht.
 
 ## Befehle
 
@@ -61,6 +81,10 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
   zu `false` statt zum String.
 - **Rechenergebnisse als `string` über `BigInt`**, nie als `number`. Ab `21!` ist `number`
   still ungenau.
+- **`tsconfig.json` steht auf `target: ES2020`** (create-next-app liefert ES2017). Darunter
+  verbietet TypeScript `0n`-Literale, und ohne die schreibt sich die Engine nicht lesbar.
+- **Kein `mathjs`.** Ausdrücke laufen über den eigenen Parser in `lib/engine/expr/`,
+  siehe Entscheidung E-01 unten.
 - **SQLite statt PostgreSQL** (Abweichung von der Ursprungsfassung der SPEC).
   Prisma kennt für SQLite keine `enum`-Typen: `Attempt.status` ist ein `String`
   mit Default `"OPEN"`, gültige Werte `OPEN | ANSWERED | SKIPPED`, erzwungen über Zod.
@@ -75,6 +99,33 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
 - **`Attempt.status` und `Attempt.answerType` sind `String`**, keine Enums. Erlaubte Werte
   (`OPEN | ANSWERED | SKIPPED` bzw. die `answer_type`-Liste aus SPEC.md Abschnitt 5)
   werden über Zod geprüft, nicht von der Datenbank.
+
+## Getroffene Entscheidungen
+
+Abweichungen von `SPEC.md`, die bewusst so gewählt wurden. Nicht ohne Rückfrage
+zurückdrehen — die Gründe stehen dabei, weil sie sonst in der nächsten Session fehlen.
+
+**E-01 — Eigener Ausdrucksparser statt `mathjs`** (2026-08-19, M0)
+`SPEC.md` Abschnitt 7 nannte ursprünglich `mathjs.parse` + `evaluate`. Umgesetzt ist
+stattdessen `lib/engine/expr/` (Tokenizer, rekursiver Abstiegsparser, Evaluator).
+Grund: `mathjs` rechnet in float64, damit wäre der Vergleich ab `21!` still falsch — das
+bricht die BigInt-Regel und Invariante 1. Zusätzlich hätten die `MathNode`-Typen `as`-Casts
+erzwungen. Alle inhaltlichen Vorgaben bleiben erfüllt: kein `eval`, feste Grammatik,
+Funktions-Whitelist (`factorial`, `combinations`, `permutations`, `sqrt`, `abs`,
+Grundrechenarten), leerer Scope bei Nutzereingaben, `unparseable` ≠ falsch.
+Derselbe Parser trägt auch die Constraint-Auswertung. Für `numeric`/`fraction` in M1 darf
+`mathjs` zusätzlich dazukommen — als neue Entscheidung, nicht als Rückbau von `expr/`.
+
+**E-02 — `tsconfig.json`: `target` von ES2017 auf ES2020** (2026-08-19, M0)
+Unterhalb ES2020 lehnt TypeScript `0n`-Literale ab. Da die gesamte Engine auf `BigInt`
+rechnet, wäre die Alternative `BigInt(0)` an hunderten Stellen. Next.js 16 kompiliert
+ohnehin moderner; das Feld wirkt nur auf die Typprüfung.
+
+**E-03 — Bei `answer_type: integer` bleibt `,` der Argumenttrenner** (2026-08-19, M0)
+`combinations(10,3)` ist eine gültige Antwort, deshalb wird das Komma dort nicht zum
+Dezimalpunkt. Die Grading-Tabelle in `SPEC.md` Abschnitt 7 ordnet die Regel `,` → `.`
+ohnehin nur `numeric` zu. Folge: `2,5` gilt bei einer Ganzzahlfrage als „nicht lesbar",
+nicht als „falsch" — was näher an der Wahrheit ist. `1,000` bleibt Tausendertrennung.
 
 ## Konventionen
 
