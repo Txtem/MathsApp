@@ -164,13 +164,14 @@ describe("instantiate — Fehlerfälle", () => {
 describe("renderSolution", () => {
   it("rendert den Lösungstext mit result", () => {
     const instance = instantiate(addition, "seed-7");
-    const solution = renderSolution(addition, instance);
+    const solution = renderSolution(addition, instance.params, instance.expectedAnswer);
     expect(solution).toBe(
       `${instance.params.a} + ${instance.params.b} = ${instance.expectedAnswer}`,
     );
   });
 
   it("gibt undefined, wenn das Template keinen Lösungstext hat", () => {
-    expect(renderSolution(subtraction, instantiate(subtraction, "seed-7"))).toBeUndefined();
+    const bare = instantiate(subtraction, "seed-7");
+    expect(renderSolution(subtraction, bare.params, bare.expectedAnswer)).toBeUndefined();
   });
 });

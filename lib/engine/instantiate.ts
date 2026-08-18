@@ -4,7 +4,7 @@ import { checkConstraints, constraintVariables, RESULT_KEY } from "./generate/co
 import { makeRng } from "./generate/rng";
 import { sampleParams } from "./generate/sample";
 import { interpolate } from "./render/interpolate";
-import { type Instance, runCompute, type Template } from "./types";
+import { type Instance, type ParamValue, runCompute, type Template } from "./types";
 
 /** Nach so vielen verworfenen Würfen gilt das Template als falsch konfiguriert. */
 export const MAX_TRIES = 50;
@@ -59,10 +59,11 @@ export function instantiate(tpl: Template, seed: string): Instance {
  * an den Client, wenn der Attempt beantwortet ist, und wird dort aus den
  * persistierten Parametern neu erzeugt.
  */
-export function renderSolution(tpl: Template, instance: Instance): string | undefined {
+export function renderSolution(
+  tpl: Template,
+  params: Readonly<Record<string, ParamValue>>,
+  expectedAnswer: string,
+): string | undefined {
   if (tpl.solution_text === undefined) return undefined;
-  return interpolate(tpl.solution_text, {
-    ...instance.params,
-    [RESULT_KEY]: instance.expectedAnswer,
-  });
+  return interpolate(tpl.solution_text, { ...params, [RESULT_KEY]: expectedAnswer });
 }

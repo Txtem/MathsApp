@@ -146,7 +146,8 @@ describe.each(devTemplates.map((template) => [template.id, template] as const))(
     });
 
     it("rendert einen Lösungstext ohne offenen Platzhalter", () => {
-      const solution = renderSolution(template, instances[0]);
+      const first = instances[0];
+      const solution = renderSolution(template, first.params, first.expectedAnswer);
       expect(solution).toBeDefined();
       expect(solution).not.toMatch(/[{}]/);
     });

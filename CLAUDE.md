@@ -21,11 +21,16 @@ steht in `SPEC.md` im Repo-Root. Lies sie, bevor du an `lib/engine`, `content/te
   Funktions-Whitelist), `generate/` (seeded RNG, Sampling, Constraint-Prüfung),
   `render/interpolate.ts`, `grade/` für `answer_type: integer`,
   `instantiate.ts` mit Rejection Sampling (`MAX_TRIES = 50`);
-  zwei Dev-Templates in `lib/content/dev-templates.ts` (Addition, Subtraktion) —
-  301 Tests grün
-- Als Nächstes: die Routen `POST /api/session`, `POST /api/session/[id]/next` und
-  `POST /api/attempt/[id]/answer`, danach die Practice-Seite. Beides braucht eine
-  lauffähige SQLite-Datei, siehe „Lokale Einrichtung"
+  zwei Dev-Templates in `lib/content/dev-templates.ts` (Addition, Subtraktion);
+  die drei Routen `POST /api/session`, `POST /api/session/[id]/next` und
+  `POST /api/attempt/[id]/answer` inkl. Dummy-User (`lib/db/dev-user.ts`),
+  Verträgen (`lib/api/contracts.ts`) und M0-Auswahl (`lib/selection/next-template.ts`);
+  Oberfläche: Landing unter `app/(marketing)/`, Themenauswahl und Aufgaben-Loop
+  unter `app/(app)/practice/` — 338 Tests grün, Loop gegen `npm run dev` durchgespielt
+- Offen in M0: keine automatisierten Tests für die React-Komponenten (bräuchte
+  jsdom + Testing Library, bewusst noch nicht hinzugefügt)
+- Als Nächstes: Rückmeldung einholen, dann M1 (YAML-Loader, Zod-Content-Schema,
+  Kombinatorik-Templates, KaTeX, restliche `answer_type`s)
 
 ### Lokale Einrichtung
 
@@ -127,6 +132,14 @@ Dezimalpunkt. Die Grading-Tabelle in `SPEC.md` Abschnitt 7 ordnet die Regel `,` 
 ohnehin nur `numeric` zu. Folge: `2,5` gilt bei einer Ganzzahlfrage als „nicht lesbar",
 nicht als „falsch" — was näher an der Wahrheit ist. `1,000` bleibt Tausendertrennung.
 
+**E-04 — Eine unlesbare Antwort schließt den Attempt nicht** (2026-08-19, M0)
+`SPEC.md` Abschnitt 8 lässt offen, was bei `parseError: "unparseable"` mit dem Attempt
+passiert. Umgesetzt: Der Attempt bleibt `OPEN`, die Response enthält **kein**
+`expectedAnswer` und keinen `solutionText`, der Nutzer darf es noch einmal eingeben.
+Grund: Alles andere bräche Invariante 2 — die Lösung darf einen offenen Attempt nicht
+verlassen — oder würde jemanden für einen Tippfehler die Aufgabe kosten. Ein Parse-Fehler
+ist ausdrücklich nicht „falsch", genau deshalb gibt es das Feld.
+
 ## Konventionen
 
 - TypeScript strict. Kein `any`, kein `as` außer bei nachweislich sicherem Narrowing.
@@ -139,3 +152,13 @@ nicht als „falsch" — was näher an der Wahrheit ist. `1,000` bleibt Tausende
 - Am Ende eines Meilensteins stoppen und Rückmeldung einholen, nicht durchziehen.
 - Bei Konflikt zwischen einer Chat-Anweisung und `SPEC.md`: nachfragen, nicht still
   vom Dokument abweichen.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
