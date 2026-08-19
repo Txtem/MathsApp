@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Formelsatz — siehe components/MathText.tsx */
+@import "katex/dist/katex.min.css";
 
 :root {
   --background: #ffffff;

@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { answerFormatHint } from "@/components/answer-format";
+import { MathText } from "@/components/MathText";
 import {
   type AnswerResponse,
   AnswerResponseSchema,
@@ -102,7 +104,9 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       if ("parseError" in parsed.data) {
         // Nicht dasselbe wie falsch: Die Aufgabe bleibt offen, es darf noch
         // einmal getippt werden (Entscheidung E-04).
-        setHint("Das konnte ich nicht lesen. Erlaubt sind Zahlen und Ausdrücke wie 5! oder 5*4*3.");
+        setHint(
+          `Das konnte ich nicht lesen. ${answerFormatHint(phase.question.answerType, phase.question.roundTo)}`,
+        );
         return;
       }
 
@@ -149,7 +153,9 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
             {phase.question.targetTimeSeconds} s
           </p>
 
-          <p className="text-2xl text-zinc-900 dark:text-zinc-50">{phase.question.questionText}</p>
+          <div className="text-2xl leading-relaxed text-zinc-900 dark:text-zinc-50">
+            <MathText text={phase.question.questionText} />
+          </div>
 
           <div className="flex flex-col gap-2">
             <label htmlFor="answer" className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -164,6 +170,9 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
               maxLength={200}
               className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 font-mono text-lg text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-300"
             />
+            <p className="text-sm text-zinc-500">
+              {answerFormatHint(phase.question.answerType, phase.question.roundTo)}
+            </p>
             {hint ? (
               <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
                 {hint}

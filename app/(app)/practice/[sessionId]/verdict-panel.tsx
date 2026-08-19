@@ -1,3 +1,4 @@
+import { MathText } from "@/components/MathText";
 import type { AnswerResponse } from "@/lib/api/contracts";
 
 /** Die geschlossene Aufgabe: Urteil, Musterlösung, Lösungsweg. */
@@ -30,9 +31,9 @@ export function VerdictPanel({
           {correct ? "Richtig." : `Falsch. Richtig wäre ${verdict.expectedAnswer} gewesen.`}
         </p>
         {verdict.solutionText ? (
-          <p className="mt-2 font-mono text-sm text-zinc-700 dark:text-zinc-300">
-            {verdict.solutionText}
-          </p>
+          <div className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
+            <MathText text={verdict.solutionText} />
+          </div>
         ) : null}
       </div>
 
