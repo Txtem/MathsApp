@@ -16,14 +16,17 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M1 (Content-Pipeline & Kombinatorik)**, begonnen
-- M0 abgeschlossen: Next.js-Scaffold, Prisma 7 + SQLite (`User`/`Session`/`Attempt`,
-  Migration `init`), `lib/db/client.ts`, Engine-Kern (`expr/`, `generate/`, `render/`,
-  `grade/` für `integer`, `instantiate.ts`), zwei Dev-Templates, die drei API-Routen,
-  Practice-Loop im Browser, 338 Tests grün
-- Offen aus M0: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library,
-  bewusst zurückgestellt)
-- Als Nächstes: `SPEC-M1.md` abarbeiten, Schritt 1 (Platzhalter auf `{{name}}`)
+- Meilenstein: **M1 (Content-Pipeline & Kombinatorik)** abgeschlossen
+- M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
+- M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
+  `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
+  `npm run content:check`; zwölf Compute-Funktionen; zwölf Templates als YAML;
+  Grading für `integer`, `numeric`, `fraction`, `choice` inkl. `round_to`;
+  KaTeX über `components/MathText.tsx` — 715 Tests grün
+- Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
+  zurückgestellt); die Aufgabenauswahl ist zufällig innerhalb des Filters
+- Als Nächstes: M2 — Auth.js, `TopicMastery`, Auswahl nach Erfolgsquote und Fälligkeit,
+  Statistik-Seite
 
 ### Lokale Einrichtung
 
@@ -44,7 +47,7 @@ Die Engine und ihre Tests laufen damit, die Datenbank nicht.
 npm run dev
 npm run build
 npm run lint
-npm run content:check   # validiert alle Templates (läuft auch als pretest)
+npm run content:check   # validiert alle Templates (läuft als pretest mit)
 npx prisma migrate dev --name <name>
 npx prisma studio
 npx vitest run          # CI-Lauf

@@ -49,8 +49,10 @@ Diese Regeln gelten in jeder Phase. Verstöße sind Bugs, keine Trade-offs.
 | ORM | Prisma | Typsicheres Schema, Migrationen |
 | Validierung | Zod | Contracts an allen Grenzen (API, Content, LLM-Output) |
 | Styling | Tailwind CSS | — |
-| Mathe-Rendering | KaTeX (`react-katex`) | Schneller als MathJax, reicht für Formelsatz |
-| Ausdrucks-Parsing | eigener Parser in `lib/engine/expr` (BigInt-exakt, leerer Scope) | Für den Antwortvergleich; siehe Entscheidung E-01 in Abschnitt 7 |
+| Mathe-Rendering | KaTeX (`katex.renderToString`, kein `react-katex`) | Schneller als MathJax, reicht für Formelsatz |
+| Content | YAML über das `yaml`-Paket (YAML 1.2) | Templates sind Content, kein Code |
+| Skripte | `tsx` | `npm run content:check` ohne Build-Schritt |
+| Ausdrucks-Parsing | eigener Parser in `lib/engine/expr` (exakte Brüche, leerer Scope) | Für den Antwortvergleich; siehe `DECISIONS.md`, D-01 und D-06 |
 | Tests | Vitest | Engine-Unit-Tests sind Pflicht |
 | LLM | `@anthropic-ai/sdk` | Erst ab Meilenstein M3 relevant |
 | Auth | Auth.js (Credentials + optional GitHub) | Erst ab M2 |
@@ -70,14 +72,16 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 ```
 .
 ├── app/
-│   ├── (marketing)/
-│   │   └── page.tsx                    # Landing
+│   ├── (marketing)/page.tsx            # Landing
 │   ├── (app)/
 │   │   ├── layout.tsx
-│   │   ├── practice/
-│   │   │   ├── page.tsx                # Themenauswahl
-│   │   │   └── [sessionId]/page.tsx    # Aufgaben-Loop
-│   │   └── stats/page.tsx              # Fortschritt pro Topic
+│   │   └── practice/
+│   │       ├── page.tsx                # Themenauswahl aus dem Themenbaum
+│   │       ├── topic-picker.tsx        # Client: startet die Session
+│   │       └── [sessionId]/
+│   │           ├── page.tsx            # prüft die Session, rendert den Loop
+│   │           ├── practice-loop.tsx   # Client: Aufgabe → Antwort → Urteil
+│   │           └── verdict-panel.tsx
 │   └── api/
 │       ├── session/route.ts            # POST: Session starten
 │       ├── session/[id]/next/route.ts  # POST: nächste Aufgabe
@@ -85,62 +89,63 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │       ├── attempt/[id]/transcribe/route.ts  # M4
 │       └── attempt/[id]/review/route.ts      # M4, streamt
 │
+├── components/
+│   ├── MathText.tsx                    # KaTeX-Rendering nach der Interpolation
+│   ├── split-math.ts                   # trennt Text von $…$ und $$…$$
+│   └── answer-format.ts                # Formathinweis je answer_type
+│
 ├── content/
+│   ├── topics.yaml                     # Themenbaum, einzige Quelle gültiger Topics
 │   └── templates/
-│       ├── kombinatorik/
-│       │   ├── permutation-ohne-wdh.yaml
-│       │   ├── kombination-ohne-wdh.yaml
-│       │   └── stars-and-bars.yaml
-│       └── _schema.md                  # Kurzdoku des Template-Formats
+│       ├── _README.md                  # Kurzdoku für Template-Autoren
+│       ├── arithmetik/*.yaml
+│       ├── kombinatorik/*.yaml
+│       └── wahrscheinlichkeit/*.yaml
 │
 ├── lib/
 │   ├── engine/                         # REIN. Kein I/O. Kein React.
 │   │   ├── compute/
-│   │   │   ├── registry.ts             # compute_ref -> Funktion (Whitelist)
+│   │   │   ├── registry.ts             # compute_ref -> Eintrag (Whitelist)
+│   │   │   ├── arithmetik.ts
 │   │   │   ├── kombinatorik.ts
-│   │   │   └── arithmetik.ts
-│   │   ├── expr/                       # Ausdrucks-Kern, von grade UND constraints genutzt
-│   │   │   ├── bigmath.ts              # factorial, binomial, permutations (BigInt)
-│   │   │   ├── numeric.ts              # Zahlwert: exakt in BigInt, float nur als Rückfall
+│   │   │   └── wahrscheinlichkeit.ts
+│   │   ├── expr/                       # Ausdruckskern, von grade UND constraints genutzt
+│   │   │   ├── rational.ts             # exakte Brüche auf BigInt
+│   │   │   ├── numeric.ts              # Wertetyp exact | inexact
+│   │   │   ├── bigmath.ts              # factorial, binomial, permutations
 │   │   │   ├── tokenize.ts
 │   │   │   ├── parse.ts                # feste Grammatik, kein eval
 │   │   │   └── evaluate.ts             # expliziter Scope + Funktions-Whitelist
 │   │   ├── generate/
-│   │   │   ├── rng.ts                  # seeded PRNG (mulberry32 o.ä.)
+│   │   │   ├── rng.ts                  # seeded PRNG (mulberry32)
 │   │   │   ├── sample.ts               # Parameter würfeln
 │   │   │   └── constraints.ts          # Constraint-Auswertung
-│   │   ├── errors.ts                   # TemplateUnsatisfiableError, ExpressionError, …
-│   │   ├── render/
-│   │   │   └── interpolate.ts          # {n} -> Wert, strikt
-│   │   ├── grade/
-│   │   │   ├── normalize.ts            # pro answer_type
-│   │   │   ├── compare.ts
-│   │   │   └── index.ts
+│   │   ├── render/interpolate.ts       # {{n}} -> Wert, strikt
+│   │   ├── grade/                      # normalize.ts, compare.ts, index.ts
 │   │   ├── instantiate.ts              # Orchestrierung: Template -> Instanz
+│   │   ├── errors.ts
 │   │   └── types.ts
 │   │
-│   ├── content/
-│   │   ├── schema.ts                   # Zod-Schema der Templates
-│   │   └── load.ts                     # YAML lesen + validieren (build-time)
+│   ├── content/                        # Content-Pipeline, siehe Abschnitt 5b
+│   │   ├── schema.ts                   # Zod: Template und Themenbaum
+│   │   ├── checks.ts                   # die statischen Prüfungen
+│   │   ├── read.ts                     # YAML lesen + validieren + prüfen
+│   │   ├── load.ts                     # server-only, Cache, App-Zugang
+│   │   └── __fixtures__/               # ein Negativ-Fall pro Prüfung
 │   │
-│   ├── selection/
-│   │   └── next-template.ts            # Welches Topic/Template als Nächstes?
-│   │
+│   ├── api/                            # Request- und Response-Verträge (Zod)
+│   ├── selection/next-template.ts      # Welches Template als Nächstes?
 │   ├── llm/                            # ab M3
-│   │   ├── client.ts
-│   │   ├── prompts/
-│   │   └── gates/                      # Validierung der Modellausgaben
-│   │
-│   └── db/
-│       └── client.ts                   # Prisma-Singleton
+│   └── db/client.ts                    # Prisma-Singleton, server-only
 │
-├── prisma/
-│   └── schema.prisma
+├── scripts/check-templates.ts          # npm run content:check
+├── prisma/schema.prisma
 └── SPEC.md
 ```
 
-**Regel:** Alles unter `lib/engine` importiert nichts aus `app/`, `lib/db` oder `lib/llm`.
-Diese Abhängigkeitsrichtung ist die wichtigste Struktureigenschaft des Projekts.
+**Regel:** Alles unter `lib/engine` importiert nichts aus `app/`, `lib/db`, `lib/content`
+oder `lib/llm`. Templates werden der Engine übergeben, nicht von ihr geladen. Diese
+Abhängigkeitsrichtung ist die wichtigste Struktureigenschaft des Projekts.
 
 ---
 
@@ -222,79 +227,180 @@ Seite neu laden können, ohne dass die Aufgabe kaputtgeht.
 
 ## 5. Template-Format
 
-Templates beschreiben **Wertebereiche**, nicht Werte. Das ist die zentrale Korrektur
-gegenüber dem ursprünglichen Entwurf.
+Templates beschreiben **Wertebereiche**, nicht Werte.
 
 ```yaml
-# content/templates/kombinatorik/permutation-ohne-wdh.yaml
-id: aufg_00089
+# content/templates/kombinatorik/permutation_reihe.yaml
+id: aufg_00003
 version: 1
 topic: kombinatorik.permutation
 difficulty: 1
 target_time_seconds: 60
 
-compute_ref: kombinatorik.permutation.permute
-answer_type: numeric
+compute_ref: kombinatorik.permutation.factorial
+answer_type: integer
 
 param_spec:
   n:
     type: int
-    min: 3
+    min: 4
     max: 9
-  ordered:
-    type: const
-    value: true
-  with_repetition:
-    type: const
-    value: false
 
 constraints:
-  - "n >= 3"
-  - "result <= 1000000"      # nach der Berechnung geprüft
+  - "result <= 400000"      # nach der Berechnung geprüft
 
 question_text: |
-  Auf wie viele Arten können {n} Personen an einem runden Tisch Platz nehmen?
+  Auf wie viele Arten können {{n}} Personen in einer Reihe angeordnet werden?
 
 solution_text: |
-  Es handelt sich um eine Permutation ohne Wiederholung von {n} Elementen:
-  {n}! = {result}
+  Permutation ohne Wiederholung von {{n}} Elementen:
+  $${{n}}! = {{result}}$$
 
-tags: [permutation, ohne-wiederholung]
+tags: [permutation, ohne_wiederholung]
 ```
 
-Zod-Schema in `lib/content/schema.ts`:
+### Platzhalter-Syntax: doppelte geschweifte Klammern
+
+Platzhalter sind **`{{name}}`**, nicht `{name}`, wobei `name` gegen `^[a-z][a-z0-9_]*$`
+passt. Grund: Aufgabentexte enthalten LaTeX, und LaTeX benutzt einfache geschweifte
+Klammern als Argumentklammern — `\frac{1}{2}` würde von einem strikten Interpolator als
+zwei unbekannte Platzhalter gelesen. Siehe `DECISIONS.md`, D-05.
+
+- Ersetzt wird ausschließlich `{{name}}`. Einfache Klammern werden nie angefasst.
+- Ein Platzhalter ohne Wert wirft `TemplateRenderError`. Nicht still stehenlassen.
+- Nach der Interpolation darf kein `{{` mehr im Ergebnis vorkommen. Das ist eine
+  Assertion, kein Vorschlag — sie fängt auch `{{ n }}` und `{{N}}`.
+
+### Zod-Schema (`lib/content/schema.ts`)
 
 ```ts
+const SEGMENT = /^[a-z][a-z0-9_]*$/;
+const DOTTED  = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
+
 const ParamSpec = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("int"),   min: z.number().int(), max: z.number().int() }),
-  z.object({ type: z.literal("float"), min: z.number(), max: z.number(), decimals: z.number().int().default(2) }),
-  z.object({ type: z.literal("choice"), values: z.array(z.union([z.string(), z.number(), z.boolean()])) }),
-  z.object({ type: z.literal("const"), value: z.union([z.string(), z.number(), z.boolean()]) }),
+  z.object({ type: z.literal("int"),    min: z.number().int(), max: z.number().int() }),
+  z.object({ type: z.literal("choice"), values: z.array(z.union([z.string(), z.number(), z.boolean()])).min(2) }),
+  z.object({ type: z.literal("const"),  value: z.union([z.string(), z.number(), z.boolean()]) }),
 ]);
 
 export const TemplateSchema = z.object({
   id: z.string().regex(/^aufg_\d{5}$/),
   version: z.number().int().positive(),
-  topic: z.string().regex(/^[a-z]+(\.[a-z-]+)*$/),
+  topic: z.string().regex(DOTTED),
   difficulty: z.number().int().min(1).max(5),
   target_time_seconds: z.number().int().positive(),
-  compute_ref: z.string(),
-  answer_type: z.enum(["numeric", "integer", "fraction", "set", "tuple", "text", "choice"]),
-  param_spec: z.record(ParamSpec),
+  compute_ref: z.string().regex(DOTTED),
+  answer_type: z.enum(["integer", "numeric", "fraction", "choice"]),
+  round_to: z.number().int().min(0).max(10).optional(),   // nur bei numeric
+  param_spec: z.record(z.string().regex(SEGMENT), ParamSpec),
   constraints: z.array(z.string()).default([]),
-  question_text: z.string(),
-  solution_text: z.string().optional(),
+  question_text: z.string().trim().min(1),
+  solution_text: z.string().trim().optional(),
   tags: z.array(z.string()).default([]),
 });
 ```
 
-Zusätzlich beim Laden prüfen (harte Fehler, Build bricht ab):
+Einen `float`-Parametertyp gibt es nicht. Er wurde nie gebraucht, und zufällige
+Kommazahlen als Aufgabenparameter erzeugen fast immer unschöne Ergebnisse. Falls er später
+nötig wird: als neue Entscheidung aufnehmen.
 
-- `compute_ref` existiert in der Registry.
-- Jeder Platzhalter `{x}` in `question_text` existiert in `param_spec` (oder ist `{result}` in `solution_text`).
-- Umgekehrt: Jeder Parameter aus `param_spec` wird im `question_text` verwendet **oder** ist als
-  `const` markiert. Ungenutzte Zufallsparameter sind ein Template-Bug.
-- Das Input-Zod-Schema der Compute-Funktion akzeptiert die `param_spec`-Keys.
+`question_text` und `solution_text` werden getrimmt — YAML-Blockskalare (`|`) hängen sonst
+einen Zeilenumbruch an, der in der Aufgabe landet.
+
+### Statische Prüfungen beim Laden
+
+Alles harte Fehler. Der Ladevorgang bricht ab, `npm run content:check` schlägt fehl.
+Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
+
+1. `compute_ref` existiert in der Registry.
+2. Jeder `{{x}}`-Platzhalter in `question_text` ist ein Key aus `param_spec`.
+3. Jeder `{{x}}` in `solution_text` ist ein Key aus `param_spec` **oder** `result`.
+4. Jeder Key aus `param_spec` kommt im `question_text` vor **oder** hat `type: const`.
+   Ungenutzte Zufallsparameter sind ein Template-Bug.
+5. Das Zod-Input-Schema der Compute-Funktion akzeptiert genau die `param_spec`-Keys.
+   Die Registry-Schemata sind `strictObject`, deshalb fällt auch ein überzähliger
+   Parameter auf, nicht nur ein fehlender.
+6. `id` ist repoweit eindeutig.
+7. `topic` ist ein Blatt aus `content/topics.yaml`.
+8. `round_to` ist nur bei `answer_type: numeric` gesetzt.
+9. In `constraints` kommen nur Namen aus `param_spec` plus `result` vor. Ein Constraint,
+   das gar kein Vergleich ist, wird als eigener Befund (`invalid_constraint`) gemeldet.
+
+### Versionierung
+
+`Attempt` speichert `templateVersion`. Deshalb:
+
+- Änderung an `param_spec`, `compute_ref`, `constraints` oder an der **Bedeutung** von
+  `question_text` ⇒ `version` erhöhen.
+- Reine Tippfehlerkorrektur ohne Bedeutungsänderung ⇒ keine Erhöhung.
+
+Beim Bewerten wird der Lösungstext nur gerendert, wenn die gespeicherte Version noch der
+aktuellen entspricht — ein Text zu einer anderen Version wäre schlechter als gar keiner.
+
+---
+
+## 5a. Themenbaum
+
+`content/topics.yaml` ist die einzige Quelle gültiger Topic-Pfade und liefert gleichzeitig
+die Beschriftungen für die Themenauswahl-Seite. Damit gibt es keine zweite Liste, die
+auseinanderlaufen kann. Siehe `DECISIONS.md`, D-08.
+
+```yaml
+arithmetik:
+  label: Grundrechenarten
+  children:
+    grundrechenarten:
+      label: Addition und Subtraktion
+
+kombinatorik:
+  label: Kombinatorik
+  children:
+    permutation:
+      label: Permutationen
+    variation:
+      label: Variationen (geordnete Auswahl)
+    kombination:
+      label: Kombinationen (ungeordnete Auswahl)
+    verteilung:
+      label: Verteilungen (Stars and Bars)
+
+wahrscheinlichkeit:
+  label: Wahrscheinlichkeitsrechnung
+  children:
+    hypergeometrisch:
+      label: Hypergeometrische Verteilung
+```
+
+Ein Template zeigt immer auf ein **Blatt** (`kombinatorik.permutation`, nicht
+`kombinatorik`). Ein Session-`topicFilter` darf dagegen auf jeder Ebene stehen und umfasst
+dann alle Blätter darunter.
+
+---
+
+## 5b. Content-Pipeline
+
+| Modul | Aufgabe |
+|---|---|
+| `lib/content/schema.ts` | Zod-Schemata für Template und Themenbaum, Hilfsfunktionen für Blätter und Beschriftungen |
+| `lib/content/checks.ts` | die statischen Prüfungen aus Abschnitt 5, als Liste von Befunden statt als Ausnahme |
+| `lib/content/read.ts` | YAML lesen, validieren, prüfen. Wirft `ContentError` mit allen Befunden |
+| `lib/content/load.ts` | `import "server-only"`, Cache im Modul-Scope, einziger Zugang aus `app/` |
+| `scripts/check-templates.ts` | lädt alles, Exit-Code ≠ 0 bei Befunden |
+
+```json
+"scripts": {
+  "content:check": "tsx scripts/check-templates.ts",
+  "pretest": "npm run content:check"
+}
+```
+
+`read.ts` trägt bewusst **kein** `server-only`: Skript und Tests brauchen es, und
+`server-only` wirft außerhalb einer React-Server-Umgebung. Den Schutz für die Anwendung
+übernimmt `load.ts`. Siehe `DECISIONS.md`, D-12.
+
+**Deployment:** Next.js bündelt `content/` nicht automatisch mit — der Ordner steht in
+`next.config.ts` unter `outputFileTracingIncludes`. Lokal fällt das nie auf, weil dort das
+ganze Repo liegt.
 
 ---
 
@@ -360,44 +466,110 @@ export const registry = {
 } as const satisfies Record<string, ComputeEntry>;
 ```
 
-Ergebnisse als String, nicht als `number` — sonst verlierst du bei `20!` still Präzision.
+Ergebnisse sind `Rational`, nicht `number` — sonst verlierst du bei `20!` still Präzision,
+und ab der hypergeometrischen Verteilung sind die Werte ohnehin Brüche.
+
+Ein Registry-Eintrag validiert selbst: `entry.run(params)` prüft gegen das Zod-Schema und
+rechnet nur bei Erfolg, sonst `undefined`. `instantiate` behandelt das als verworfenen
+Wurf. Der Grund für diese Signatur steht in `DECISIONS.md`, D-14.
+
+### Vorhandene Compute-Funktionen
+
+| `compute_ref` | Formel | Rückgabe |
+|---|---|---|
+| `arithmetik.add` | `a + b` | ganzzahlig |
+| `arithmetik.subtract` | `a - b` | ganzzahlig |
+| `kombinatorik.permutation.factorial` | `n!` | ganzzahlig |
+| `kombinatorik.permutation.multiset` | `n! / (k₁!·k₂!·k₃!)` | ganzzahlig |
+| `kombinatorik.variation.ohne_wdh` | `n! / (n−k)!` | ganzzahlig |
+| `kombinatorik.variation.mit_wdh` | `n^k` | ganzzahlig |
+| `kombinatorik.kombination.ohne_wdh` | `C(n,k)` | ganzzahlig |
+| `kombinatorik.kombination.mit_wdh` | `C(n+k−1, k)` | ganzzahlig |
+| `kombinatorik.verteilung.nichtnegativ` | `C(n+k−1, k−1)` | ganzzahlig |
+| `kombinatorik.teilmengen.anzahl` | `2^n` | ganzzahlig |
+| `wahrscheinlichkeit.hypergeometrisch.genau` | `C(K,k)·C(N−K, n−k) / C(N,n)` | `Rational` |
+| `wahrscheinlichkeit.hypergeometrisch.mindestens_eins` | `1 − C(N−K, n) / C(N,n)` | `Rational` |
+
+Beziehungen zwischen Parametern (`k <= n`, `K <= N`, `n <= N`, `n − k <= N − K`) stehen als
+`refine` im Zod-Schema des Eintrags, nicht im Rechenteil. Jede Funktion braucht Tests mit
+`n = 0`, `k = 0`, `k = n`, `k > n` und einem großen `n`, bei dem `number` überliefe.
 
 ---
 
 ## 7. Bewertung
 
-Zweistufig: **normalisieren**, dann **vergleichen**. Pro `answer_type` eigene Implementierung.
+Zweistufig: **normalisieren**, dann **vergleichen**. Pro `answer_type` eigene
+Implementierung. Nie ein direkter Stringvergleich.
+
+### Wertetyp: exakte Rationalzahlen
 
 ```ts
-export function grade(userInput: string, expected: unknown, type: AnswerType): GradeResult
+// lib/engine/expr/rational.ts
+export interface Rational { readonly num: bigint; readonly den: bigint }  // den > 0, gekürzt
+```
+
+Der Ausdruckskern rechnet mit gekürzten Brüchen. Damit gilt:
+
+- `integer` ist der Fall `den === 1n`.
+- `fraction` fällt ohne Zusatzarbeit ab.
+- `numeric` vergleicht exakt statt mit Toleranz.
+- Dezimaleingaben werden verlustfrei überführt: `2.5` → `5/2`, `0.0177` → `177/10000`.
+- Float taucht nur bei `sqrt` auf einer Nicht-Quadratzahl auf und ist im Wertetyp als
+  `inexact` markiert — niemand kann versehentlich eine Bewertung darauf stützen.
+
+Begründung in `DECISIONS.md`, D-06.
+
+### Signatur
+
+```ts
+export function grade(
+  userInput: string,
+  expected: Rational | string,      // Speicherform "41" bzw. "3/8" ist erlaubt
+  type: AnswerType,
+  options?: { roundTo?: number },
+): GradeResult
 ```
 
 | Typ | Normalisierung | Vergleich |
 |---|---|---|
-| `integer` | Leerzeichen/Tausendertrenner weg; `5!` und `5·4·3·2·1` auswerten; wissenschaftliche Notation | exakt über `BigInt` |
-| `numeric` | wie oben, zusätzlich `,` → `.` | relative Toleranz 1e-9 |
-| `fraction` | `a/b` kürzen | Zähler/Nenner exakt |
-| `set` | trennen an `,` / `;`, sortieren, dedupliziert | Mengengleichheit |
-| `tuple` | trennen, Reihenfolge behalten | elementweise |
-| `choice` | — | ID-Vergleich |
+| `integer` | Leerzeichen und Tausendertrenner weg; Ausdrücke wie `5!`, `combinations(10,3)`, `5*4*3` auswerten | exakt, `den === 1n` gefordert |
+| `numeric` | wie oben; Komma je nach Kontext Dezimal- oder Argumenttrenner (D-10) | ohne `round_to`: exakt. Mit `round_to: k`: beide Seiten kaufmännisch auf k Stellen runden, dann exakt |
+| `fraction` | `a/b` auswerten, kürzen | Wertgleichheit auf gekürzten Brüchen (D-11) |
+| `choice` | Rand weg, Groß-/Kleinschreibung egal | ID-Vergleich |
+
+`set`, `tuple` und `text` sind **nicht** implementiert und werfen
+`UnsupportedAnswerTypeError`. Regel: kein Normalizer ohne Template, das ihn benutzt
+(`DECISIONS.md`, D-07).
+
+**Prozentangaben sind nicht zugelassen.** Templates fragen entweder nach dem Bruch oder
+nach dem auf `round_to` Stellen gerundeten Dezimalwert, und der `question_text` sagt das
+ausdrücklich. Sonst ist `1.77` gegen `0.0177` nicht entscheidbar (`DECISIONS.md`, D-09).
 
 Auswertung von Nutzerausdrücken mit **leerem Scope** (keine Variablen, keine
-Funktionsdefinitionen). Nur Whitelist an Funktionen:
-`factorial`, `combinations`, `permutations`, `sqrt`, `abs`, Grundrechenarten.
-Bei Parse-Fehler: `{ ok: false, reason: "unparseable" }` — das ist *nicht* dasselbe wie
-„falsch" und soll dem Nutzer auch anders angezeigt werden.
+Funktionsdefinitionen). Nur Whitelist an Funktionen: `factorial`, `combinations`,
+`permutations`, `sqrt`, `abs`, Grundrechenarten. Bei Parse-Fehler:
+`{ ok: false, reason: "unparseable" }` — das ist *nicht* dasselbe wie „falsch", soll dem
+Nutzer anders angezeigt werden und lässt den Attempt offen (`DECISIONS.md`, D-04).
 
-> **Entscheidung E-01 (2026-08-19, M0): eigener Parser statt `mathjs`.**
-> Die ursprüngliche Fassung schrieb hier `mathjs.parse` + `evaluate` vor. Umgesetzt ist
-> stattdessen ein eigener Tokenizer/Parser/Evaluator in `lib/engine/expr/`. Grund:
-> `mathjs` rechnet in float64 — ab `21!` wäre der Vergleich still falsch, was Invariante 1
-> und die BigInt-Regel bricht. Zusätzlich hätten die `MathNode`-Typen `as`-Casts erzwungen.
-> Der eigene Parser hält alle inhaltlichen Vorgaben ein: kein `eval`, feste Grammatik,
-> Funktions-Whitelist, leerer Scope, exakt über `BigInt`, `unparseable` ≠ falsch.
-> Für `numeric` und `fraction` (M1) kann `mathjs` zusätzlich hinzukommen — das ist dann
-> eine neue Entscheidung, kein Rückbau von `expr/`.
+Der eigene Parser statt `mathjs` ist in `DECISIONS.md`, D-01 begründet.
 
-Dieses Modul bekommt eine Tabellen-Testsuite mit mindestens 40 Fällen pro Typ.
+Dieses Modul hat eine Tabellen-Testsuite mit mindestens 40 Fällen pro Typ.
+
+---
+
+## 7a. Formelsatz mit KaTeX
+
+- Mathematik in `question_text` und `solution_text` steht zwischen `$…$` (inline) oder
+  `$$…$$` (abgesetzt).
+- Gerendert wird **nach** der Interpolation.
+- `components/split-math.ts` trennt Text von Formel, `components/MathText.tsx` ruft für die
+  Formelteile `katex.renderToString` auf. Kein `react-katex` — die Funktion aus dem
+  `katex`-Paket reicht und läuft in Server- wie Client-Komponenten.
+- `katex/dist/katex.min.css` wird einmal in `app/globals.css` importiert.
+- KaTeX-Optionen: `throwOnError: false`, `trust: false`. Ein kaputter Ausdruck wird rot
+  dargestellt, statt die Seite zu zerlegen.
+- Unter dem Eingabefeld steht ein Formathinweis je `answer_type`
+  (`components/answer-format.ts`), bei `numeric` mit der Stellenzahl aus `round_to`.
 
 ---
 
@@ -420,6 +592,7 @@ Response: {
   targetTimeSeconds: number,
   topic: string,
   difficulty: number,
+  roundTo?: number,           // nur bei numeric, für den Formathinweis
 }
 ```
 **Enthält niemals `expectedAnswer`.** Das ist der wichtigste Vertrag im ganzen System.
@@ -427,16 +600,21 @@ Response: {
 ### `POST /api/attempt/[id]/answer`
 ```ts
 Request:  { answer: string, durationMs: number }
-Response: {
-  isCorrect: boolean,
-  parseError?: "unparseable",
-  expectedAnswer: string,     // JETZT erlaubt — Aufgabe ist geschlossen
-  solutionText?: string,
-  masteryDelta?: { topic: string, newRate: number },
-}
+Response:
+  | { isCorrect: false, parseError: "unparseable" }        // Aufgabe bleibt OPEN
+  | { isCorrect: boolean,
+      expectedAnswer: string,   // JETZT erlaubt — Aufgabe ist geschlossen
+      solutionText?: string,
+      masteryDelta?: { topic: string, newRate: number } }  // ab M2
 ```
 Server prüft: Attempt gehört zum eingeloggten User **und** `status === "OPEN"`.
-Ein zweiter Aufruf auf denselben Attempt wird abgelehnt.
+Der Statuswechsel auf `ANSWERED` passiert in derselben Anweisung wie die Prüfung
+(`updateMany` mit `status: "OPEN"` in der Bedingung), damit zwei gleichzeitige Absenden
+nicht beide bewertet werden. Ein zweiter Aufruf wird mit 409 abgelehnt.
+
+Eine nicht lesbare Eingabe lässt den Attempt offen und gibt weder `expectedAnswer` noch
+`solutionText` zurück (`DECISIONS.md`, D-04). Bei `answer_type: numeric` mit
+`round_to` wird die Stellenzahl aus dem Template an `grade` durchgereicht.
 
 ### `POST /api/attempt/[id]/transcribe` *(M4)*
 ```ts
@@ -502,16 +680,22 @@ deshalb liegt es hinter einer einzigen Funktion mit klarer Signatur.
 
 ## 11. Meilensteine
 
-**M0 — Skelett** (entspricht „Prototyp V1" im Entwurf)
+**M0 — Skelett** ✅
 Next.js + Prisma + SQLite aufgesetzt. Zwei hartcodierte Templates (Addition, Subtraktion).
 Compute-Registry mit zwei Funktionen. Eine Practice-Seite: Aufgabe anzeigen, Antwort eingeben,
 richtig/falsch zurückgeben. Kein Auth (Dummy-User-ID). Ziel: der Loop läuft Ende zu Ende.
 
-**M1 — Engine**
-Template-Loader mit Zod-Validierung, YAML-Content-Ordner, seeded Parametergenerierung,
-Constraint-Auswertung, Grading-Modul mit allen Normalizern. 10 Kombinatorik-Templates
-(Permutation mit/ohne Wiederholung, Kombination mit/ohne Wiederholung, Stars and Bars,
-hypergeometrische Verteilung). KaTeX-Rendering. Vollständige Vitest-Suite für `lib/engine`.
+**M1 — Content-Pipeline & Kombinatorik** ✅
+Platzhalter-Syntax `{{name}}`. Exakte Rationalzahlen im Ausdruckskern. Themenbaum in
+`content/topics.yaml`. YAML-Loader mit Zod-Schema und den statischen Prüfungen,
+`npm run content:check` im `pretest`. Zwölf Compute-Funktionen inklusive Kombinatorik und
+hypergeometrischer Verteilung. Zwölf Templates als YAML, `dev-templates.ts` gelöscht.
+Grading für `integer`, `numeric`, `fraction`, `choice`. KaTeX-Rendering. Themenauswahl auf
+Basis des Themenbaums.
+
+Nicht in M1: Auth, `TopicMastery`, Fortschrittsanzeige, LLM, Fotoupload. Die
+Aufgabenauswahl bleibt zufällig innerhalb des Filters; die Mastery-Logik aus Abschnitt 10
+kommt vollständig in M2.
 
 **M2 — Nutzer & Fortschritt**
 Auth.js. Sessions, Attempts, TopicMastery persistiert. Auswahl-Logik. Statistik-Seite
@@ -535,26 +719,21 @@ Klassen-/Lehrerfunktionen, Gamification.
 - TypeScript strict. Kein `any`, kein `as` außer bei nachweislich sicheren Narrowings.
 - Zod an jeder Grenze: HTTP-Request-Bodies, YAML-Content, LLM-Ausgaben, `process.env`.
 - Jede neue Compute-Funktion braucht im selben Commit Unit-Tests inklusive Randfälle
-  (`n = 0`, `k = n`, `k > n`, große `n`).
-- Jedes neue Template braucht einen Test, der 200 Seeds instanziiert und prüft, dass
-  keiner scheitert und alle Ergebnisse innerhalb der Constraints liegen.
-- Keine Secrets in Client Components. Alles unter `app/api` und `lib/db` bleibt server-only
-  (`import "server-only"` in `lib/db/client.ts`).
+  (`n = 0`, `k = 0`, `k = n`, `k > n`, große `n`).
+- Jedes neue Template wird vom Property-Test automatisch erfasst: 200 Seeds, keine
+  Ausnahme, alle Constraints erfüllt, kein Platzhalterrest im gerenderten Text.
+- Jede neue statische Content-Prüfung braucht ein Negativ-Fixture, das genau daran scheitert.
+- Kein Normalizer ohne Template, das ihn benutzt.
+- Keine Secrets in Client Components. `import "server-only"` in `lib/db`, `lib/content/load.ts`
+  und `lib/llm`.
+- Bewusste Abweichungen von diesem Dokument gehören als neuer Eintrag nach `DECISIONS.md`.
 - Commits klein und thematisch. Ein Meilenstein ist kein Commit.
 - Bevor du eine Datei über 300 Zeilen schreibst: aufteilen.
 - Wenn eine Anforderung aus diesem Dokument im Konflikt mit einer Chat-Anweisung steht,
   frag nach, statt still das Dokument zu brechen.
 
-### Erste Aufgabe (M0)
+### Arbeitsweise
 
-1. `create-next-app` mit TypeScript, Tailwind, App Router, ESLint.
-2. Prisma installieren, `schema.prisma` aus Abschnitt 4 anlegen (nur `Attempt` und `Session`,
-   `User` mit einer Dummy-Zeile), erste Migration.
-3. `lib/engine/compute/registry.ts` mit `arithmetik.add` und `arithmetik.subtract`.
-4. `lib/engine/instantiate.ts` und `lib/engine/grade/` in der minimalen Form (`answer_type: integer`).
-5. Zwei Templates inline in `lib/content/dev-templates.ts` (YAML-Loader kommt in M1).
-6. `POST /api/session/[id]/next` und `POST /api/attempt/[id]/answer`.
-7. `app/(app)/practice/[sessionId]/page.tsx` mit dem Aufgaben-Loop.
-8. Vitest aufsetzen, Tests für `grade` und die zwei Compute-Funktionen.
-
-Danach stoppen und Rückmeldung einholen, bevor M1 beginnt.
+Ein Meilenstein wird in kleinen Schritten abgearbeitet; jeder Schritt endet mit grünen
+Tests (`npm run content:check` läuft als `pretest` mit) und einem thematischen Commit.
+Am Ende eines Meilensteins stoppen und Rückmeldung einholen, nicht durchziehen.

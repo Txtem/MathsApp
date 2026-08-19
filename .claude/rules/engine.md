@@ -39,10 +39,19 @@ Mocks testbar bleibt.
 Der Build bricht ab, wenn eines davon verletzt ist:
 
 - `compute_ref` existiert nicht in der Registry.
-- Ein Platzhalter `{x}` in `question_text` hat keine Entsprechung in `param_spec`.
+- Ein Platzhalter `{{x}}` in `question_text` hat keine Entsprechung in `param_spec`.
 - Ein Parameter aus `param_spec` taucht nirgends im `question_text` auf und ist
   nicht als `type: const` markiert. Ungenutzte Zufallsparameter sind ein Bug.
 - Das Zod-Input-Schema der Compute-Funktion passt nicht zu den `param_spec`-Keys.
+- Die `id` ist schon vergeben, `topic` ist kein Blatt aus `content/topics.yaml`,
+  `round_to` steht bei einem anderen `answer_type` als `numeric`, oder ein Constraint
+  nennt einen unbekannten Namen.
+
+Jede dieser Prüfungen hat ein Negativ-Fixture unter `lib/content/__fixtures__/`. Neue
+Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt.
+
+Platzhalter sind `{{name}}` (D-05). Einfache Klammern gehören LaTeX und werden nie
+angefasst.
 
 ## Bewertung
 
@@ -50,9 +59,9 @@ Immer zweistufig: erst normalisieren, dann vergleichen. Nie direkter String-Verg
 
 - Nutzerausdrücke über `lib/engine/expr/` mit **leerem Scope**, Whitelist an Funktionen
   (`factorial`, `combinations`, `permutations`, `sqrt`, `abs`, Grundrechenarten).
-  **Kein `mathjs`** — siehe Entscheidung E-01 in `SPEC.md` Abschnitt 7: float64 macht den
-  Vergleich ab `21!` still falsch. Wer den Parser ersetzen will, muss die BigInt-Exaktheit
-  erhalten.
+  **Kein `mathjs`** — siehe `DECISIONS.md`, D-01: float64 macht den Vergleich ab `21!`
+  still falsch. Gerechnet wird mit exakten Brüchen (`Rational`, D-06); `inexact` entsteht
+  nur bei `sqrt` und darf keine Bewertung tragen.
 - `120`, `5!` und `5*4*3*2*1` müssen als dieselbe Antwort gelten.
 - Ein Parse-Fehler ist **nicht** dasselbe wie „falsch": `{ ok: false, reason: "unparseable" }`
   zurückgeben, damit die UI anders reagieren kann.

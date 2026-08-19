@@ -174,3 +174,51 @@ dagegen schlicht falsch, weil sie einen anderen Wert bezeichnet.
 
 Wenn ein Template später auf der Bruchschreibweise bestehen soll, ist das eine
 Formatprüfung im Template, keine Änderung am Vergleich.
+
+---
+
+## D-12 — `lib/content/read.ts` trägt kein `server-only`
+*M1*
+
+Die Konvention verlangt `import "server-only"` in allem unter `lib/content`. Umgesetzt ist
+eine Zweiteilung: `read.ts` liest und prüft den Content ohne `server-only`, `load.ts` ist
+der einzige aus `app/` importierte Zugang und trägt es.
+
+**Grund:** `server-only` wirft außerhalb einer React-Server-Umgebung. Mit dem Import in
+`read.ts` könnten weder `scripts/check-templates.ts` noch die Vitest-Suite den Content
+laden — genau die beiden Stellen, die ihn prüfen sollen.
+
+**Folge:** Die Regel gilt weiterhin für alles, was die Anwendung importiert. Wer aus `app/`
+auf Templates zugreift, nimmt `load.ts`; `read.ts` ist für Werkzeuge.
+
+---
+
+## D-13 — `permutation.multiset` hat drei feste Gruppen und ein statisches Template
+*M1*
+
+Die Compute-Funktion nimmt `n`, `k1`, `k2`, `k3` statt einer Liste von Gruppengrößen. Das
+zugehörige Template `aufg_00004` (MISSISSIPPI) hat ausschließlich `const`-Parameter.
+
+**Grund:** Das Template-Format kennt weder Listen noch abgeleitete Parameter. Ein
+gewürfeltes `n` müsste über ein Constraint zur Summe der Gruppen passen; die Trefferquote
+läge bei rund einem Sechstel, und `MAX_TRIES = 50` würde gelegentlich scheitern — ein
+Property-Test über 200 Seeds wäre dann zufällig rot. Ein statisches Template ist ehrlicher
+als ein flackernder Generator.
+
+**Wenn mehr Varianz nötig wird:** abgeleitete Parameter ins Template-Format aufnehmen
+(`k3: {type: derived, expr: "n - k1 - k2"}`) — das ist dann eine eigene Entscheidung.
+
+---
+
+## D-14 — Registry-Einträge validieren selbst (`entry.run`)
+*M1*
+
+`ComputeEntry` hat neben `input` und `compute` eine Methode `run(params: unknown)`, die
+beides verbindet. `instantiate` ruft ausschließlich `run` auf.
+
+**Grund:** Seit M1 ist die Registry heterogen — jeder Eintrag hat einen anderen
+Parametertyp. `registry[ref]` ist damit eine Vereinigung von `ComputeEntry<S>`, und eine
+generische Hilfsfunktion `runCompute(entry, params)` kann `S` nicht mehr inferieren. Die
+Alternative wäre ein `as`-Cast an der heikelsten Stelle des Systems gewesen. Eine
+einheitliche Signatur `(params: unknown) => Rational | undefined` lässt sich dagegen auf
+der Vereinigung aufrufen, und die Typsicherheit bleibt im Eintrag selbst erhalten.
