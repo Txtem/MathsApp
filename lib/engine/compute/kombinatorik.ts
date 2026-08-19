@@ -13,8 +13,8 @@ import { binomial, factorial } from "../expr/bigmath";
  * Permutationen mit Wiederholung: `n! / (k₁! · k₂! · … )`.
  *
  * Die Gruppengrößen kommen als Liste herein. Templates können keine Listen
- * ausdrücken, deshalb reicht die Registry drei einzelne Parameter durch —
- * siehe DECISIONS.md, D-13.
+ * ausdrücken, deshalb reicht die Registry sie als `k1` bis `k4` durch, wovon
+ * die hinteren beiden optional sind — siehe DECISIONS.md, D-15.
  */
 export function multisetPermutations(n: bigint, groups: readonly bigint[]): bigint {
   const sum = groups.reduce((total, size) => total + size, 0n);

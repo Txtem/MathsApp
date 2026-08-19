@@ -1,6 +1,7 @@
-import { getTopicOffers, type TopicOffer } from "@/lib/content/load";
+import { toTopicGroups, totalTemplates } from "@/components/topic-groups";
+import { getTopicOffers } from "@/lib/content/load";
 
-import { type TopicChoice, TopicPicker } from "./topic-picker";
+import { TopicPicker } from "./topic-picker";
 
 /**
  * Themenauswahl. Die Liste kommt aus `content/topics.yaml` — dieselbe Quelle,
@@ -11,12 +12,6 @@ import { type TopicChoice, TopicPicker } from "./topic-picker";
  */
 export default function PracticePage() {
   const offers = getTopicOffers();
-  const total = offers.reduce((sum, offer) => sum + offer.templateCount, 0);
-
-  const choices: readonly TopicChoice[] = [
-    { label: "Alle Themen", topic: null, templateCount: total, level: 0 },
-    ...offers.flatMap(flatten),
-  ].filter((choice) => choice.templateCount > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -25,17 +20,11 @@ export default function PracticePage() {
           Was möchtest du üben?
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
-          Du bekommst so lange neue Aufgaben, wie du magst.
+          Wähle ein ganzes Gebiet oder ein einzelnes Thema. Du bekommst so lange neue
+          Aufgaben, wie du magst.
         </p>
       </div>
-      <TopicPicker choices={choices} />
+      <TopicPicker groups={toTopicGroups(offers)} total={totalTemplates(offers)} />
     </div>
   );
-}
-
-function flatten(offer: TopicOffer, level = 1): readonly TopicChoice[] {
-  return [
-    { label: offer.label, topic: offer.path, templateCount: offer.templateCount, level },
-    ...offer.children.flatMap((child) => flatten(child, level + 1)),
-  ];
 }

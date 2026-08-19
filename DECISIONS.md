@@ -222,3 +222,48 @@ generische Hilfsfunktion `runCompute(entry, params)` kann `S` nicht mehr inferie
 Alternative wäre ein `as`-Cast an der heikelsten Stelle des Systems gewesen. Eine
 einheitliche Signatur `(params: unknown) => Rational | undefined` lässt sich dagegen auf
 der Vereinigung aufrufen, und die Typsicherheit bleibt im Eintrag selbst erhalten.
+
+---
+
+## D-15 — `permutation.multiset` nimmt zwei bis vier Gruppen
+*2026-08-20, M1*
+
+Das Eingabeschema hat jetzt `k1` und `k2` als Pflichtfelder sowie `k3` und `k4` als
+optionale. Vorher waren es genau drei Gruppen (D-13).
+
+**Anlass:** ein falsches Ergebnis in `aufg_00004`. MISSISSIPPI hat vier Buchstabengruppen
+(4×I, 4×S, 2×P, 1×M). Um in die drei Felder zu passen, standen im Template 5/4/2 — die
+Summe stimmte, die Aufgabe nicht. Die Engine rechnete `11!/(5!·4!·2!) = 6930`, während der
+angezeigte Lösungsweg die richtige Formel `11!/(4!·4!·2!·1!) = 34650` zeigte. Wer richtig
+gerechnet hatte, bekam „falsch".
+
+**Was daran lehrreich ist:** Der Fehler lag nicht im Rechenteil, sondern an einer
+Formatgrenze, die ich mir selbst gesetzt hatte. Kein Test hat ihn gefunden, weil beide
+Seiten dieselbe falsche Annahme teilten — die Testfälle waren aus dem Template abgeleitet
+statt unabhängig nachgerechnet. Deshalb prüft die Suite jetzt konkrete Wörter mit ihren
+tatsächlichen Buchstabenhäufigkeiten.
+
+**Folgen:** `aufg_00004` steht auf `version: 2` (Änderung an `param_spec`). Ältere
+Attempts behalten ihr gespeichertes Ergebnis; der Lösungsweg wird für sie nicht mehr
+gerendert, weil die Version nicht mehr passt. Das ist das vorgesehene Verhalten.
+
+---
+
+## D-16 — Die Themenauswahl gruppiert, statt einzurücken
+*2026-08-20, M1*
+
+Die Auswahlseite zeigt je Oberthema eine Karte mit Überschrift und darin die einzelnen
+Themen als Zeilen. Vorher war es eine flache Liste, deren Ebenen nur über den Einzug
+unterschieden waren.
+
+**Anlass:** Die Einrückung war unbrauchbar — `offers.flatMap(flatten)` reichte den
+Array-Index als Ebene weiter (`flatMap` ruft den Callback mit `(element, index, array)`
+auf), sodass jedes weitere Oberthema eine Stufe tiefer stand als das vorige. Selbst
+richtig gerechnet bliebe die Darstellung schwach: Einzug allein sagt nicht, was ein Gebiet
+ist und wo es endet.
+
+**Regeln der neuen Darstellung:** Themen ohne Aufgaben werden nicht angeboten. Hat ein
+Oberthema nur ein einziges Thema, wird dieses nicht noch einmal aufgeführt — der Knopf für
+das Oberthema deckt es ab. Tiefere Ebenen werden als Blätter hochgezogen, statt weitere
+Einzugsstufen einzuführen. Die Umformung steht als reine Funktion in
+`components/topic-groups.ts` und hat eigene Tests.

@@ -38,14 +38,20 @@ const PairOrdered = Pair.refine((v) => v.k <= v.n, {
   message: "k darf nicht größer als n sein",
 });
 
+/**
+ * Bis zu vier Gruppen. `k3` und `k4` sind optional, damit ein Template genau so
+ * viele Gruppen angeben kann, wie die Aufgabe hat — MISSISSIPPI braucht vier
+ * (4×I, 4×S, 2×P, 1×M). Siehe DECISIONS.md, D-15.
+ */
 const Multiset = z
   .strictObject({
     n: z.number().int().min(1).max(N_MAX),
     k1: z.number().int().min(1).max(N_MAX),
     k2: z.number().int().min(1).max(N_MAX),
-    k3: z.number().int().min(0).max(N_MAX),
+    k3: z.number().int().min(1).max(N_MAX).optional(),
+    k4: z.number().int().min(1).max(N_MAX).optional(),
   })
-  .refine((v) => v.k1 + v.k2 + v.k3 === v.n, {
+  .refine((v) => v.k1 + v.k2 + (v.k3 ?? 0) + (v.k4 ?? 0) === v.n, {
     message: "Die Gruppengrößen müssen zusammen n ergeben",
   });
 
@@ -91,11 +97,16 @@ export const registry = {
     compute: ({ n }) => Q.fromBigInt(factorial(big(n))),
   }),
 
-  /** Permutationen mit Wiederholung: n! / (k1! · k2! · k3!) */
+  /** Permutationen mit Wiederholung: n! / (k1! · k2! · k3! · k4!) */
   "kombinatorik.permutation.multiset": defineCompute({
     input: Multiset,
-    compute: ({ n, k1, k2, k3 }) =>
-      Q.fromBigInt(multisetPermutations(big(n), [big(k1), big(k2), big(k3)])),
+    compute: ({ n, k1, k2, k3, k4 }) =>
+      Q.fromBigInt(
+        multisetPermutations(
+          big(n),
+          [k1, k2, k3, k4].flatMap((size) => (size === undefined ? [] : [big(size)])),
+        ),
+      ),
   }),
 
   /** Variationen ohne Wiederholung: n! / (n-k)! */

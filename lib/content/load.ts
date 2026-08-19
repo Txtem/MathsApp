@@ -5,10 +5,13 @@ import {
   allTopicPaths,
   leafTopics,
   topicLabel,
-  type TopicNode,
+  type TopicOffer,
+  topicOffers,
   type Topics,
   type ValidatedTemplate,
 } from "./schema";
+
+export type { TopicOffer } from "./schema";
 
 /**
  * Zugang der Anwendung zum Content. Liest einmal pro Prozess und hält das
@@ -62,33 +65,8 @@ export function getTopicLabel(path: string): string | undefined {
   return topicLabel(bundle().topics, path);
 }
 
-/**
- * Themen für die Auswahlseite: jeder Oberpunkt mit seinen Blättern, jeweils mit
- * Beschriftung aus dem Baum und der Zahl der vorhandenen Aufgaben.
- */
-export interface TopicOffer {
-  readonly path: string;
-  readonly label: string;
-  readonly templateCount: number;
-  readonly children: readonly TopicOffer[];
-}
-
+/** Themen für die Auswahlseite, mit Beschriftung und Aufgabenzahl. */
 export function getTopicOffers(): readonly TopicOffer[] {
   const { topics, templates } = bundle();
-
-  const countFor = (path: string): number =>
-    templates.filter(
-      (template) => template.topic === path || template.topic.startsWith(`${path}.`),
-    ).length;
-
-  const build = (path: string, node: TopicNode): TopicOffer => ({
-    path,
-    label: node.label,
-    templateCount: countFor(path),
-    children: Object.entries(node.children ?? {}).map(([segment, child]) =>
-      build(`${path}.${segment}`, child),
-    ),
-  });
-
-  return Object.entries(topics).map(([segment, node]) => build(segment, node));
+  return topicOffers(topics, templates);
 }

@@ -113,3 +113,35 @@ export function topicLabel(topics: Topics, path: string): string | undefined {
   }
   return current?.label;
 }
+
+/**
+ * Ein Thema, wie es die Auswahlseite braucht: Pfad, Beschriftung, die Zahl der
+ * Aufgaben darunter und die Unterthemen.
+ */
+export interface TopicOffer {
+  readonly path: string;
+  readonly label: string;
+  readonly templateCount: number;
+  readonly children: readonly TopicOffer[];
+}
+
+export function topicOffers(
+  topics: Topics,
+  templates: readonly { readonly topic: string }[],
+): readonly TopicOffer[] {
+  const countFor = (path: string): number =>
+    templates.filter(
+      (template) => template.topic === path || template.topic.startsWith(`${path}.`),
+    ).length;
+
+  const build = (path: string, node: TopicNode): TopicOffer => ({
+    path,
+    label: node.label,
+    templateCount: countFor(path),
+    children: Object.entries(node.children ?? {}).map(([segment, child]) =>
+      build(`${path}.${segment}`, child),
+    ),
+  });
+
+  return Object.entries(topics).map(([segment, node]) => build(segment, node));
+}

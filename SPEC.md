@@ -480,7 +480,7 @@ Wurf. Der Grund für diese Signatur steht in `DECISIONS.md`, D-14.
 | `arithmetik.add` | `a + b` | ganzzahlig |
 | `arithmetik.subtract` | `a - b` | ganzzahlig |
 | `kombinatorik.permutation.factorial` | `n!` | ganzzahlig |
-| `kombinatorik.permutation.multiset` | `n! / (k₁!·k₂!·k₃!)` | ganzzahlig |
+| `kombinatorik.permutation.multiset` | `n! / (k₁!·…·k₄!)`, zwei bis vier Gruppen | ganzzahlig |
 | `kombinatorik.variation.ohne_wdh` | `n! / (n−k)!` | ganzzahlig |
 | `kombinatorik.variation.mit_wdh` | `n^k` | ganzzahlig |
 | `kombinatorik.kombination.ohne_wdh` | `C(n,k)` | ganzzahlig |

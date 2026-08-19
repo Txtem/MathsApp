@@ -13,7 +13,9 @@ const via = (ref: keyof typeof registry, params: Record<string, number>): string
 
 describe("multisetPermutations", () => {
   const cases: ReadonlyArray<readonly [bigint, readonly bigint[], string]> = [
-    [11n, [5n, 4n, 2n], "6930"], // MISSISSIPPI ohne das M
+    [11n, [4n, 4n, 2n, 1n], "34650"], // MISSISSIPPI
+    [10n, [4n, 4n, 2n], "3150"], // MISSISSIPPI ohne das M
+    [11n, [5n, 4n, 2n], "6930"], // drei Gruppen, zum Vergleich
     [3n, [1n, 1n, 1n], "6"], // alle verschieden ⇒ 3!
     [4n, [2n, 2n, 0n], "6"],
     [5n, [5n, 0n, 0n], "1"], // alle gleich ⇒ nur eine Anordnung
@@ -40,6 +42,22 @@ describe("multisetPermutations", () => {
   it("lehnt über die Registry Gruppen ab, die nicht aufgehen", () => {
     expect(via("kombinatorik.permutation.multiset", { n: 10, k1: 5, k2: 4, k3: 2 })).toBeUndefined();
     expect(via("kombinatorik.permutation.multiset", { n: 11, k1: 5, k2: 4, k3: 2 })).toBe("6930");
+  });
+
+  it("nimmt zwei bis vier Gruppen entgegen", () => {
+    // Der Fall, an dem aufg_00004 gescheitert ist: MISSISSIPPI hat vier
+    // Buchstabengruppen, nicht drei.
+    expect(via("kombinatorik.permutation.multiset", { n: 11, k1: 4, k2: 4, k3: 2, k4: 1 })).toBe(
+      "34650",
+    );
+    expect(via("kombinatorik.permutation.multiset", { n: 5, k1: 3, k2: 2 })).toBe("10");
+    expect(via("kombinatorik.permutation.multiset", { n: 9, k1: 3, k2: 3, k3: 3 })).toBe("1680");
+    // Eine Gruppe der Größe 0 gibt es nicht — sie wird weggelassen.
+    expect(via("kombinatorik.permutation.multiset", { n: 5, k1: 3, k2: 2, k3: 0 })).toBeUndefined();
+    // Fünf Gruppen kennt das Schema nicht.
+    expect(
+      via("kombinatorik.permutation.multiset", { n: 6, k1: 2, k2: 1, k3: 1, k4: 1, k5: 1 }),
+    ).toBeUndefined();
   });
 });
 

@@ -22,7 +22,7 @@ die naheliegende Variante nicht gewählt wurde.
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
   `npm run content:check`; zwölf Compute-Funktionen; zwölf Templates als YAML;
   Grading für `integer`, `numeric`, `fraction`, `choice` inkl. `round_to`;
-  KaTeX über `components/MathText.tsx` — 715 Tests grün
+  KaTeX über `components/MathText.tsx` — 727 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
   zurückgestellt); die Aufgabenauswahl ist zufällig innerhalb des Filters
 - Als Nächstes: M2 — Auth.js, `TopicMastery`, Auswahl nach Erfolgsquote und Fälligkeit,

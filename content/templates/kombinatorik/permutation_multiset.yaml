@@ -1,8 +1,12 @@
 # Bewusst ohne Zufallsparameter: n muss die Summe der Gruppengrößen sein, und
 # das Template-Format kennt keine abgeleiteten Parameter. Ein gewürfeltes n
 # würde in fast jedem Wurf am Constraint scheitern. Siehe DECISIONS.md, D-13.
+#
+# Version 2: Die Gruppen waren 5/4/2 und damit falsch — MISSISSIPPI hat vier
+# Gruppen (4×I, 4×S, 2×P, 1×M). Die Aufgabe rechnete 6930 statt 34650, während
+# der angezeigte Lösungsweg die richtige Formel zeigte. Siehe DECISIONS.md, D-15.
 id: aufg_00004
-version: 1
+version: 2
 topic: kombinatorik.permutation
 difficulty: 3
 target_time_seconds: 120
@@ -14,15 +18,18 @@ param_spec:
   n:
     type: const
     value: 11
-  k1:
-    type: const
-    value: 5
-  k2:
+  k1: # I
     type: const
     value: 4
-  k3:
+  k2: # S
+    type: const
+    value: 4
+  k3: # P
     type: const
     value: 2
+  k4: # M
+    type: const
+    value: 1
 
 constraints: []
 
