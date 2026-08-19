@@ -1,0 +1,136 @@
+# Getroffene Entscheidungen
+
+Bewusste Abweichungen von `SPEC.md` und Festlegungen, die die SPEC offengelassen hat.
+Nicht ohne Rückfrage zurückdrehen — die Gründe stehen dabei, weil sie sonst in der
+nächsten Session fehlen.
+
+Format: fortlaufende Nummer, Datum, Meilenstein. Neue Einträge unten anhängen.
+
+---
+
+## D-01 — Eigener Ausdrucksparser statt `mathjs`
+*2026-08-19, M0*
+
+`SPEC.md` Abschnitt 7 nannte ursprünglich `mathjs.parse` + `evaluate`. Umgesetzt ist
+stattdessen `lib/engine/expr/` (Tokenizer, rekursiver Abstiegsparser, Evaluator).
+
+**Grund:** `mathjs` rechnet in float64, damit wäre der Vergleich ab `21!` still falsch —
+das bricht die BigInt-Regel und Invariante 1. Zusätzlich hätten die `MathNode`-Typen
+`as`-Casts erzwungen.
+
+Alle inhaltlichen Vorgaben bleiben erfüllt: kein `eval`, feste Grammatik,
+Funktions-Whitelist (`factorial`, `combinations`, `permutations`, `sqrt`, `abs`,
+Grundrechenarten), leerer Scope bei Nutzereingaben, `unparseable` ≠ falsch.
+Derselbe Parser trägt auch die Constraint-Auswertung.
+
+**Nachtrag M1:** Der Parser wird durch D-06 auf exakte Brüche erweitert, statt `mathjs`
+für `numeric`/`fraction` nachzuziehen. Die in der Ursprungsfassung offengelassene
+Möglichkeit, `mathjs` doch noch zu ergänzen, ist damit erledigt.
+
+---
+
+## D-02 — `tsconfig.json`: `target` von ES2017 auf ES2020
+*2026-08-19, M0*
+
+Unterhalb ES2020 lehnt TypeScript `0n`-Literale ab. Da die gesamte Engine auf `BigInt`
+rechnet, wäre die Alternative `BigInt(0)` an hunderten Stellen. Next.js kompiliert ohnehin
+moderner; das Feld wirkt nur auf die Typprüfung.
+
+---
+
+## D-03 — Bei `answer_type: integer` bleibt `,` der Argumenttrenner
+*2026-08-19, M0*
+
+`combinations(10,3)` ist eine gültige Antwort, deshalb wird das Komma dort nicht zum
+Dezimalpunkt. Die Grading-Tabelle ordnet die Regel `,` → `.` ohnehin nur `numeric` zu.
+
+**Folge:** `2,5` gilt bei einer Ganzzahlfrage als „nicht lesbar", nicht als „falsch" —
+was näher an der Wahrheit ist. `1,000` bleibt Tausendertrennung.
+
+---
+
+## D-04 — Eine unlesbare Antwort schließt den Attempt nicht
+*2026-08-19, M0*
+
+`SPEC.md` Abschnitt 8 ließ offen, was bei `parseError: "unparseable"` mit dem Attempt
+passiert. Umgesetzt: Der Attempt bleibt `OPEN`, die Response enthält **kein**
+`expectedAnswer` und keinen `solutionText`, der Nutzer darf es noch einmal eingeben.
+
+**Grund:** Alles andere bräche Invariante 2 — die Lösung darf einen offenen Attempt nicht
+verlassen — oder würde jemanden für einen Tippfehler die Aufgabe kosten. Ein Parse-Fehler
+ist ausdrücklich nicht „falsch", genau deshalb gibt es das Feld.
+
+---
+
+## D-05 — Platzhalter sind `{{name}}` statt `{name}`
+*M1*
+
+M0 nutzte `{n}`. Ab M1 enthalten Aufgabentexte LaTeX, und LaTeX benutzt einfache
+geschweifte Klammern als Argumentklammern: `\frac{1}{2}`, `\sqrt{2}`, `\binom{n}{k}`.
+
+**Grund:** Ein strikter Interpolator mit einfachen Klammern liest `\frac{1}{2}` als zwei
+unbekannte Platzhalter und wirft. Es gibt keine zuverlässige Heuristik, die einen
+Platzhalter von einem LaTeX-Argument unterscheidet. Die Alternative wäre ein nachsichtiger
+Interpolator — dann fällt aber ein Tippfehler wie `{nn}` nie auf, und die statische
+Template-Prüfung verliert ihren Sinn.
+
+Mit doppelten Klammern bleibt LaTeX unberührt und die strikte Prüfung funktioniert weiter.
+Nach der Interpolation gilt die Assertion, dass kein `{{` im Ergebnis übrig ist.
+
+---
+
+## D-06 — Exakte Rationalzahlen als Wertetyp im Ausdruckskern
+*M1*
+
+`lib/engine/expr/` rechnet nicht mehr nur mit `BigInt`, sondern mit gekürzten Brüchen
+(`{ num: bigint, den: bigint }`, `den > 0`).
+
+**Grund:** Ab der hypergeometrischen Verteilung sind Ergebnisse Brüche. In float gerechnet
+wäre der Vergleich wieder ungenau — genau der Grund, aus dem `mathjs` verworfen wurde
+(D-01). Die konsequente Fortsetzung ist ein exakter Bruchtyp, kein Float-Rückfall.
+
+**Folgen:** `integer` ist der Fall `den === 1n`. `fraction` fällt ohne Zusatzarbeit ab.
+`numeric` vergleicht exakt statt mit Toleranz. Dezimaleingaben werden verlustfrei
+überführt (`0.0177` → `177/10000`). Float bleibt ausschließlich für irrationale
+Zwischenwerte (`sqrt`) und wird im Wertetyp als „nicht mehr exakt" markiert.
+
+---
+
+## D-07 — Kein Normalizer ohne Template, das ihn benutzt
+*M1*
+
+Die ursprüngliche M1-Beschreibung verlangte „alle Normalizer". Umgesetzt werden nur
+`integer`, `numeric`, `fraction` und `choice`. `set`, `tuple` und `text` bleiben offen,
+bis ein Template sie braucht.
+
+**Grund:** Ein Normalizer ohne Aufrufer ist Spekulation über eine Anforderung, die noch
+niemand gestellt hat, plus Testaufwand für Verhalten, das niemand prüft. Der `float`-
+Parametertyp entfällt aus demselben Grund.
+
+---
+
+## D-08 — Themenpfade kommen aus `content/topics.yaml`
+*M1*
+
+`topic` war ein freies Textfeld mit Regex-Prüfung. Ab M1 muss es auf ein Blatt im
+Themenbaum zeigen.
+
+**Grund:** Ein Tippfehler wie `kombinatorik.permuation` hätte lautlos ein neues Thema
+erzeugt — mit eigener Fortschrittsstatistik ab M2 und ohne dass jemand es merkt.
+Der Baum liefert zusätzlich die Beschriftungen für die Themenauswahl-Seite, sodass es
+keine zweite Liste gibt, die auseinanderlaufen kann.
+
+**Folge:** Ein Template zeigt immer auf ein Blatt. Ein Session-`topicFilter` darf auf
+jeder Ebene stehen und umfasst dann alle Blätter darunter.
+
+---
+
+## D-09 — Prozentangaben sind als Antwortformat nicht zugelassen
+*M1*
+
+Templates fragen nach dem Bruch oder nach dem auf `round_to` Stellen gerundeten
+Dezimalwert, und der Aufgabentext sagt das ausdrücklich.
+
+**Grund:** Ohne diese Festlegung ist `1.77` gegen `0.0177` nicht entscheidbar — beides
+wäre je nach gemeinter Einheit richtig. Die Alternative wäre ein Einheitenfeld im
+Antwortformat, das für den Nutzen zu viel Komplexität kostet.
