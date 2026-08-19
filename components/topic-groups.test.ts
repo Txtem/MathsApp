@@ -46,11 +46,17 @@ describe("toTopicGroups", () => {
     ]);
   });
 
-  it("wiederholt ein einzelnes Blatt nicht unter seinem Oberthema", () => {
-    // "Grundrechenarten > Addition und Subtraktion" wäre zweimal dasselbe.
+  it("führt auch ein einzelnes Thema unter seinem Oberthema auf", () => {
+    // Sonst sieht das Oberthema aus, als fehlte etwas darunter.
     const arithmetik = toTopicGroups(tree).find((group) => group.topic === "arithmetik");
-    expect(arithmetik?.leaves).toEqual([]);
+    expect(arithmetik?.leaves.map((leaf) => leaf.topic)).toEqual(["arithmetik.grundrechenarten"]);
     expect(arithmetik?.templateCount).toBe(2);
+  });
+
+  it("gibt jedem Oberthema mindestens ein Thema", () => {
+    for (const group of toTopicGroups(tree)) {
+      expect(group.leaves.length, group.topic).toBeGreaterThan(0);
+    }
   });
 
   it("blendet Themen ohne Aufgaben aus", () => {
@@ -66,8 +72,7 @@ describe("toTopicGroups", () => {
       ]),
     ];
     const groups = toTopicGroups(gemischt);
-    // Nur ein gefülltes Blatt übrig ⇒ es wird nicht noch einmal aufgeführt.
-    expect(groups[0]?.leaves).toEqual([]);
+    expect(groups[0]?.leaves.map((leaf) => leaf.topic)).toEqual(["t.a"]);
   });
 
   it("zieht auch tiefere Ebenen als Blätter hoch, statt sie einzurücken", () => {

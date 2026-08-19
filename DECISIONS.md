@@ -262,8 +262,12 @@ auf), sodass jedes weitere Oberthema eine Stufe tiefer stand als das vorige. Sel
 richtig gerechnet bliebe die Darstellung schwach: Einzug allein sagt nicht, was ein Gebiet
 ist und wo es endet.
 
-**Regeln der neuen Darstellung:** Themen ohne Aufgaben werden nicht angeboten. Hat ein
-Oberthema nur ein einziges Thema, wird dieses nicht noch einmal aufgeführt — der Knopf für
-das Oberthema deckt es ab. Tiefere Ebenen werden als Blätter hochgezogen, statt weitere
-Einzugsstufen einzuführen. Die Umformung steht als reine Funktion in
-`components/topic-groups.ts` und hat eigene Tests.
+**Regeln der neuen Darstellung:** Themen ohne Aufgaben werden nicht angeboten. Tiefere
+Ebenen werden als Blätter hochgezogen, statt weitere Einzugsstufen einzuführen. Jedes
+Oberthema führt seine Themen auf, auch wenn es nur eines ist. Die Umformung steht als reine
+Funktion in `components/topic-groups.ts` und hat eigene Tests.
+
+**Nachtrag, noch am selben Tag:** Ursprünglich unterdrückte die Darstellung ein einzelnes
+Thema unter seinem Oberthema, weil beide dasselbe aussagen. In der Praxis war das
+schlechter: Zwei von drei Gebieten standen ohne Unterpunkte da, und es sah aus, als fehlte
+dort etwas. Einheitlichkeit schlägt hier Sparsamkeit — die Regel ist gestrichen.

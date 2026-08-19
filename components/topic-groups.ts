@@ -16,7 +16,10 @@ export interface TopicLeafChoice {
 }
 
 export interface TopicGroupChoice extends TopicLeafChoice {
-  /** Die Blätter unter diesem Oberthema. Leer, wenn es nur eines gibt. */
+  /**
+   * Die Themen unter diesem Oberthema. Auch ein einzelnes wird aufgeführt: Ein
+   * Oberthema, unter dem nichts steht, sieht sonst aus, als fehlte etwas.
+   */
   readonly leaves: readonly TopicLeafChoice[];
 }
 
@@ -31,14 +34,11 @@ export function toTopicGroups(offers: readonly TopicOffer[]): readonly TopicGrou
   return offers
     .filter((offer) => offer.templateCount > 0)
     .map((offer) => {
-      const leaves = leavesOf(offer).filter((leaf) => leaf.templateCount > 0);
       return {
         label: offer.label,
         topic: offer.path,
         templateCount: offer.templateCount,
-        // Ein einzelnes Blatt unter einem Oberthema sagt dasselbe zweimal —
-        // der Knopf für das Oberthema deckt es bereits ab.
-        leaves: leaves.length > 1 ? leaves : [],
+        leaves: leavesOf(offer).filter((leaf) => leaf.templateCount > 0),
       };
     });
 }
