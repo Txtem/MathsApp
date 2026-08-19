@@ -18,8 +18,8 @@ const addition: Template = {
     b: { type: "int", min: 10, max: 99 },
   },
   constraints: ["result <= 150"],
-  question_text: "Was ist {a} + {b}?",
-  solution_text: "{a} + {b} = {result}",
+  question_text: "Was ist {{a}} + {{b}}?",
+  solution_text: "{{a}} + {{b}} = {{result}}",
   tags: ["addition"],
 };
 
@@ -37,7 +37,7 @@ const subtraction: Template = {
   },
   // Kein negatives Ergebnis: Das prüft, dass die zweite Constraint-Runde greift.
   constraints: ["result >= 0"],
-  question_text: "Was ist {a} - {b}?",
+  question_text: "Was ist {{a}} - {{b}}?",
 };
 
 const seeds = Array.from({ length: 200 }, (_, i) => `seed-${i}`);
@@ -140,7 +140,7 @@ describe("instantiate — Fehlerfälle", () => {
   });
 
   it("lehnt einen Platzhalter ohne Parameter ab", () => {
-    const broken: Template = { ...addition, question_text: "Was ist {a} + {c}?" };
+    const broken: Template = { ...addition, question_text: "Was ist {{a}} + {{c}}?" };
     expect(() => instantiate(broken, "seed")).toThrow(TemplateConfigError);
   });
 
@@ -168,6 +168,19 @@ describe("renderSolution", () => {
     expect(solution).toBe(
       `${instance.params.a} + ${instance.params.b} = ${instance.expectedAnswer}`,
     );
+  });
+
+  it("lässt LaTeX mit einfachen Klammern unberührt", () => {
+    const latex: Template = {
+      ...addition,
+      solution_text: "$\binom{{{a}}}{2} = \frac{1}{2}\cdot{{a}}\cdot({{a}}-1)$",
+    };
+    const instance = instantiate(latex, "seed-3");
+    const solution = renderSolution(latex, instance.params, instance.expectedAnswer);
+    expect(solution).toBe(
+      `$\binom{${instance.params.a}}{2} = \frac{1}{2}\cdot${instance.params.a}\cdot(${instance.params.a}-1)$`,
+    );
+    expect(solution).not.toContain("{{");
   });
 
   it("gibt undefined, wenn das Template keinen Lösungstext hat", () => {

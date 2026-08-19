@@ -28,8 +28,8 @@ export const additionTemplate = {
   // Deckelt die Aufgabe auf Kopfrechenniveau. Wirft rund die Hälfte der
   // Parameterpaare weg — genau der Rejection-Sampling-Fall, für den es MAX_TRIES gibt.
   constraints: ["result <= 100"],
-  question_text: "Berechne: {a} + {b}",
-  solution_text: "{a} + {b} = {result}",
+  question_text: "Berechne: {{a}} + {{b}}",
+  solution_text: "{{a}} + {{b}} = {{result}}",
   tags: ["addition", "kopfrechnen"],
 } satisfies Template;
 
@@ -48,8 +48,8 @@ export const subtractionTemplate = {
   },
   // Erst nach der Berechnung entscheidbar: Das ist der zweite Constraint-Durchgang.
   constraints: ["result >= 0"],
-  question_text: "Berechne: {a} - {b}",
-  solution_text: "{a} - {b} = {result}",
+  question_text: "Berechne: {{a}} - {{b}}",
+  solution_text: "{{a}} - {{b}} = {{result}}",
   tags: ["subtraktion", "kopfrechnen"],
 } satisfies Template;
 

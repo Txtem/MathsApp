@@ -68,3 +68,17 @@ export class InvalidExpectedAnswerError extends Error {
     this.name = "InvalidExpectedAnswerError";
   }
 }
+
+/**
+ * Ein Platzhalter ließ sich nicht auflösen, oder im Ergebnis blieb `{{` stehen.
+ *
+ * Erbt von `TemplateConfigError`, weil beides denselben Ursprung hat: ein
+ * fehlerhaftes Template, das laut scheitern muss, statt eine kaputte Aufgabe
+ * anzuzeigen.
+ */
+export class TemplateRenderError extends TemplateConfigError {
+  constructor(message: string) {
+    super(message);
+    this.name = "TemplateRenderError";
+  }
+}
