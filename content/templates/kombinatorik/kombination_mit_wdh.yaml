@@ -1,0 +1,31 @@
+id: aufg_00008
+version: 1
+topic: kombinatorik.kombination
+difficulty: 3
+target_time_seconds: 120
+
+compute_ref: kombinatorik.kombination.mit_wdh
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 4
+    max: 10
+  k:
+    type: int
+    min: 2
+    max: 5
+
+constraints: []
+
+question_text: |
+  Eine Eisdiele bietet {{n}} Sorten an. Du bestellst {{k}} Kugeln und darfst
+  Sorten mehrfach wählen. Auf die Reihenfolge kommt es nicht an.
+  Wie viele verschiedene Bestellungen gibt es?
+
+solution_text: |
+  Kombination mit Wiederholung:
+  $$\binom{ {{n}}+{{k}}-1 }{ {{k}} } = {{result}}$$
+
+tags: [kombination, mit_wiederholung, ungeordnet]

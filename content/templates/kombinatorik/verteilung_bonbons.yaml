@@ -1,0 +1,30 @@
+id: aufg_00010
+version: 1
+topic: kombinatorik.verteilung
+difficulty: 3
+target_time_seconds: 120
+
+compute_ref: kombinatorik.verteilung.nichtnegativ
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 5
+    max: 15
+  k:
+    type: int
+    min: 3
+    max: 5
+
+constraints: []
+
+question_text: |
+  {{n}} gleiche Bonbons werden auf {{k}} Kinder verteilt. Ein Kind darf auch
+  leer ausgehen. Wie viele Verteilungen gibt es?
+
+solution_text: |
+  Stars and Bars — {{n}} Sterne und {{k}}-1 Trennstriche:
+  $$\binom{ {{n}}+{{k}}-1 }{ {{k}}-1 } = {{result}}$$
+
+tags: [verteilung, stars_and_bars]

@@ -1,0 +1,31 @@
+id: aufg_00007
+version: 1
+topic: kombinatorik.kombination
+difficulty: 2
+target_time_seconds: 90
+
+compute_ref: kombinatorik.kombination.ohne_wdh
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 6
+    max: 14
+  k:
+    type: int
+    min: 2
+    max: 5
+
+constraints:
+  - "k <= n"
+
+question_text: |
+  Aus {{n}} Personen wird ein Ausschuss mit {{k}} Mitgliedern gewählt.
+  Wie viele verschiedene Ausschüsse sind möglich?
+
+solution_text: |
+  Kombination ohne Wiederholung, die Reihenfolge zählt nicht:
+  $$\binom{ {{n}} }{ {{k}} } = {{result}}$$
+
+tags: [kombination, ohne_wiederholung, ungeordnet]

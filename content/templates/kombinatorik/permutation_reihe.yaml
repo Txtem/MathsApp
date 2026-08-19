@@ -1,0 +1,26 @@
+id: aufg_00003
+version: 1
+topic: kombinatorik.permutation
+difficulty: 1
+target_time_seconds: 60
+
+compute_ref: kombinatorik.permutation.factorial
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 4
+    max: 9
+
+constraints:
+  - "result <= 400000"
+
+question_text: |
+  Auf wie viele Arten können {{n}} Personen in einer Reihe angeordnet werden?
+
+solution_text: |
+  Permutation ohne Wiederholung von {{n}} Elementen:
+  $${{n}}! = {{result}}$$
+
+tags: [permutation, ohne_wiederholung]

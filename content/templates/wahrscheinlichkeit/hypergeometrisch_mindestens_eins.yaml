@@ -1,0 +1,38 @@
+id: aufg_00012
+version: 1
+topic: wahrscheinlichkeit.hypergeometrisch
+difficulty: 4
+target_time_seconds: 180
+
+compute_ref: wahrscheinlichkeit.hypergeometrisch.mindestens_eins
+answer_type: fraction
+
+param_spec:
+  population:
+    type: int
+    min: 8
+    max: 15
+  successes:
+    type: int
+    min: 2
+    max: 4
+  draws:
+    type: int
+    min: 2
+    max: 3
+
+constraints:
+  - "successes <= population"
+  - "draws <= population"
+
+question_text: |
+  In einer Urne liegen {{population}} Kugeln, davon sind {{successes}} rot.
+  Es werden {{draws}} Kugeln ohne Zurücklegen gezogen. Wie groß ist die
+  Wahrscheinlichkeit, mindestens eine rote Kugel zu ziehen?
+  Gib das Ergebnis als vollständig gekürzten Bruch $a/b$ an.
+
+solution_text: |
+  Über das Gegenereignis "keine rote Kugel":
+  $$P(X \ge 1) = 1 - \frac{\binom{ {{population}}-{{successes}} }{ {{draws}} }}{\binom{ {{population}} }{ {{draws}} }} = {{result}}$$
+
+tags: [hypergeometrisch, gegenereignis]

@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
 import { getTemplate } from "@/lib/content/load";
+import type { ValidatedTemplate } from "@/lib/content/schema";
 import { prisma } from "@/lib/db/client";
 import { DEV_USER_ID } from "@/lib/db/dev-user";
 import { grade } from "@/lib/engine/grade";
@@ -61,7 +62,15 @@ export async function POST(
   const answerType = AnswerTypeSchema.parse(attempt.answerType);
   const expectedAnswer = ExpectedAnswerSchema.parse(attempt.expectedAnswer);
 
-  const verdict = grade(body.data.answer, expectedAnswer, answerType);
+  // Das Template wird einmal geholt: Es liefert `round_to` für die Bewertung
+  // und den Lösungstext. Passt die Version nicht mehr, gilt es als nicht
+  // vorhanden — dann wird exakt bewertet und kein Lösungsweg gezeigt.
+  const template = getTemplate(attempt.templateId);
+  const current = template?.version === attempt.templateVersion ? template : undefined;
+
+  const verdict = grade(body.data.answer, expectedAnswer, answerType, {
+    roundTo: current?.round_to,
+  });
 
   if (!verdict.ok) {
     const unreadable: AnswerResponse = { isCorrect: false, parseError: "unparseable" };
@@ -88,7 +97,7 @@ export async function POST(
   const response: AnswerResponse = {
     isCorrect: verdict.isCorrect,
     expectedAnswer,
-    ...buildSolution(attempt.templateId, attempt.templateVersion, attempt.params, expectedAnswer),
+    ...buildSolution(current, attempt.params, expectedAnswer),
   };
 
   return NextResponse.json(response, { status: 200 });
@@ -100,13 +109,11 @@ export async function POST(
  * einer anderen Version wäre schlechter als gar keiner.
  */
 function buildSolution(
-  templateId: string,
-  templateVersion: number,
+  template: ValidatedTemplate | undefined,
   params: unknown,
   expectedAnswer: string,
 ): { solutionText?: string } {
-  const template = getTemplate(templateId);
-  if (!template || template.version !== templateVersion) return {};
+  if (!template) return {};
 
   const parsedParams = ParamsSchema.safeParse(params);
   if (!parsedParams.success) return {};

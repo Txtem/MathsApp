@@ -1,0 +1,26 @@
+id: aufg_00009
+version: 1
+topic: kombinatorik.kombination
+difficulty: 1
+target_time_seconds: 45
+
+compute_ref: kombinatorik.teilmengen.anzahl
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 3
+    max: 12
+
+constraints: []
+
+question_text: |
+  Wie viele Teilmengen hat eine Menge mit {{n}} Elementen?
+  Die leere Menge und die Menge selbst zählen mit.
+
+solution_text: |
+  Jedes Element ist entweder in der Teilmenge oder nicht:
+  $$2^{ {{n}} } = {{result}}$$
+
+tags: [teilmengen, potenzmenge]

@@ -47,6 +47,8 @@ export interface NextQuestionResponse {
   readonly targetTimeSeconds: number;
   readonly topic: string;
   readonly difficulty: number;
+  /** Nur bei `numeric`: auf so viele Nachkommastellen wird gerundet. */
+  readonly roundTo?: number;
 }
 
 export type AnswerResponse =
@@ -67,7 +69,9 @@ export type AnswerResponse =
  */
 export function toNextQuestionResponse(
   attempt: { readonly id: string; readonly questionText: string; readonly answerType: AnswerType },
-  template: Pick<Template, "topic" | "difficulty" | "target_time_seconds">,
+  template: Pick<Template, "topic" | "difficulty" | "target_time_seconds"> & {
+    readonly round_to?: number;
+  },
 ): NextQuestionResponse {
   return {
     attemptId: attempt.id,
@@ -76,6 +80,7 @@ export function toNextQuestionResponse(
     targetTimeSeconds: template.target_time_seconds,
     topic: template.topic,
     difficulty: template.difficulty,
+    ...(template.round_to === undefined ? {} : { roundTo: template.round_to }),
   };
 }
 
@@ -100,6 +105,7 @@ export const NextQuestionResponseSchema = z.strictObject({
   targetTimeSeconds: z.number().int().positive(),
   topic: z.string().min(1),
   difficulty: z.number().int().min(1).max(5),
+  roundTo: z.number().int().min(0).max(10).optional(),
 });
 
 export const AnswerResponseSchema = z.union([

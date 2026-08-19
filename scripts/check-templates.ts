@@ -8,7 +8,7 @@ try {
   const { templates, topics } = readContent();
   const leaves = new Set(templates.map((template) => template.topic));
   console.log(
-    `OK — ${templates.length} Template(s) in ${leaves.size} von ${Object.keys(topics).length} Themenbereichen.`,
+    `OK — ${templates.length} Template(s) auf ${leaves.size} Blättern in ${Object.keys(topics).length} Themenbereichen.`,
   );
 } catch (error) {
   if (error instanceof ContentError) {

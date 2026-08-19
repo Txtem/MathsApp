@@ -1,0 +1,37 @@
+# Bewusst ohne Zufallsparameter: n muss die Summe der Gruppengrößen sein, und
+# das Template-Format kennt keine abgeleiteten Parameter. Ein gewürfeltes n
+# würde in fast jedem Wurf am Constraint scheitern. Siehe DECISIONS.md, D-13.
+id: aufg_00004
+version: 1
+topic: kombinatorik.permutation
+difficulty: 3
+target_time_seconds: 120
+
+compute_ref: kombinatorik.permutation.multiset
+answer_type: integer
+
+param_spec:
+  n:
+    type: const
+    value: 11
+  k1:
+    type: const
+    value: 5
+  k2:
+    type: const
+    value: 4
+  k3:
+    type: const
+    value: 2
+
+constraints: []
+
+question_text: |
+  Wie viele verschiedene Buchstabenfolgen lassen sich aus den elf Buchstaben
+  des Wortes MISSISSIPPI bilden? (viermal I, viermal S, zweimal P, einmal M)
+
+solution_text: |
+  Permutation mit Wiederholung:
+  $$\frac{11!}{4! \cdot 4! \cdot 2! \cdot 1!} = {{result}}$$
+
+tags: [permutation, mit_wiederholung]
