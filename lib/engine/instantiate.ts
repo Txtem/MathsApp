@@ -5,7 +5,7 @@ import { makeRng } from "./generate/rng";
 import { sampleParams } from "./generate/sample";
 import { toStorageString } from "./expr/rational";
 import { interpolate } from "./render/interpolate";
-import { type Instance, type ParamValue, runCompute, type Template } from "./types";
+import type { Instance, ParamValue, Template } from "./types";
 
 /** Nach so vielen verworfenen Würfen gilt das Template als falsch konfiguriert. */
 export const MAX_TRIES = 50;
@@ -36,7 +36,7 @@ export function instantiate(tpl: Template, seed: string): Instance {
     const params = sampleParams(tpl.param_spec, rng);
     if (!checkConstraints(beforeCompute, params)) continue;
 
-    const result = runCompute(entry, params);
+    const result = entry.run(params);
     if (result === undefined) continue;
 
     if (!checkConstraints(tpl.constraints, { ...params, [RESULT_KEY]: result })) continue;

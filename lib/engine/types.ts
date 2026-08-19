@@ -12,43 +12,49 @@ import type { Rational } from "./expr/rational";
 export interface ComputeEntry<TSchema extends ZodType> {
   readonly input: TSchema;
   readonly compute: (params: output<TSchema>) => Rational;
+  /**
+   * Validieren und rechnen in einem Schritt. `undefined` heißt: Die Parameter
+   * passen nicht zum Schema — für `instantiate` kein Fehler, sondern ein
+   * verworfener Wurf.
+   *
+   * Diese Methode ist der einzige Weg, einen Eintrag aus der Registry
+   * aufzurufen. Die Registry ist heterogen, ihre Einträge haben also
+   * verschiedene Parametertypen; nur eine einheitliche Signatur
+   * `(params: unknown)` lässt sich auf der Vereinigung aufrufen, ohne den
+   * Typ mit einem `as` zu erschlagen.
+   */
+  readonly run: (params: unknown) => Rational | undefined;
 }
 
 /**
- * Obergrenze für die Registry als Ganzes. `never` als Parametertyp ist Absicht:
- * nur so ist jeder konkrete `ComputeEntry<S>` diesem Typ zuweisbar
- * (Funktionsparameter sind kontravariant). Zum Aufrufen wird ein Eintrag über
- * `registry[ref]` geholt, dort steht der genaue Typ noch zur Verfügung.
+ * Obergrenze für die Registry als Ganzes. `never` als Parametertyp von
+ * `compute` ist Absicht: nur so ist jeder konkrete `ComputeEntry<S>` diesem
+ * Typ zuweisbar (Funktionsparameter sind kontravariant). Gerechnet wird über
+ * `run`, nicht über `compute`.
  */
 export interface AnyComputeEntry {
   readonly input: ZodType;
   readonly compute: (params: never) => Rational;
+  readonly run: (params: unknown) => Rational | undefined;
 }
 
 /**
- * Hilfsfunktion, die das Schema an die `compute`-Signatur koppelt. Ohne sie
- * müsste jeder Eintrag seine Parameter von Hand annotieren.
+ * Hilfsfunktion, die das Schema an die `compute`-Signatur koppelt und `run`
+ * daraus ableitet. Ohne sie müsste jeder Eintrag seine Parameter von Hand
+ * annotieren.
  */
-export function defineCompute<TSchema extends ZodType>(
-  entry: ComputeEntry<TSchema>,
-): ComputeEntry<TSchema> {
-  return entry;
-}
-
-/**
- * Führt einen Registry-Eintrag aus. Die Generik koppelt `safeParse`-Ausgabe und
- * `compute`-Eingabe, deshalb braucht es hier kein `as`.
- *
- * Rückgabe `undefined` heißt: Die Parameter passen nicht zum Input-Schema. Für
- * `instantiate` ist das kein Fehler, sondern ein verworfener Wurf.
- */
-export function runCompute<TSchema extends ZodType>(
-  entry: ComputeEntry<TSchema>,
-  params: unknown,
-): Rational | undefined {
-  const parsed = entry.input.safeParse(params);
-  if (!parsed.success) return undefined;
-  return entry.compute(parsed.data);
+export function defineCompute<TSchema extends ZodType>(entry: {
+  readonly input: TSchema;
+  readonly compute: (params: output<TSchema>) => Rational;
+}): ComputeEntry<TSchema> {
+  return {
+    input: entry.input,
+    compute: entry.compute,
+    run: (params) => {
+      const parsed = entry.input.safeParse(params);
+      return parsed.success ? entry.compute(parsed.data) : undefined;
+    },
+  };
 }
 
 /** Konkreter Wert eines Parameters, wie er in `Attempt.params` persistiert wird. */
