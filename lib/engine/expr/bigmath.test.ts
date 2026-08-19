@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ExpressionError } from "../errors";
-import { binomial, exactSqrt, factorial, permutations, power } from "./bigmath";
+import { binomial, exactSqrt, factorial, permutations } from "./bigmath";
 
 describe("factorial", () => {
   const cases: ReadonlyArray<readonly [bigint, string]> = [
@@ -62,20 +62,6 @@ describe("permutations", () => {
 
   it.each(cases)("permutations(%s, %s) = %s", (n, k, expected) => {
     expect(permutations(n, k).toString()).toBe(expected);
-  });
-});
-
-describe("power", () => {
-  it("rechnet exakt", () => {
-    expect(power(2n, 64n).toString()).toBe("18446744073709551616");
-  });
-
-  it("lehnt negative Exponenten ab", () => {
-    expect(() => power(2n, -1n)).toThrow(ExpressionError);
-  });
-
-  it("lehnt Exponenten jenseits der Grenze ab", () => {
-    expect(() => power(2n, 4097n)).toThrow(ExpressionError);
   });
 });
 

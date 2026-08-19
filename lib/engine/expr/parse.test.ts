@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ExpressionError } from "../errors";
 import { parseComparison, parseExpression, variablesOf } from "./parse";
+import { formatNum } from "./numeric";
 import { parseNumberLiteral, tokenize } from "./tokenize";
 
 describe("parseNumberLiteral", () => {
@@ -16,13 +17,20 @@ describe("parseNumberLiteral", () => {
   ];
 
   it.each(exact)("%s bleibt exakt ganzzahlig (%s)", (text, expected) => {
-    const value = parseNumberLiteral(text);
-    expect(value.kind).toBe("int");
-    expect(value.kind === "int" ? value.value.toString() : "").toBe(expected);
+    expect(formatNum(parseNumberLiteral(text))).toBe(expected);
   });
 
-  it.each([["2.5"], ["0.1"], ["1.5e-1"]])("%s wird float", (text) => {
-    expect(parseNumberLiteral(text).kind).toBe("float");
+  // Ab M1 wird auch das exakt gelesen — als Bruch, nicht als float64.
+  const fractions: ReadonlyArray<readonly [string, string]> = [
+    ["2.5", "5/2"],
+    ["0.1", "1/10"],
+    ["1.5e-1", "3/20"],
+  ];
+
+  it.each(fractions)("%s wird der exakte Bruch %s", (text, expected) => {
+    const value = parseNumberLiteral(text);
+    expect(value.kind).toBe("exact");
+    expect(formatNum(value)).toBe(expected);
   });
 
   it("lehnt absurd große Exponenten ab", () => {
@@ -51,8 +59,11 @@ describe("parseExpression — Struktur", () => {
     expect(parseExpression("2*3!")).toEqual({
       kind: "binary",
       op: "*",
-      left: { kind: "number", value: { kind: "int", value: 2n } },
-      right: { kind: "factorial", operand: { kind: "number", value: { kind: "int", value: 3n } } },
+      left: { kind: "number", value: { kind: "exact", value: { num: 2n, den: 1n } } },
+      right: {
+        kind: "factorial",
+        operand: { kind: "number", value: { kind: "exact", value: { num: 3n, den: 1n } } },
+      },
     });
   });
 

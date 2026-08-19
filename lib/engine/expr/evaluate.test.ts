@@ -41,9 +41,14 @@ describe("evaluate — exakt statt float", () => {
     expect(run("7/7")).toBe("1");
   });
 
-  it("wird float, wenn die Division nicht aufgeht", () => {
-    expect(run("5/2")).toBe("2.5");
-    expect(run("1/3")).toBe("0.3333333333333333");
+  it("bleibt exakt, wenn die Division nicht aufgeht", () => {
+    expect(run("5/2")).toBe("5/2");
+    expect(run("1/3")).toBe("1/3");
+    // Der Bruch bleibt bis zum Vergleich stehen, statt in float64 zu zerfallen.
+    expect(run("1/3 + 1/6")).toBe("1/2");
+    expect(run("2.5 * 4")).toBe("10");
+    // Der Fall, an dem float64 scheitert:
+    expect(evaluateComparison(parseComparison("0.1 + 0.2 == 0.3"))).toBe(true);
   });
 
   it("zieht Wurzeln exakt, wenn sie aufgehen", () => {

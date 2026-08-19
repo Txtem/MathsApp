@@ -3,6 +3,7 @@ import { TemplateUnsatisfiableError, UnknownComputeRefError } from "./errors";
 import { checkConstraints, constraintVariables, RESULT_KEY } from "./generate/constraints";
 import { makeRng } from "./generate/rng";
 import { sampleParams } from "./generate/sample";
+import { toStorageString } from "./expr/rational";
 import { interpolate } from "./render/interpolate";
 import { type Instance, type ParamValue, runCompute, type Template } from "./types";
 
@@ -46,7 +47,7 @@ export function instantiate(tpl: Template, seed: string): Instance {
       seed,
       params,
       questionText: interpolate(tpl.question_text, params),
-      expectedAnswer: result,
+      expectedAnswer: toStorageString(result),
       answerType: tpl.answer_type,
     };
   }

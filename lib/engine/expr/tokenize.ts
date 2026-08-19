@@ -1,5 +1,6 @@
 import { ExpressionError } from "../errors";
-import { floatNum, intNum, type Num } from "./numeric";
+import { exactNum, type Num } from "./numeric";
+import { fromDecimalString } from "./rational";
 
 /**
  * Tokenizer für die Ausdrucksgrammatik der Engine. Bewusst klein: Er kennt
@@ -25,27 +26,11 @@ const NUMBER = /^\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|^\.\d+(?:[eE][+-]?\d+)?/;
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*/;
 
 /**
- * Zahlliteral → `Num`, exakt wo möglich. `2.5e3` ist 2500 und bleibt damit
- * ganzzahlig; `2.5` wird `float`.
+ * Zahlliteral → `Num`, verlustfrei. `2.5` wird der Bruch `5/2`, nicht 2.5 in
+ * float64 — siehe DECISIONS.md, D-06.
  */
 export function parseNumberLiteral(text: string): Num {
-  const match = /^(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(text);
-  if (!match) throw new ExpressionError(`Ungültige Zahl: "${text}".`);
-
-  const [, whole = "", fraction = "", exponentText] = match;
-  const digits = `${whole}${fraction}`;
-  if (digits === "") throw new ExpressionError(`Ungültige Zahl: "${text}".`);
-
-  const exponent = BigInt(exponentText ?? "0") - BigInt(fraction.length);
-  const mantissa = BigInt(digits);
-
-  if (exponent >= 0n) {
-    if (exponent > 4096n) throw new ExpressionError(`Zahl zu groß: "${text}".`);
-    return intNum(mantissa * 10n ** exponent);
-  }
-  const divisor = 10n ** -exponent;
-  if (mantissa % divisor === 0n) return intNum(mantissa / divisor);
-  return floatNum(Number(text));
+  return exactNum(fromDecimalString(text));
 }
 
 export function tokenize(input: string): readonly Token[] {

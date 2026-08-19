@@ -1,6 +1,7 @@
 import { ExpressionError, TemplateConfigError } from "../errors";
 import { evaluateComparison } from "../expr/evaluate";
-import { fromNumber, negNum, type Num } from "../expr/numeric";
+import { exactNum, fromNumber, negNum, type Num } from "../expr/numeric";
+import type { Rational } from "../expr/rational";
 import { parseComparison, variablesOf } from "../expr/parse";
 import { parseNumberLiteral } from "../expr/tokenize";
 import type { ParamValue } from "../types";
@@ -14,12 +15,14 @@ import type { ParamValue } from "../types";
  * durchgehen — sonst läuft der Generator stumm in `TemplateUnsatisfiableError`.
  */
 
-export type ConstraintScope = Readonly<Record<string, ParamValue>>;
+export type ConstraintScope = Readonly<Record<string, ParamValue | Rational>>;
 
 /** Name, unter dem das Rechenergebnis im Scope der zweiten Prüfung steht. */
 export const RESULT_KEY = "result";
 
-function toNum(name: string, value: ParamValue): Num {
+function toNum(name: string, value: ParamValue | Rational): Num {
+  // Das Rechenergebnis kommt als exakter Bruch herein, nicht als Zahl.
+  if (typeof value === "object") return exactNum(value);
   if (typeof value === "number") return fromNumber(value);
   if (typeof value === "string") {
     // Ergebnisse der Compute-Registry sind Dezimalstrings und dürfen negativ sein;

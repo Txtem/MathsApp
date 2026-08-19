@@ -136,7 +136,8 @@ describe("grade — Musterlösung und Typen", () => {
       isCorrect: true,
       normalized: "120",
     });
-    const asFloat = grade("2.5", "120", "integer");
-    expect(asFloat.ok && asFloat.normalized).toBe("2.5");
+    // Kommazahlen werden exakt gelesen und deshalb als Bruch zurückgemeldet.
+    const asFraction = grade("2.5", "120", "integer");
+    expect(asFraction.ok && asFraction.normalized).toBe("5/2");
   });
 });

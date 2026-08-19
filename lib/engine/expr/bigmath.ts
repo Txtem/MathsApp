@@ -3,12 +3,11 @@ import { ExpressionError } from "../errors";
 /**
  * Exakte Ganzzahlfunktionen auf BigInt. Rein, ohne I/O.
  *
- * Die Obergrenzen sind kein Rechenlimit, sondern ein Schutz gegen Eingaben, die
+ * Die Obergrenze ist kein Rechenlimit, sondern ein Schutz gegen Eingaben, die
  * den Server beschäftigen sollen: `100000!` hat über 450.000 Stellen.
  */
 
 export const MAX_FACTORIAL_INPUT = 2000n;
-export const MAX_POW_EXPONENT = 4096n;
 
 export function factorial(n: bigint): bigint {
   if (n < 0n) throw new ExpressionError("Fakultät ist für negative Zahlen nicht definiert.");
@@ -43,14 +42,6 @@ export function permutations(n: bigint, k: bigint): bigint {
   let acc = 1n;
   for (let i = 0n; i < k; i++) acc *= n - i;
   return acc;
-}
-
-export function power(base: bigint, exponent: bigint): bigint {
-  if (exponent < 0n) throw new ExpressionError("Negative Exponenten liefern keine Ganzzahl.");
-  if (exponent > MAX_POW_EXPONENT) {
-    throw new ExpressionError(`Exponent nur bis ${MAX_POW_EXPONENT} erlaubt.`);
-  }
-  return base ** exponent;
 }
 
 /** Exakte Ganzzahlwurzel, oder `undefined`, wenn `n` keine Quadratzahl ist. */

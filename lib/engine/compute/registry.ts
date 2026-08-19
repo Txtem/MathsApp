@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { fromBigInt } from "../expr/rational";
 import { type AnyComputeEntry, defineCompute } from "../types";
 import { add, subtract } from "./arithmetik";
 
@@ -16,12 +17,12 @@ const Operands = z.object({
 export const registry = {
   "arithmetik.add": defineCompute({
     input: Operands,
-    compute: ({ a, b }) => add(BigInt(a), BigInt(b)).toString(),
+    compute: ({ a, b }) => fromBigInt(add(BigInt(a), BigInt(b))),
   }),
 
   "arithmetik.subtract": defineCompute({
     input: Operands,
-    compute: ({ a, b }) => subtract(BigInt(a), BigInt(b)).toString(),
+    compute: ({ a, b }) => fromBigInt(subtract(BigInt(a), BigInt(b))),
   }),
 } as const satisfies Record<string, AnyComputeEntry>;
 

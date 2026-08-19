@@ -1,5 +1,7 @@
 import type { ZodType, output } from "zod";
 
+import type { Rational } from "./expr/rational";
+
 /**
  * Ein Eintrag der Compute-Registry: ein Zod-Schema für die Parameter und eine
  * reine Funktion, die daraus das Ergebnis berechnet.
@@ -9,7 +11,7 @@ import type { ZodType, output } from "zod";
  */
 export interface ComputeEntry<TSchema extends ZodType> {
   readonly input: TSchema;
-  readonly compute: (params: output<TSchema>) => string;
+  readonly compute: (params: output<TSchema>) => Rational;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface ComputeEntry<TSchema extends ZodType> {
  */
 export interface AnyComputeEntry {
   readonly input: ZodType;
-  readonly compute: (params: never) => string;
+  readonly compute: (params: never) => Rational;
 }
 
 /**
@@ -43,7 +45,7 @@ export function defineCompute<TSchema extends ZodType>(
 export function runCompute<TSchema extends ZodType>(
   entry: ComputeEntry<TSchema>,
   params: unknown,
-): string | undefined {
+): Rational | undefined {
   const parsed = entry.input.safeParse(params);
   if (!parsed.success) return undefined;
   return entry.compute(parsed.data);
