@@ -9,7 +9,7 @@ import { add, subtract } from "./arithmetik";
  * nie ein Codepfad. Kein `eval`, kein dynamischer Import.
  */
 
-const Operands = z.object({
+const Operands = z.strictObject({
   a: z.number().int(),
   b: z.number().int(),
 });

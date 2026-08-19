@@ -1,23 +1,22 @@
-import { devTemplates } from "@/lib/content/dev-templates";
+import { getTopicOffers, type TopicOffer } from "@/lib/content/load";
 
-import { type TopicOption, TopicPicker } from "./topic-picker";
-
-/** "arithmetik.addition" → "Addition" */
-function label(topic: string): string {
-  const leaf = topic.split(".").at(-1) ?? topic;
-  return leaf.charAt(0).toUpperCase() + leaf.slice(1);
-}
+import { type TopicChoice, TopicPicker } from "./topic-picker";
 
 /**
- * Themenauswahl. Die Liste entsteht aus den vorhandenen Templates — in M1
- * kommen die Topics aus dem YAML-Content, die Seite bleibt gleich.
+ * Themenauswahl. Die Liste kommt aus `content/topics.yaml` — dieselbe Quelle,
+ * gegen die auch die Templates geprüft werden. Damit gibt es keine zweite
+ * Liste, die auseinanderlaufen kann.
+ *
+ * Themen ohne Aufgaben werden gar nicht erst angeboten.
  */
 export default function PracticePage() {
-  const topics = [...new Set(devTemplates.map((template) => template.topic))].sort();
-  const options: readonly TopicOption[] = [
-    { label: "Alle Themen", topic: null },
-    ...topics.map((topic) => ({ label: label(topic), topic })),
-  ];
+  const offers = getTopicOffers();
+  const total = offers.reduce((sum, offer) => sum + offer.templateCount, 0);
+
+  const choices: readonly TopicChoice[] = [
+    { label: "Alle Themen", topic: null, templateCount: total, level: 0 },
+    ...offers.flatMap(flatten),
+  ].filter((choice) => choice.templateCount > 0);
 
   return (
     <div className="flex flex-col gap-8">
@@ -29,7 +28,14 @@ export default function PracticePage() {
           Du bekommst so lange neue Aufgaben, wie du magst.
         </p>
       </div>
-      <TopicPicker options={options} />
+      <TopicPicker choices={choices} />
     </div>
   );
+}
+
+function flatten(offer: TopicOffer, level = 1): readonly TopicChoice[] {
+  return [
+    { label: offer.label, topic: offer.path, templateCount: offer.templateCount, level },
+    ...offer.children.flatMap((child) => flatten(child, level + 1)),
+  ];
 }

@@ -1,0 +1,30 @@
+# Themenbaum — die einzige Quelle gültiger Topic-Pfade.
+#
+# Ein Template zeigt immer auf ein *Blatt* (kombinatorik.permutation), ein
+# Session-Filter darf auf jeder Ebene stehen (kombinatorik) und umfasst dann
+# alle Blätter darunter. Die Beschriftungen speisen die Themenauswahl-Seite,
+# damit es keine zweite Liste gibt, die auseinanderlaufen kann.
+
+arithmetik:
+  label: Grundrechenarten
+  children:
+    grundrechenarten:
+      label: Addition und Subtraktion
+
+kombinatorik:
+  label: Kombinatorik
+  children:
+    permutation:
+      label: Permutationen
+    variation:
+      label: Variationen (geordnete Auswahl)
+    kombination:
+      label: Kombinationen (ungeordnete Auswahl)
+    verteilung:
+      label: Verteilungen (Stars and Bars)
+
+wahrscheinlichkeit:
+  label: Wahrscheinlichkeitsrechnung
+  children:
+    hypergeometrisch:
+      label: Hypergeometrische Verteilung

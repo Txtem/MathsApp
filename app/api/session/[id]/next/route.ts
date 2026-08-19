@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 
 import { AnswerTypeSchema, toNextQuestionResponse } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
-import { devTemplates } from "@/lib/content/dev-templates";
+import { getTemplates } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
 import { DEV_USER_ID } from "@/lib/db/dev-user";
 import { instantiate } from "@/lib/engine/instantiate";
@@ -42,7 +42,7 @@ export async function POST(
   });
 
   const template = selectTemplate(
-    devTemplates,
+    getTemplates(),
     {
       topicFilter: session.topicFilter,
       recentTemplateIds: recent.map((attempt) => attempt.templateId),

@@ -1,7 +1,26 @@
 import { describe, expect, it } from "vitest";
 
-import { devTemplates } from "@/lib/content/dev-templates";
 import type { Template } from "@/lib/engine/types";
+
+/**
+ * Eigene Fixtures statt echter Templates: Die Auswahl soll hier geprüft werden,
+ * nicht der Content. Ein neues Template im Repo darf diese Tests nicht kippen.
+ */
+const base = {
+  version: 1,
+  difficulty: 1,
+  target_time_seconds: 30,
+  compute_ref: "arithmetik.add",
+  answer_type: "integer",
+  param_spec: { a: { type: "int", min: 1, max: 9 }, b: { type: "int", min: 1, max: 9 } },
+  constraints: [],
+  question_text: "{{a}} + {{b}}",
+} satisfies Omit<Template, "id" | "topic">;
+
+const devTemplates: readonly Template[] = [
+  { ...base, id: "aufg_00001", topic: "arithmetik.addition" },
+  { ...base, id: "aufg_00002", topic: "arithmetik.subtraktion" },
+];
 
 import { matchesTopic, selectTemplate } from "./next-template";
 

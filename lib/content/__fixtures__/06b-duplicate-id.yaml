@@ -1,0 +1,12 @@
+# Prüfung 6: dieselbe id wie 06a.
+id: aufg_90006
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 2
+target_time_seconds: 30
+compute_ref: arithmetik.subtract
+answer_type: integer
+param_spec:
+  a: { type: int, min: 5, max: 9 }
+  b: { type: int, min: 1, max: 4 }
+question_text: "Berechne: {{a}} - {{b}}"

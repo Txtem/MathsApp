@@ -1,0 +1,14 @@
+# Prüfung 9: das Constraint nennt einen Namen, den es nicht gibt.
+id: aufg_90009
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 1
+target_time_seconds: 30
+compute_ref: arithmetik.add
+answer_type: integer
+param_spec:
+  a: { type: int, min: 1, max: 9 }
+  b: { type: int, min: 1, max: 9 }
+constraints:
+  - "c >= 1"
+question_text: "Berechne: {{a}} + {{b}}"

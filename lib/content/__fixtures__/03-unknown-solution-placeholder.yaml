@@ -1,0 +1,13 @@
+# Prüfung 3: Im Lösungstext ist nur param_spec plus result erlaubt.
+id: aufg_90003
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 1
+target_time_seconds: 30
+compute_ref: arithmetik.add
+answer_type: integer
+param_spec:
+  a: { type: int, min: 1, max: 9 }
+  b: { type: int, min: 1, max: 9 }
+question_text: "Berechne: {{a}} + {{b}}"
+solution_text: "{{a}} + {{b}} = {{summe}}"

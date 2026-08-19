@@ -1,0 +1,13 @@
+# Prüfung 8: round_to gibt es nur bei answer_type numeric.
+id: aufg_90008
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 1
+target_time_seconds: 30
+compute_ref: arithmetik.add
+answer_type: integer
+round_to: 4
+param_spec:
+  a: { type: int, min: 1, max: 9 }
+  b: { type: int, min: 1, max: 9 }
+question_text: "Berechne: {{a}} + {{b}}"

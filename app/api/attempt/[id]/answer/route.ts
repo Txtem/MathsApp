@@ -9,7 +9,7 @@ import {
   ParamsSchema,
 } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
-import { getDevTemplate } from "@/lib/content/dev-templates";
+import { getTemplate } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
 import { DEV_USER_ID } from "@/lib/db/dev-user";
 import { grade } from "@/lib/engine/grade";
@@ -105,7 +105,7 @@ function buildSolution(
   params: unknown,
   expectedAnswer: string,
 ): { solutionText?: string } {
-  const template = getDevTemplate(templateId);
+  const template = getTemplate(templateId);
   if (!template || template.version !== templateVersion) return {};
 
   const parsedParams = ParamsSchema.safeParse(params);

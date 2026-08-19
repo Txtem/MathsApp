@@ -1,0 +1,30 @@
+id: aufg_00002
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 1
+target_time_seconds: 30
+
+compute_ref: arithmetik.subtract
+answer_type: integer
+
+param_spec:
+  a:
+    type: int
+    min: 20
+    max: 99
+  b:
+    type: int
+    min: 3
+    max: 89
+
+# Erst nach der Berechnung entscheidbar: der zweite Constraint-Durchgang.
+constraints:
+  - "result >= 0"
+
+question_text: |
+  Berechne: {{a}} - {{b}}
+
+solution_text: |
+  ${{a}} - {{b}} = {{result}}$
+
+tags: [subtraktion, kopfrechnen]

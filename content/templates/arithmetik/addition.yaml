@@ -1,0 +1,31 @@
+id: aufg_00001
+version: 1
+topic: arithmetik.grundrechenarten
+difficulty: 1
+target_time_seconds: 30
+
+compute_ref: arithmetik.add
+answer_type: integer
+
+param_spec:
+  a:
+    type: int
+    min: 12
+    max: 89
+  b:
+    type: int
+    min: 12
+    max: 89
+
+# Deckelt die Aufgabe auf Kopfrechenniveau. Wirft rund die Hälfte der
+# Parameterpaare weg — genau der Rejection-Sampling-Fall, für den es MAX_TRIES gibt.
+constraints:
+  - "result <= 100"
+
+question_text: |
+  Berechne: {{a}} + {{b}}
+
+solution_text: |
+  ${{a}} + {{b}} = {{result}}$
+
+tags: [addition, kopfrechnen]
