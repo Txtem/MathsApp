@@ -134,3 +134,43 @@ Dezimalwert, und der Aufgabentext sagt das ausdrücklich.
 **Grund:** Ohne diese Festlegung ist `1.77` gegen `0.0177` nicht entscheidbar — beides
 wäre je nach gemeinter Einheit richtig. Die Alternative wäre ein Einheitenfeld im
 Antwortformat, das für den Nutzen zu viel Komplexität kostet.
+
+---
+
+## D-10 — Das Komma entscheidet sich am Kontext, nicht am `answer_type`
+*M1*
+
+`SPEC-M1.md` Abschnitt F schrieb für `numeric` schlicht `,` → `.` vor. Umgesetzt ist eine
+Regel, die zwei Fälle unterscheidet:
+
+- Enthält die Eingabe **Buchstaben**, ist sie ein Ausdruck mit Funktionsaufrufen. Kommas
+  bleiben dann Argumenttrenner: `combinations(4,2)*combinations(48,4)/combinations(52,6)`.
+- Sonst ist sie eine reine Zahl. Pro Zahl gilt: beide Trennerarten vorhanden ⇒ die hintere
+  ist der Dezimaltrenner; ein Trenner mehrfach ⇒ Tausendertrennung, aber nur bei sauberer
+  Dreiergruppierung; genau ein Trenner ⇒ Dezimaltrenner.
+
+**Grund:** Die pauschale Regel hätte genau die Antworten zerstört, für die `numeric` in M1
+gebraucht wird — die hypergeometrische Verteilung wird typischerweise als Quotient von
+Binomialkoeffizienten eingegeben. Umgekehrt muss `0,0177` lesbar bleiben.
+
+Die Zahl-Regel greift **pro Zahl**, nicht auf den ganzen Ausdruck: `0.5-0.125` sind zwei
+Dezimalzahlen und nicht eine Zahl mit zwei Tausenderpunkten. Passt eine Gruppierung zu
+keinem Fall (`0,3,7`), bleibt sie stehen und scheitert am Parser — „nicht lesbar" ist
+ehrlicher als eine geratene Zahl. D-03 (`integer` behält das Komma als Argumenttrenner)
+bleibt unberührt.
+
+---
+
+## D-11 — `fraction` vergleicht Werte, nicht Schreibweisen
+*M1*
+
+`SPEC-M1.md` verlangt für `fraction` „Zähler und Nenner exakt". Da `Rational` immer gekürzt
+ist, ist das gleichbedeutend mit Wertgleichheit: `10/24`, `5/12` und `1/3+1/12` gelten alle.
+Eine exakt darstellbare Dezimaleingabe wird ebenfalls akzeptiert — `0.375` für `3/8`.
+
+**Grund:** Der Grader prüft, ob jemand den richtigen Wert ausgerechnet hat, nicht ob er ihn
+in der erwarteten Schreibweise notiert. Eine gerundete Eingabe wie `0.4167` für `5/12` ist
+dagegen schlicht falsch, weil sie einen anderen Wert bezeichnet.
+
+Wenn ein Template später auf der Bruchschreibweise bestehen soll, ist das eine
+Formatprüfung im Template, keine Änderung am Vergleich.

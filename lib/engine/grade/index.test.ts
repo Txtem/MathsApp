@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { InvalidExpectedAnswerError, UnsupportedAnswerTypeError } from "../errors";
 import type { AnswerType } from "../types";
-import { grade } from "./index";
+import { fromBigInt } from "../expr/rational";
+import { grade, toExpectedRational } from "./index";
 
 /** 20! — jenseits von `Number.MAX_SAFE_INTEGER`. */
 const BIG = "2432902008176640000";
@@ -111,20 +112,37 @@ describe("grade — nicht lesbare Eingaben", () => {
 });
 
 describe("grade — Musterlösung und Typen", () => {
-  it("akzeptiert die Musterlösung als string oder number", () => {
+  it("akzeptiert die Musterlösung als Speicherform oder als Bruch", () => {
     expect(grade("42", "42", "integer").ok).toBe(true);
-    expect(grade("42", 42, "integer")).toEqual({ ok: true, isCorrect: true, normalized: "42" });
+    expect(grade("42", fromBigInt(42n), "integer")).toEqual({
+      ok: true,
+      isCorrect: true,
+      normalized: "42",
+    });
   });
 
   it("meldet eine kaputte Musterlösung als Serverfehler, nicht als falsche Antwort", () => {
     expect(() => grade("120", "120.5", "integer")).toThrow(InvalidExpectedAnswerError);
-    expect(() => grade("120", null, "integer")).toThrow(InvalidExpectedAnswerError);
-    expect(() => grade("120", {}, "integer")).toThrow(InvalidExpectedAnswerError);
-    expect(() => grade("120", 1.5, "integer")).toThrow(InvalidExpectedAnswerError);
+    expect(() => grade("120", "abc", "integer")).toThrow(InvalidExpectedAnswerError);
+    // Ein Bruch ist bei answer_type integer keine gültige Musterlösung.
+    expect(() => grade("120", "3/8", "integer")).toThrow(InvalidExpectedAnswerError);
+  });
+
+  it("prüft die Musterlösung an der Grenze, nicht erst im Vergleich", () => {
+    // Was aus der Datenbank kommt, ist zur Übersetzungszeit unbekannt —
+    // deshalb hat der Validator eine eigene Suite.
+    for (const broken of [null, undefined, {}, 1.5, [], true]) {
+      expect(() => toExpectedRational(broken), String(broken)).toThrow(
+        InvalidExpectedAnswerError,
+      );
+    }
+    expect(toExpectedRational(42)).toEqual({ num: 42n, den: 1n });
+    expect(toExpectedRational("3/8")).toEqual({ num: 3n, den: 8n });
+    expect(toExpectedRational(7n)).toEqual({ num: 7n, den: 1n });
   });
 
   it("wirft bei noch nicht implementierten answer_types", () => {
-    const later: readonly AnswerType[] = ["numeric", "fraction", "set", "tuple", "text", "choice"];
+    const later: readonly AnswerType[] = ["set", "tuple", "text"];
     for (const type of later) {
       expect(() => grade("1", "1", type), type).toThrow(UnsupportedAnswerTypeError);
     }
