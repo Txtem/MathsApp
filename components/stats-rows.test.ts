@@ -5,7 +5,13 @@ import type { TopicStats } from "@/lib/selection/scoring";
 
 import {
   type AnsweredDuration,
+  countSnaps,
+  INTERRUPTED_FACTOR,
   median,
+  medianTime,
+  SNAP_MIN_COUNT,
+  SNAP_SHARE,
+  TIME_MIN_SAMPLES,
   type TopicTotals,
   toStatsGroups,
   toSummary,
@@ -47,7 +53,7 @@ function stats(topic: string, correct: number, answered: number): TopicStats {
 
 describe("toStatsGroups", () => {
   it("zeigt jedes Thema mit Aufgaben, auch ohne einen einzigen Versuch", () => {
-    const groups = toStatsGroups(GRUPPEN, totals([]), recent([]), NOW);
+    const groups = toStatsGroups(GRUPPEN, totals([]), recent([]), [], NOW);
 
     expect(groups).toHaveLength(1);
     expect(groups[0].rows.map((row) => row.topic)).toEqual([
@@ -65,7 +71,7 @@ describe("toStatsGroups", () => {
   });
 
   it("übernimmt Gruppierung und Beschriftung aus der Themenauswahl", () => {
-    const groups = toStatsGroups(GRUPPEN, totals([]), recent([]), NOW);
+    const groups = toStatsGroups(GRUPPEN, totals([]), recent([]), [], NOW);
     expect(groups[0]).toMatchObject({ topic: "kombinatorik", label: "Kombinatorik" });
   });
 
@@ -74,6 +80,7 @@ describe("toStatsGroups", () => {
       GRUPPEN,
       totals([{ topic: "kombinatorik.permutation", attempts: 8, correct: 6, dueAt: MORGEN }]),
       recent([]),
+      [],
       NOW,
     );
 
@@ -85,6 +92,7 @@ describe("toStatsGroups", () => {
       GRUPPEN,
       totals([{ topic: "kombinatorik.permutation", attempts: 30, correct: 15, dueAt: MORGEN }]),
       recent([stats("kombinatorik.permutation", 9, 10)]),
+      [],
       NOW,
     );
 
@@ -99,6 +107,7 @@ describe("toStatsGroups", () => {
       GRUPPEN,
       totals([]),
       recent([stats("kombinatorik.permutation", 1, 1)]),
+      [],
       NOW,
     );
 
@@ -112,6 +121,7 @@ describe("toStatsGroups", () => {
         GRUPPEN,
         totals([{ topic: "kombinatorik.permutation", attempts: 3, correct: 2, dueAt }]),
         recent([]),
+        [],
         NOW,
       );
       return groups[0].rows[0];
@@ -157,46 +167,196 @@ describe("median", () => {
   });
 });
 
-describe("toSummary", () => {
-  const durations: readonly AnsweredDuration[] = [
-    { durationMs: 20_000, targetMs: 30_000 },
-    { durationMs: 40_000, targetMs: 60_000 },
-    { durationMs: 90_000, targetMs: 60_000 },
-  ];
+/** Eine beantwortete Aufgabe. `targetMs` ist die Zielzeit des Templates. */
+function attempt(overrides: Partial<AnsweredDuration> = {}): AnsweredDuration {
+  return {
+    topic: "kombinatorik.permutation",
+    durationMs: 30_000,
+    targetMs: 60_000,
+    isCorrect: true,
+    ...overrides,
+  };
+}
 
+/** `count` richtige Antworten, jede mit dem Vielfachen `ratio` der Zielzeit. */
+function richtige(count: number, ratio: number): AnsweredDuration[] {
+  return Array.from({ length: count }, () => attempt({ durationMs: 60_000 * ratio }));
+}
+
+describe("medianTime", () => {
+  it("zeigt nichts, solange zu wenige richtige Antworten vorliegen", () => {
+    const zeit = medianTime(richtige(TIME_MIN_SAMPLES - 1, 1));
+    expect(zeit.relative).toBeNull();
+    expect(zeit.counted).toBe(TIME_MIN_SAMPLES - 1);
+  });
+
+  it("zeigt ab der Mindestzahl", () => {
+    expect(medianTime(richtige(TIME_MIN_SAMPLES, 1)).relative).toBe(1);
+  });
+
+  it("rechnet relativ zur Zielzeit, nicht in Sekunden", () => {
+    // Dieselbe absolute Dauer, aber halb so lange Zielzeit ⇒ doppelt so lang.
+    const gemischt = [
+      ...Array.from({ length: 3 }, () => attempt({ durationMs: 30_000, targetMs: 30_000 })),
+      ...Array.from({ length: 3 }, () => attempt({ durationMs: 30_000, targetMs: 30_000 })),
+    ];
+    expect(medianTime(gemischt).relative).toBe(1);
+
+    const langsam = richtige(5, 1.5);
+    expect(medianTime(langsam).relative).toBe(1.5);
+  });
+
+  it("rechnet nur mit richtigen Antworten", () => {
+    // Fünf richtige bei Zielzeit, dazu zwanzig sehr schnelle falsche. Die alte
+    // Definition hätte den Median dadurch nach unten gezogen; das war der
+    // Anlass für D-21.
+    const falsche = Array.from({ length: 20 }, () =>
+      attempt({ durationMs: 1_000, isCorrect: false }),
+    );
+    const zeit = medianTime([...richtige(5, 1), ...falsche]);
+
+    expect(zeit.relative).toBe(1);
+    expect(zeit.counted).toBe(5);
+  });
+
+  it("schnell und falsch verbessert die Zeit nicht", () => {
+    const ohne = medianTime(richtige(9, 1.4));
+    const mit = medianTime([
+      ...richtige(9, 1.4),
+      ...Array.from({ length: 50 }, () => attempt({ durationMs: 500, isCorrect: false })),
+    ]);
+    expect(mit.relative).toBe(ohne.relative);
+  });
+
+  it("lässt unterbrochene Aufgaben aus dem Median und zählt sie", () => {
+    const zeit = medianTime([
+      ...richtige(5, 1),
+      attempt({ durationMs: 60_000 * INTERRUPTED_FACTOR }),
+      attempt({ durationMs: 60_000 * 100 }),
+    ]);
+
+    expect(zeit.relative).toBe(1);
+    expect(zeit.counted).toBe(5);
+    expect(zeit.interrupted).toBe(2);
+  });
+
+  it("zählt genau am Zehnfachen schon als unterbrochen", () => {
+    const zeit = medianTime([
+      ...richtige(5, 1),
+      attempt({ durationMs: 60_000 * (INTERRUPTED_FACTOR - 0.01) }),
+    ]);
+    expect(zeit.interrupted).toBe(0);
+    expect(zeit.counted).toBe(6);
+  });
+
+  it("kann durch Unterbrechungen unter die Mindestzahl fallen", () => {
+    // Fünf richtige, davon vier unterbrochen: Dann steht die Zahl nicht mehr.
+    const zeit = medianTime([
+      ...richtige(1, 1),
+      ...Array.from({ length: 4 }, () => attempt({ durationMs: 60_000 * 50 })),
+    ]);
+    expect(zeit.relative).toBeNull();
+    expect(zeit.interrupted).toBe(4);
+  });
+
+  it("lässt Aufgaben ohne Template aus", () => {
+    // Ohne Zielzeit gibt es kein Verhältnis.
+    const zeit = medianTime([...richtige(5, 1), attempt({ targetMs: null, durationMs: 1 })]);
+    expect(zeit.counted).toBe(5);
+    expect(zeit.relative).toBe(1);
+  });
+
+  it("liefert ohne Daten nichts", () => {
+    expect(medianTime([])).toEqual({ relative: null, counted: 0, interrupted: 0 });
+  });
+});
+
+describe("countSnaps", () => {
+  const schnellFalsch = (topic: string) =>
+    attempt({ topic, isCorrect: false, durationMs: 60_000 * SNAP_SHARE - 1 });
+
+  it("zählt falsche Antworten deutlich unter der Zielzeit", () => {
+    const counts = countSnaps([schnellFalsch("a"), schnellFalsch("a"), schnellFalsch("b")]);
+    expect(counts.get("a")).toBe(2);
+    expect(counts.get("b")).toBe(1);
+  });
+
+  it("zählt richtige Antworten nicht, auch schnelle nicht", () => {
+    const counts = countSnaps([attempt({ topic: "a", durationMs: 100, isCorrect: true })]);
+    expect(counts.get("a")).toBeUndefined();
+  });
+
+  it("zählt langsame falsche Antworten nicht", () => {
+    // Wer lange gerechnet und sich verrechnet hat, hat nicht geraten.
+    const counts = countSnaps([
+      attempt({ topic: "a", isCorrect: false, durationMs: 60_000 * SNAP_SHARE }),
+      attempt({ topic: "a", isCorrect: false, durationMs: 55_000 }),
+    ]);
+    expect(counts.get("a")).toBeUndefined();
+  });
+
+  it("braucht eine Zielzeit", () => {
+    const counts = countSnaps([
+      attempt({ topic: "a", isCorrect: false, durationMs: 1, targetMs: null }),
+    ]);
+    expect(counts.get("a")).toBeUndefined();
+  });
+});
+
+describe("Schnellschüsse in der Zeile", () => {
+  function rowFor(anzahl: number) {
+    const answered = Array.from({ length: anzahl }, () =>
+      attempt({ topic: "kombinatorik.permutation", isCorrect: false, durationMs: 100 }),
+    );
+    const groups = toStatsGroups(
+      GRUPPEN,
+      totals([{ topic: "kombinatorik.permutation", attempts: 10, correct: 2, dueAt: MORGEN }]),
+      recent([]),
+      answered,
+      NOW,
+    );
+    return groups[0].rows[0];
+  }
+
+  it("zeigt nichts, solange es zu wenige sind", () => {
+    expect(rowFor(SNAP_MIN_COUNT - 1).snapAnswers).toBeNull();
+  });
+
+  it("zeigt sie ab der Mindestzahl", () => {
+    expect(rowFor(SNAP_MIN_COUNT).snapAnswers).toBe(SNAP_MIN_COUNT);
+    expect(rowFor(7).snapAnswers).toBe(7);
+  });
+
+  it("bleibt bei einem Thema ohne Schnellschüsse leer", () => {
+    const groups = toStatsGroups(GRUPPEN, totals([]), recent([]), [], NOW);
+    expect(groups[0].rows.every((row) => row.snapAnswers === null)).toBe(true);
+  });
+});
+
+describe("toSummary", () => {
   it("summiert über alle Themen", () => {
     const summary = toSummary(
       [
         { topic: "a", attempts: 6, correct: 3, dueAt: null },
         { topic: "b", attempts: 4, correct: 4, dueAt: null },
       ],
-      durations,
+      richtige(5, 1),
     );
 
     expect(summary).toMatchObject({ attempts: 10, correct: 7, overallRate: 0.7 });
   });
 
-  it("liefert ohne Versuche keine Quote", () => {
-    expect(toSummary([], [])).toMatchObject({
+  it("liefert ohne Versuche weder Quote noch Zeit", () => {
+    expect(toSummary([], [])).toEqual({
       attempts: 0,
       correct: 0,
       overallRate: null,
-      medianDurationMs: null,
-      medianTargetMs: null,
+      time: { relative: null, counted: 0, interrupted: 0 },
     });
   });
 
-  it("stellt gemessene Zeit und Zielzeit gegenüber", () => {
-    const summary = toSummary([], durations);
-    expect(summary.medianDurationMs).toBe(40_000);
-    expect(summary.medianTargetMs).toBe(60_000);
-  });
-
-  it("lässt Aufgaben ohne Template aus dem Zeitvergleich", () => {
-    // Ohne Template gibt es keine Zielzeit — die gemessene Zeit stünde sonst
-    // gegen den Wert einer anderen Aufgabe.
-    const summary = toSummary([], [...durations, { durationMs: 1, targetMs: null }]);
-    expect(summary.medianDurationMs).toBe(40_000);
+  it("reicht die Medianzeit durch", () => {
+    expect(toSummary([], richtige(6, 1.25)).time.relative).toBe(1.25);
   });
 
   it("zählt Themen ohne Versuche nicht gegen die Quote", () => {

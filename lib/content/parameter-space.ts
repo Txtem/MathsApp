@@ -16,7 +16,7 @@ import type { ParamSpec, ParamValue, Template } from "@/lib/engine/types";
  * verlangt, dass jeder nicht-`const`-Parameter im Fragetext vorkommt. Zwei
  * verschiedene Kombinationen unterscheiden sich also in mindestens einem Wert,
  * der im Text steht, und ergeben verschiedene Fragetexte. Dieselbe Invariante
- * trägt den Dedup-Schlüssel in D-23 — und fällt mit ihr: Sobald ein Template
+ * trägt den Dedup-Schlüssel in D-25 — und fällt mit ihr: Sobald ein Template
  * einen Parameter zieht, der die Rechnung nicht berührt, misst diese Zahl
  * nicht mehr, was sie messen soll.
  */

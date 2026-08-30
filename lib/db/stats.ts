@@ -30,16 +30,22 @@ export async function loadTopicTotals(
 /** Eine beantwortete Aufgabe mit gemessener Zeit. */
 export interface AnsweredAttempt {
   readonly templateId: string;
+  readonly topic: string;
   readonly durationMs: number;
+  readonly isCorrect: boolean;
 }
 
 /**
- * Bearbeitungszeiten aller beantworteten Aufgaben.
+ * Alle beantworteten Aufgaben mit gemessener Zeit — richtige wie falsche.
+ *
+ * Beide werden gebraucht: Die Medianzeit rechnet nur mit den richtigen, die
+ * Schnellschüsse nur mit den falschen (D-21). Gefiltert wird deshalb erst in
+ * `components/stats-rows.ts`, nicht schon hier.
  *
  * Bewusst ohne Obergrenze: Ein Median über die Hälfte der Daten wäre kein
- * Median. Für einen einzelnen Übenden sind das einige tausend Zeilen mit je
- * zwei Spalten; wenn das je zum Problem wird, gehört die Zeit als Aggregat in
- * `TopicMastery` und nicht in eine größere Abfrage.
+ * Median. Für einen einzelnen Übenden sind das einige tausend schmale Zeilen;
+ * wenn das je zum Problem wird, gehört die Zeit als Aggregat in `TopicMastery`
+ * und nicht in eine größere Abfrage.
  */
 export async function loadAnsweredDurations(
   prisma: PrismaClient,
@@ -47,11 +53,15 @@ export async function loadAnsweredDurations(
 ): Promise<AnsweredAttempt[]> {
   const rows = await prisma.attempt.findMany({
     where: { userId, status: "ANSWERED", durationMs: { not: null } },
-    select: { templateId: true, durationMs: true },
+    select: { templateId: true, topic: true, durationMs: true, isCorrect: true },
   });
 
   return rows.map((row) => ({
     templateId: row.templateId,
+    topic: row.topic,
     durationMs: row.durationMs as number,
+    // `isCorrect` ist nullable, weil ein offener Attempt noch kein Urteil hat.
+    // Hier sind alle ANSWERED; alles außer `true` zählt als nicht richtig.
+    isCorrect: row.isCorrect === true,
   }));
 }

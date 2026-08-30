@@ -3,9 +3,11 @@ import Link from "next/link";
 import { dueLabel } from "@/components/due-label";
 import {
   type AnsweredDuration,
+  SNAP_SHARE,
   type StatsGroup,
   type StatsRow,
   type StatsSummary,
+  TIME_MIN_SAMPLES,
   toStatsGroups,
   toSummary,
 } from "@/components/stats-rows";
@@ -46,19 +48,25 @@ export default async function StatsPage() {
     loadAnsweredDurations(prisma, userId),
   ]);
 
-  const rows = toStatsGroups(
-    groups,
-    new Map(totals.map((entry) => [entry.topic, entry])),
-    new Map(recent.map((entry) => [entry.topic, entry])),
-    now,
-  );
-
   // Die Zielzeit steht im Template, nicht am Attempt. Fehlt das Template,
   // fällt die Aufgabe aus dem Zeitvergleich.
   const answered: AnsweredDuration[] = durations.map((entry) => {
     const target = getTemplate(entry.templateId)?.target_time_seconds;
-    return { durationMs: entry.durationMs, targetMs: target === undefined ? null : target * 1000 };
+    return {
+      topic: entry.topic,
+      durationMs: entry.durationMs,
+      targetMs: target === undefined ? null : target * 1000,
+      isCorrect: entry.isCorrect,
+    };
   });
+
+  const rows = toStatsGroups(
+    groups,
+    new Map(totals.map((entry) => [entry.topic, entry])),
+    new Map(recent.map((entry) => [entry.topic, entry])),
+    answered,
+    now,
+  );
 
   const summary = toSummary(totals, answered);
 
@@ -102,16 +110,21 @@ function Summary({ summary }: { summary: StatsSummary }) {
     <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-xl border border-zinc-200 bg-zinc-200 dark:border-zinc-800 dark:bg-zinc-800">
       <Stat label="Versuche" value={String(summary.attempts)} />
       <Stat label="Quote insgesamt" value={formatRate(summary.overallRate)} />
-      <Stat label="Zeit (Median)" value={formatDurationComparison(summary)} />
+      <Stat
+        label="Medianzeit bei richtigen Antworten"
+        value={formatRelative(summary.time.relative)}
+        note={timeNote(summary.time)}
+      />
     </dl>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
     <div className="flex flex-col gap-1 bg-white px-5 py-4 dark:bg-zinc-900">
       <dt className="text-xs font-semibold uppercase tracking-widest text-zinc-500">{label}</dt>
       <dd className="text-lg text-zinc-900 tabular-nums dark:text-zinc-50">{value}</dd>
+      {note ? <dd className="text-xs text-zinc-500">{note}</dd> : null}
     </div>
   );
 }
@@ -151,7 +164,25 @@ function Numbers({ row, now }: { row: StatsRow; now: Date }) {
       <span title="Quote über die letzten zehn beantworteten Aufgaben">
         zuletzt {formatRate(row.recentRate)}
       </span>
+      <Snaps row={row} />
       <Due row={row} now={now} />
+    </span>
+  );
+}
+
+/**
+ * Schnell und falsch — geraten statt gerechnet. Erscheint erst, wenn es
+ * mehrfach vorkam; einmal ist Zufall (D-21).
+ */
+function Snaps({ row }: { row: StatsRow }) {
+  if (row.snapAnswers === null) return null;
+
+  return (
+    <span
+      className="text-amber-700 dark:text-amber-500"
+      title={`Falsche Antworten in weniger als ${Math.round(SNAP_SHARE * 100)} % der Zielzeit`}
+    >
+      {row.snapAnswers}× geraten
     </span>
   );
 }
@@ -173,13 +204,26 @@ function formatRate(rate: number | null): string {
   return rate === null ? "—" : `${Math.round(rate * 100)} %`;
 }
 
-function formatSeconds(ms: number): string {
-  return `${Math.round(ms / 1000)} s`;
+/**
+ * „1,3× Zielzeit". Absolute Sekunden wären über Aufgabentypen hinweg nicht
+ * vergleichbar (D-21).
+ *
+ * Von Hand formatiert statt über `Intl`: Das Ergebnis hängt sonst vom
+ * Gebietsschema der Laufzeit ab — dieselbe Überlegung wie bei den Terminen
+ * (D-22).
+ */
+function formatRelative(relative: number | null): string {
+  if (relative === null) return "—";
+  return `${(Math.round(relative * 10) / 10).toFixed(1).replace(".", ",")}× Zielzeit`;
 }
 
-/** „42 s von 60 s" — gemessen gegen die Zielzeit derselben Aufgaben. */
-function formatDurationComparison(summary: StatsSummary): string {
-  if (summary.medianDurationMs === null) return "—";
-  if (summary.medianTargetMs === null) return formatSeconds(summary.medianDurationMs);
-  return `${formatSeconds(summary.medianDurationMs)} von ${formatSeconds(summary.medianTargetMs)}`;
+/** Der Zusatz unter der Zahl: warum sie fehlt, oder was ausgelassen wurde. */
+function timeNote(time: StatsSummary["time"]): string | undefined {
+  if (time.relative === null) {
+    return `erst ab ${TIME_MIN_SAMPLES} richtigen Antworten (bisher ${time.counted})`;
+  }
+  if (time.interrupted > 0) {
+    return `${time.interrupted} unterbrochen, nicht gezählt`;
+  }
+  return undefined;
 }

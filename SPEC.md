@@ -369,8 +369,7 @@ geschätzt und dann mit `~` gekennzeichnet.
 Das ist zugleich die Zahl der verschiedenen **Aufgaben**: Prüfung 4 erzwingt, dass jeder
 gewürfelte Parameter im Fragetext steht, also ergeben verschiedene Kombinationen
 verschiedene Fragetexte. Dieselbe Invariante trägt den Dedup-Schlüssel aus D-25 — und
-fällt mit ihr, sobald ein Template einen Parameter zieht, der die Rechnung nicht berührt
-(D-23).
+fällt mit ihr, sobald ein Template einen Parameter zieht, der die Rechnung nicht berührt.
 
 Unter 20 Kombinationen gibt es eine Warnung. Zwanzig, weil eine Sitzung zwanzig Aufgaben
 umfasst und ein Template eine Sitzung allein tragen können soll. Die Schwelle ist eine
@@ -886,8 +885,26 @@ Oberthema, in derselben Form wie die Themenauswahl — die Gruppierung kommt aus
 `toTopicGroups` und nicht aus einer zweiten Umformung (D-16). Jedes Thema mit Aufgaben
 bekommt eine Zeile, auch bei null Versuchen.
 
-Dazu eine Gesamtzeile: Versuche insgesamt, Quote insgesamt, Median der Bearbeitungszeit
-gegen die Zielzeit derselben Aufgaben.
+Dazu eine Gesamtzeile: Versuche insgesamt, Quote insgesamt, Medianzeit.
+
+### Die Medianzeit
+
+Grundgesamtheit sind **nur** Attempts mit `status = "ANSWERED"` und `isCorrect = true`.
+Angezeigt wird nicht in Sekunden, sondern relativ: der Median von
+`durationMs / (target_time_seconds · 1000)`, beschriftet als „1,3× Zielzeit". Absolute
+Sekunden vergleichen über Aufgabentypen hinweg nichts.
+
+- **Obergrenze:** Dauern über dem Zehnfachen der Zielzeit gelten als unterbrochen, gehen
+  nicht in den Median ein und werden separat als „n unterbrochen" ausgewiesen.
+- **Mindestzahl:** unter fünf richtigen Antworten steht keine Zahl.
+- **Beschriftung:** „Medianzeit bei richtigen Antworten" — die Einschränkung gehört
+  sichtbar in die Oberfläche, nicht nur in den Code.
+
+Zusätzlich zählt die Seite je Thema die **falschen** Antworten unter 20 % der Zielzeit und
+zeigt sie ab drei Stück als „n× geraten". Wer so schnell falsch antwortet, hat geraten
+oder das Verfahren nicht erkannt; das ist etwas anderes als eine lange Fehlrechnung.
+
+Begründung, warum die Definition geändert wurde statt einen Schalter zu bauen: D-21.
 
 Die angezeigte Quote ist **nicht** `successRate` aus Abschnitt 10. Deren `0.5` für
 unerprobte Themen ist ein Steuerungswert für die Auswahl; als Messwert wäre sie falsch.

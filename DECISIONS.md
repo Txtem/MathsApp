@@ -598,3 +598,56 @@ werden genau zwei Spalten, `templateId` und `questionText` (`lib/db/session-hist
 `expectedAnswer` hat in einem Auswahlpfad nichts verloren — das ist keine
 Performance-Frage, sondern die Fortsetzung von Invariante 2 in den Code hinein: Was nie
 geladen wird, kann nicht versehentlich hinausgehen. Ein Test hält die Spaltenauswahl fest.
+
+---
+
+## D-21 — Die Medianzeit zählt nur richtige Antworten, und sie ist relativ
+*2026-08-31, M2b*
+
+Die Statistik-Seite zeigt statt „43 s von 105 s" jetzt „1,3× Zielzeit", gerechnet
+ausschließlich über Attempts mit `status = "ANSWERED"` **und** `isCorrect = true`.
+Dauern über dem Zehnfachen der Zielzeit gelten als unterbrochen, fließen nicht ein und
+werden separat ausgewiesen. Unter fünf richtigen Antworten steht gar keine Zahl.
+
+**Anlass:** Die alte Fassung nahm alle beantworteten Attempts und vermischte damit zwei
+verschiedene Größen. Die Zeit dient dem Vergleich mit `target_time_seconds` — „schaffe ich
+diesen Aufgabentyp in der vorgesehenen Zeit". Bei einer falschen Antwort misst die Dauer
+aber, wie lange jemand gebraucht hat, um sich zu irren. Wer schnell falsch antwortete,
+verbesserte seine Medianzeit.
+
+**Warum kein Schalter zum Ein- und Ausblenden:** Er verteidigt gegen einen Gegner, den es
+nicht gibt — es gibt genau einen Nutzer, und die Zahl soll ihm nützen. Und er teilt die
+Daten in zwei Regime, deren Zustand niemand im Kopf behält. Das Problem lag in der
+Definition, also wurde die Definition geändert.
+
+**Warum relativ statt in Sekunden:** Vierzig Sekunden sind bei einer Kopfrechenaufgabe
+viel und bei einer hypergeometrischen Verteilung wenig. Ein Median über absolute Zeiten
+verschiedener Aufgabentypen vergleicht nichts; er verschiebt sich, sobald sich die
+Mischung der geübten Themen ändert.
+
+**Warum eine Obergrenze:** Wer den Tab liegen lässt und am nächsten Tag antwortet,
+erzeugt eine Dauer von Stunden. Ein einziger solcher Wert verschiebt den Median einer
+kleinen Stichprobe spürbar. Das Zehnfache der Zielzeit ist großzügig genug, dass niemand
+versehentlich hineinfällt. Ausgeschlossene Werte werden gezählt und angezeigt, nicht still
+verworfen — sonst wundert man sich über eine Zahl, die nicht zu den erinnerten Sitzungen
+passt.
+
+**Warum eine Mindestzahl:** Dasselbe Prinzip wie bei der Erfolgsquote (`MIN_ATTEMPTS_FOR_RATE`).
+Ein Median aus zwei Werten ist keine Aussage. Die Einschränkung steht in der Beschriftung
+und nicht nur im Code: „Medianzeit bei richtigen Antworten".
+
+### Schnellschüsse als eigene Kennzahl
+
+Die Umkehrung des Einwands: Eine sehr schnelle **falsche** Antwort ist nicht wertlos,
+sondern ein Signal. Wer in weniger als einem Fünftel der Zielzeit falsch antwortet, hat
+geraten oder das Verfahren nicht erkannt — das ist etwas anderes als jemand, der lange
+gerechnet und sich verrechnet hat.
+
+Die Statistik-Seite zählt sie deshalb je Thema und zeigt sie ab drei Stück als
+„n× geraten". Aus dem Schlupfloch der alten Definition wird damit eine Information.
+
+Die Schwellen — Zehnfaches, ein Fünftel, fünf Antworten, drei Schnellschüsse — sind
+gesetzt und nicht gemessen. Anders als bei D-24 gibt es hier nichts zu optimieren: Es
+gibt keine Zielgröße, gegen die man sie prüfen könnte, nur Plausibilität. Sie stehen als
+benannte Konstanten in `components/stats-rows.ts`, damit sie sich ändern lassen, ohne den
+Code zu lesen.

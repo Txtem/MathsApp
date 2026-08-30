@@ -22,6 +22,7 @@ async function seedAttempt(options: {
   readonly status?: string;
   readonly durationMs?: number | null;
   readonly templateId?: string;
+  readonly isCorrect?: boolean;
 }): Promise<void> {
   await prisma.attempt.create({
     data: {
@@ -38,6 +39,7 @@ async function seedAttempt(options: {
       answerType: "integer",
       status: options.status ?? "ANSWERED",
       durationMs: options.durationMs === undefined ? 5000 : options.durationMs,
+      isCorrect: options.isCorrect ?? true,
       createdAt: NOW,
     },
   });
@@ -88,11 +90,19 @@ describe("loadAnsweredDurations", () => {
     expect(await loadAnsweredDurations(prisma, USER)).toEqual([]);
   });
 
-  it("liefert Template und Zeit", async () => {
+  it("liefert Template, Thema, Zeit und Urteil", async () => {
     await seedAttempt({ durationMs: 12_000, templateId: "aufg_00007" });
 
     expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00007", durationMs: 12_000 },
+      { templateId: "aufg_00007", topic: TOPIC, durationMs: 12_000, isCorrect: true },
+    ]);
+  });
+
+  it("liefert falsche Antworten mit — die Schnellschüsse brauchen sie", async () => {
+    await seedAttempt({ durationMs: 800, isCorrect: false });
+
+    expect(await loadAnsweredDurations(prisma, USER)).toEqual([
+      { templateId: "aufg_00001", topic: TOPIC, durationMs: 800, isCorrect: false },
     ]);
   });
 
@@ -109,7 +119,7 @@ describe("loadAnsweredDurations", () => {
     await seedAttempt({ durationMs: 9000 });
 
     expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00001", durationMs: 9000 },
+      { templateId: "aufg_00001", topic: TOPIC, durationMs: 9000, isCorrect: true },
     ]);
   });
 
@@ -118,7 +128,7 @@ describe("loadAnsweredDurations", () => {
     await seedAttempt({ userId: ANDERER, durationMs: 2000 });
 
     expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00001", durationMs: 1000 },
+      { templateId: "aufg_00001", topic: TOPIC, durationMs: 1000, isCorrect: true },
     ]);
   });
 });
