@@ -2,7 +2,15 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { type CheckCode, checkAll, checkTemplate } from "./checks";
+import {
+  type CheckCode,
+  checkAll,
+  checkTemplate,
+  errorsOf,
+  MIN_PARAMETER_SPACE,
+  warningsOf,
+} from "./checks";
+import { parameterSpace } from "./parameter-space";
 import { readContent, readTemplateFile, readTopics } from "./read";
 import { leafTopics } from "./schema";
 
@@ -14,9 +22,10 @@ import { leafTopics } from "./schema";
 const FIXTURES = join(process.cwd(), "lib", "content", "__fixtures__");
 const topics = readTopics();
 
+/** Nur die Fehler — Warnungen haben ihren eigenen Block weiter unten. */
 function codesOf(file: string): readonly CheckCode[] {
   const entry = readTemplateFile(join(FIXTURES, file));
-  return checkTemplate(entry, topics).map((issue) => issue.code);
+  return errorsOf(checkTemplate(entry, topics)).map((issue) => issue.code);
 }
 
 describe("Negativ-Fixtures — jede Prüfung schlägt an", () => {
@@ -58,6 +67,54 @@ describe("Negativ-Fixtures — jede Prüfung schlägt an", () => {
   });
 });
 
+describe("Parameterraum — Warnung, kein Fehler", () => {
+  const entry = readTemplateFile(join(FIXTURES, "11-small-parameter-space.yaml"));
+
+  it("meldet einen zu engen Raum als Warnung", () => {
+    const issues = checkTemplate(entry, topics);
+
+    expect(errorsOf(issues)).toEqual([]);
+    expect(warningsOf(issues).map((issue) => issue.code)).toEqual(["small_parameter_space"]);
+  });
+
+  it("nennt die gezählte Zahl und die Empfehlung", () => {
+    const [warnung] = warningsOf(checkTemplate(entry, topics));
+    // n läuft von 4 bis 6 — drei Kombinationen.
+    expect(warnung?.message).toContain("Nur 3 ");
+    expect(warnung?.message).toContain(String(MIN_PARAMETER_SPACE));
+  });
+
+  it("hält den Ladevorgang nicht an", () => {
+    // Der echte Content warnt heute viermal und lädt trotzdem.
+    const { templates, warnings } = readContent();
+    expect(templates.length).toBeGreaterThan(0);
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.every((issue) => issue.severity === "warning")).toBe(true);
+  });
+
+  it("warnt genau bei den Templates unter der Schwelle", () => {
+    // Die Gegenprobe zur Zählung: Wer warnt, muss auch zu klein sein — und
+    // umgekehrt. Bleibt eine Warnung aus, rechnet `parameterSpace` falsch.
+    const { templates, warnings } = readContent();
+    const gewarnt = new Set(warnings.map((issue) => issue.templateId));
+
+    for (const template of templates) {
+      const zuKlein = parameterSpace(template).size < MIN_PARAMETER_SPACE;
+      expect(gewarnt.has(template.id)).toBe(zuKlein);
+    }
+  });
+
+  it("warnt heute genau bei diesen vier", () => {
+    // Bewusst festgenagelt: Die vier sind bekannt und in DECISIONS.md die
+    // Zielvorgabe für M2d. Verschwindet eine, ist das eine gute Nachricht und
+    // gehört gesehen — kommt eine dazu, ebenfalls.
+    const ids = readContent()
+      .warnings.map((issue) => issue.templateId)
+      .sort();
+    expect(ids).toEqual(["aufg_00003", "aufg_00004", "aufg_00006", "aufg_00009"]);
+  });
+});
+
 describe("Themenbaum", () => {
   it("liefert nur Blätter als gültige Template-Topics", () => {
     expect([...leafTopics(topics)].sort()).toEqual([
@@ -72,13 +129,14 @@ describe("Themenbaum", () => {
 });
 
 describe("Der echte Content", () => {
-  it("lädt ohne Befund", () => {
+  it("lädt ohne Fehler", () => {
     const { templates } = readContent();
     expect(templates.length).toBeGreaterThan(0);
-    expect(checkAll(
+    const issues = checkAll(
       templates.map((template) => ({ template, source: template.id })),
       topics,
-    )).toEqual([]);
+    );
+    expect(errorsOf(issues)).toEqual([]);
   });
 
   it("vergibt jede ID nur einmal", () => {

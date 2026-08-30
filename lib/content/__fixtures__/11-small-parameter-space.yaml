@@ -1,0 +1,15 @@
+# Prüfung 10: n läuft von 4 bis 6, also gibt es genau drei verschiedene
+# Aufgaben. Für eine Sitzung von zwanzig reicht das nicht.
+#
+# Sonst ist an diesem Template nichts auszusetzen — das ist Absicht: Die
+# Warnung wird nur vergeben, wenn keine Prüfung davor angeschlagen hat.
+id: aufg_90011
+version: 1
+topic: kombinatorik.permutation
+difficulty: 1
+target_time_seconds: 30
+compute_ref: kombinatorik.permutation.factorial
+answer_type: integer
+param_spec:
+  n: { type: int, min: 4, max: 6 }
+question_text: "Auf wie viele Arten können {{n}} Personen in einer Reihe stehen?"

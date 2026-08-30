@@ -3,7 +3,14 @@ import { join, relative, sep } from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { checkAll, type ContentIssue, formatIssues, type LoadedTemplate } from "./checks";
+import {
+  checkAll,
+  type ContentIssue,
+  errorsOf,
+  formatIssues,
+  type LoadedTemplate,
+  warningsOf,
+} from "./checks";
 import { TemplateSchema, TopicsSchema, type Topics, type ValidatedTemplate } from "./schema";
 
 /**
@@ -34,6 +41,12 @@ export class ContentError extends Error {
 export interface ContentBundle {
   readonly topics: Topics;
   readonly templates: readonly ValidatedTemplate[];
+  /**
+   * Befunde, die den Content nicht ungültig machen — heute ist das der zu enge
+   * Parameterraum. Die Anwendung ignoriert sie, `npm run content:check` zeigt
+   * sie an.
+   */
+  readonly warnings: readonly ContentIssue[];
 }
 
 function yamlFilesIn(directory: string): readonly string[] {
@@ -72,8 +85,9 @@ export function readTemplateFile(file: string): LoadedTemplate {
 }
 
 /**
- * Liest den gesamten Content und prüft ihn. Wirft bei jedem Befund — ein
- * fehlerhaftes Template darf nicht in eine Aufgabe geraten.
+ * Liest den gesamten Content und prüft ihn. Wirft bei jedem **Fehler** — ein
+ * fehlerhaftes Template darf nicht in eine Aufgabe geraten. Warnungen kommen
+ * im Bundle zurück, statt den Ladevorgang anzuhalten.
  */
 export function readContent(
   templatesDir: string = TEMPLATES_DIR,
@@ -82,13 +96,18 @@ export function readContent(
   const topics = readTopics(topicsFile);
   const entries = yamlFilesIn(templatesDir).map(readTemplateFile);
   const issues = checkAll(entries, topics);
+  const errors = errorsOf(issues);
 
-  if (issues.length > 0) {
+  if (errors.length > 0) {
     throw new ContentError(
-      `${issues.length} Problem(e) im Content:\n${formatIssues(issues)}`,
-      issues,
+      `${errors.length} Problem(e) im Content:\n${formatIssues(errors)}`,
+      errors,
     );
   }
 
-  return { topics, templates: entries.map((entry) => entry.template) };
+  return {
+    topics,
+    templates: entries.map((entry) => entry.template),
+    warnings: warningsOf(issues),
+  };
 }

@@ -5,11 +5,16 @@ import { makeRng } from "@/lib/engine/generate/rng";
 import { sampleParams } from "@/lib/engine/generate/sample";
 import { placeholders } from "@/lib/engine/render/interpolate";
 
+import { parameterSpace } from "./parameter-space";
 import { leafTopics, type Topics, type ValidatedTemplate } from "./schema";
 
 /**
- * Die statischen Prüfungen aus SPEC.md, Abschnitt 5. Alles harte Fehler: Der
- * Ladevorgang bricht ab, `npm run content:check` schlägt fehl.
+ * Die statischen Prüfungen aus SPEC.md, Abschnitt 5.
+ *
+ * Die meisten sind harte Fehler: Der Ladevorgang bricht ab,
+ * `npm run content:check` schlägt fehl. Eine ist eine **Warnung** — ein zu
+ * enger Parameterraum macht ein Template nicht ungültig, nur langweilig, und
+ * soll den Build nicht anhalten.
  *
  * Die Prüfungen geben Befunde zurück, statt zu werfen — so sieht man beim
  * Aufräumen alle Probleme auf einmal statt eines nach dem anderen.
@@ -25,14 +30,29 @@ export type CheckCode =
   | "topic_not_leaf"
   | "round_to_without_numeric"
   | "unknown_constraint_name"
-  | "invalid_constraint";
+  | "invalid_constraint"
+  | "small_parameter_space";
+
+export type Severity = "error" | "warning";
 
 export interface ContentIssue {
   readonly code: CheckCode;
+  readonly severity: Severity;
   readonly templateId: string;
   readonly source: string;
   readonly message: string;
 }
+
+/**
+ * Ab so vielen gültigen Parameterkombinationen gilt ein Template als tragfähig.
+ *
+ * Eine Sitzung umfasst zwanzig Aufgaben, und ein Template soll eine Sitzung
+ * allein tragen können — daher zwanzig und nicht zehn. Die Zahl ist eine
+ * **Untergrenze**, keine Zusage: Gezogen wird mit Zurücklegen, ein Template mit
+ * genau zwanzig Kombinationen liefert in zwanzig Zügen also weniger als zwanzig
+ * verschiedene Aufgaben.
+ */
+export const MIN_PARAMETER_SPACE = 20;
 
 export interface LoadedTemplate {
   readonly template: ValidatedTemplate;
@@ -46,8 +66,8 @@ const SCHEMA_PROBE_SEEDS = 20;
 export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly ContentIssue[] {
   const { template, source } = entry;
   const issues: ContentIssue[] = [];
-  const report = (code: CheckCode, message: string): void => {
-    issues.push({ code, templateId: template.id, source, message });
+  const report = (code: CheckCode, message: string, severity: Severity = "error"): void => {
+    issues.push({ code, severity, templateId: template.id, source, message });
   };
 
   const paramKeys = new Set(Object.keys(template.param_spec));
@@ -130,6 +150,22 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
     }
   }
 
+  // 10. Der Parameterraum trägt eine Sitzung. Nur eine Warnung — und nur, wenn
+  //     sonst nichts zu beanstanden war: Die Zählung braucht eine gültige
+  //     `compute_ref` und lesbare Constraints, und ein Template mit Fehlern
+  //     wird ohnehin nicht geladen.
+  if (issues.length === 0) {
+    const space = parameterSpace(template);
+    if (space.size < MIN_PARAMETER_SPACE) {
+      const wie = space.exact ? "" : " (geschätzt)";
+      report(
+        "small_parameter_space",
+        `Nur ${space.size} gültige Parameterkombination(en)${wie}, empfohlen sind ${MIN_PARAMETER_SPACE}. Das Template liefert entsprechend wenige verschiedene Aufgaben.`,
+        "warning",
+      );
+    }
+  }
+
   return issues;
 }
 
@@ -146,6 +182,7 @@ export function checkAll(
     if (first !== undefined) {
       issues.push({
         code: "duplicate_id",
+        severity: "error",
         templateId: template.id,
         source,
         message: `id "${template.id}" ist schon in ${first} vergeben.`,
@@ -162,4 +199,12 @@ export function formatIssues(issues: readonly ContentIssue[]): string {
   return issues
     .map((issue) => `  [${issue.code}] ${issue.source} (${issue.templateId}): ${issue.message}`)
     .join("\n");
+}
+
+export function errorsOf(issues: readonly ContentIssue[]): readonly ContentIssue[] {
+  return issues.filter((issue) => issue.severity === "error");
+}
+
+export function warningsOf(issues: readonly ContentIssue[]): readonly ContentIssue[] {
+  return issues.filter((issue) => issue.severity === "warning");
 }

@@ -338,7 +338,8 @@ einen Zeilenumbruch an, der in der Aufgabe landet.
 
 ### Statische Prüfungen beim Laden
 
-Alles harte Fehler. Der Ladevorgang bricht ab, `npm run content:check` schlägt fehl.
+Prüfung 1 bis 9 sind harte Fehler: Der Ladevorgang bricht ab, `npm run content:check`
+schlägt fehl. Prüfung 10 ist eine **Warnung** — sie hält nichts an.
 Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 
 1. `compute_ref` existiert in der Registry.
@@ -354,6 +355,29 @@ Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 8. `round_to` ist nur bei `answer_type: numeric` gesetzt.
 9. In `constraints` kommen nur Namen aus `param_spec` plus `result` vor. Ein Constraint,
    das gar kein Vergleich ist, wird als eigener Befund (`invalid_constraint`) gemeldet.
+10. **Warnung:** Der Parameterraum umfasst mindestens 20 gültige Kombinationen.
+
+### Der Parameterraum
+
+`npm run content:check` gibt je Template aus, wie viele gültige Parameterkombinationen es
+hat: das Produkt der Wertebereiche, abzüglich dessen, was Constraints und das
+Eingabeschema der Compute-Funktion verwerfen. Gezählt wird mit demselben
+`makeDrawValidator`, den auch `instantiate` benutzt — eine zweite Nachbildung der Regeln
+würde abweichen. Bei rein abzählbaren Bereichen exakt, bei `float` über Stichproben
+geschätzt und dann mit `~` gekennzeichnet.
+
+Das ist zugleich die Zahl der verschiedenen **Aufgaben**: Prüfung 4 erzwingt, dass jeder
+gewürfelte Parameter im Fragetext steht, also ergeben verschiedene Kombinationen
+verschiedene Fragetexte. Dieselbe Invariante trägt den Dedup-Schlüssel aus D-25 — und
+fällt mit ihr, sobald ein Template einen Parameter zieht, der die Rechnung nicht berührt
+(D-23).
+
+Unter 20 Kombinationen gibt es eine Warnung. Zwanzig, weil eine Sitzung zwanzig Aufgaben
+umfasst und ein Template eine Sitzung allein tragen können soll. Die Schwelle ist eine
+**Untergrenze, keine Zusage**: Gezogen wird mit Zurücklegen, ein Template mit genau
+zwanzig Kombinationen liefert gemessen 17,7 verschiedene Aufgaben je Sitzung. Für 18 von
+20 braucht es rund 25. Beide Zahlen sind in
+`lib/content/parameter-space.test.ts` gemessen und festgehalten.
 
 ### Versionierung
 

@@ -47,6 +47,11 @@ Der Build bricht ab, wenn eines davon verletzt ist:
   `round_to` steht bei einem anderen `answer_type` als `numeric`, oder ein Constraint
   nennt einen unbekannten Namen.
 
+Nicht hart, sondern nur eine **Warnung**: ein Parameterraum unter 20 gültigen
+Kombinationen. Ein zu enges Template ist langweilig, nicht ungültig — `readContent` gibt
+solche Befunde im Bundle zurück, statt zu werfen. Wer eine neue Prüfung schreibt, wählt
+also zusätzlich ihre `severity`.
+
 Jede dieser Prüfungen hat ein Negativ-Fixture unter `lib/content/__fixtures__/`. Neue
 Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt.
 
