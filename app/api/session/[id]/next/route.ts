@@ -17,13 +17,17 @@ import { AVOID_COUNT, matchesTopic, selectTemplate } from "@/lib/selection/next-
  * Die Response enthält **niemals** `expectedAnswer`. Sie wird deshalb nicht aus
  * der Attempt-Zeile gespreadet, sondern in `toNextQuestionResponse` Feld für
  * Feld aufgebaut.
+ *
+ * Die Uhr wird hier einmal gelesen: Auswahl und `createdAt` sehen denselben
+ * Zeitpunkt (D-20).
  */
 export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await context.params;
-  const userId = await getCurrentUserId();
+  const now = new Date();
+  const userId = await getCurrentUserId(now);
 
   const session = await prisma.practiceSession.findUnique({
     where: { id },
@@ -57,6 +61,7 @@ export async function POST(
       topicFilter: session.topicFilter,
       stats: await loadTopicStats(prisma, userId, topics),
       recentTemplateIds: recent.map((attempt) => attempt.templateId),
+      now,
     },
     Math.random,
   );
@@ -85,6 +90,7 @@ export async function POST(
       expectedAnswer: instance.expectedAnswer,
       answerType: instance.answerType,
       status: "OPEN",
+      createdAt: now,
     },
     select: { id: true, questionText: true, answerType: true },
   });

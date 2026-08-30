@@ -13,12 +13,18 @@ import { prisma } from "./client";
 export const DEV_USER_ID = "dev-user";
 const DEV_USER_EMAIL = "dev@localhost";
 
-/** Legt den Dummy-User an, falls er fehlt. Idempotent, läuft auf einer frischen DB. */
-export async function ensureDevUser(): Promise<string> {
+/**
+ * Legt den Dummy-User an, falls er fehlt. Idempotent, läuft auf einer frischen DB.
+ *
+ * `now` kommt von außen, weil `createdAt` keinen Datenbank-Default mehr hat und
+ * jeder Zeitstempel einer Anfrage aus derselben Uhr stammt (D-20). Mit M2c
+ * verschwindet die Funktion samt Parameter.
+ */
+export async function ensureDevUser(now: Date): Promise<string> {
   await prisma.user.upsert({
     where: { id: DEV_USER_ID },
     update: {},
-    create: { id: DEV_USER_ID, email: DEV_USER_EMAIL },
+    create: { id: DEV_USER_ID, email: DEV_USER_EMAIL, createdAt: now },
   });
   return DEV_USER_ID;
 }

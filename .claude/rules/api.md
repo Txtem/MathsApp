@@ -71,3 +71,10 @@ Parameter würfeln, Plausibilität von Werten beurteilen.
 
 Schema-Änderungen immer über `npx prisma migrate dev --name <name>`, nie durch
 manuelles Editieren einer bestehenden Migration. Migrationsdateien werden committet.
+
+Muss eine Migration zusätzlich **Daten** anfassen — Bestandszeilen umschreiben, eine neue
+Pflichtspalte füllen —, entsteht sie über `--create-only`; das SQL wird ergänzt, bevor sie
+zum ersten Mal läuft. Eine Migration, die schon gelaufen ist, wird nicht mehr angefasst.
+
+Zeitstempel setzt der Anwendungscode, nicht die Datenbank: kein `@default(now())`, kein
+`DEFAULT CURRENT_TIMESTAMP`. Siehe D-20.

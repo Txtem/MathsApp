@@ -10,6 +10,8 @@ import { loadAnsweredDurations, loadTopicTotals } from "./stats";
 const USER = "user-1";
 const ANDERER = "user-2";
 const TOPIC = "kombinatorik.permutation";
+/** Die Uhr der Anfrage — in den Tests eine Konstante (D-20). */
+const NOW = new Date("2026-08-30T12:00:00.000Z");
 
 let database: TempDatabase;
 let prisma: PrismaClient;
@@ -36,6 +38,7 @@ async function seedAttempt(options: {
       answerType: "integer",
       status: options.status ?? "ANSWERED",
       durationMs: options.durationMs === undefined ? 5000 : options.durationMs,
+      createdAt: NOW,
     },
   });
 }
@@ -44,9 +47,11 @@ beforeEach(async () => {
   database = createTempDatabase();
   prisma = database.prisma;
 
-  await prisma.user.create({ data: { id: USER, email: "test@localhost" } });
-  await prisma.user.create({ data: { id: ANDERER, email: "anderer@localhost" } });
-  const session = await prisma.practiceSession.create({ data: { userId: USER } });
+  await prisma.user.create({ data: { id: USER, email: "test@localhost", createdAt: NOW } });
+  await prisma.user.create({
+    data: { id: ANDERER, email: "anderer@localhost", createdAt: NOW },
+  });
+  const session = await prisma.practiceSession.create({ data: { userId: USER, startedAt: NOW } });
   sessionId = session.id;
 });
 

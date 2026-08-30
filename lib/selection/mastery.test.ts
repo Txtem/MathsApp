@@ -108,4 +108,37 @@ describe("advanceMastery", () => {
     advanceMastery(current, true, NOW);
     expect(current).toEqual({ attempts: 2, correct: 1, intervalDays: 4 });
   });
+
+  /**
+   * Der Termin wird über Millisekunden gerechnet, nicht über Kalendertage
+   * (SPEC-M2b B-3). Über eine Zeitumstellung hinweg hat ein lokaler Kalendertag
+   * 23 oder 25 Stunden — wer `setDate()` benutzt, verschiebt den Termin.
+   */
+  describe("über die Zeitumstellung hinweg", () => {
+    // In Europa wird in der Nacht zum 29.03.2026 auf Sommerzeit gestellt.
+    const VORHER = new Date("2026-03-28T12:00:00.000Z");
+
+    it("hält den Millisekundenabstand exakt ein", () => {
+      const next = advanceMastery({ attempts: 4, correct: 4, intervalDays: 1 }, true, VORHER);
+
+      expect(next.intervalDays).toBe(2);
+      expect(next.dueAt.getTime() - VORHER.getTime()).toBe(2 * MS_PER_DAY);
+    });
+
+    it("verschiebt den Termin nicht um eine Stunde Ortszeit", () => {
+      const next = advanceMastery(undefined, false, VORHER);
+
+      // Ein Kalendertag später wäre in Ortszeit dieselbe Stunde — hier ist es
+      // eine Stunde später, weil die Nacht nur 23 Stunden hatte. Genau das ist
+      // gewollt: Der Abstand ist die Größe, die zählt.
+      expect(next.dueAt.toISOString()).toBe("2026-03-29T12:00:00.000Z");
+      expect(next.dueAt.getTime() - VORHER.getTime()).toBe(MS_PER_DAY);
+    });
+
+    it("rechnet auch bei gebrochenem Intervall in Millisekunden", () => {
+      const next = advanceMastery({ attempts: 1, correct: 0, intervalDays: 0.25 }, true, VORHER);
+
+      expect(next.dueAt.getTime() - VORHER.getTime()).toBe(0.5 * MS_PER_DAY);
+    });
+  });
 });

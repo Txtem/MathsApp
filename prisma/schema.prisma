@@ -15,7 +15,7 @@ datasource db {
 model User {
   id               String            @id @default(cuid())
   email            String            @unique
-  createdAt        DateTime          @default(now())
+  createdAt        DateTime
   practiceSessions PracticeSession[]
   attempts         Attempt[]
   masteries        TopicMastery[]
@@ -28,7 +28,7 @@ model PracticeSession {
   userId      String
   user        User      @relation(fields: [userId], references: [id])
   topicFilter String? // z.B. "kombinatorik" oder "kombinatorik.permutation"
-  startedAt   DateTime  @default(now())
+  startedAt   DateTime
   endedAt     DateTime?
   attempts    Attempt[]
 }
@@ -68,7 +68,7 @@ model Attempt {
   reviewVerdict Json? // M4: LLM-Schritturteil
   durationMs    Int?
 
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime
   answeredAt DateTime?
 
   @@index([practiceSessionId])

@@ -109,17 +109,19 @@ describe("selectTemplate", () => {
   ];
 
   it("gibt undefined, wenn kein Template zum Filter passt", () => {
-    expect(selectTemplate(templates, { topicFilter: "kombinatorik" }, first)).toBeUndefined();
-    expect(selectTemplate([], {}, first)).toBeUndefined();
+    expect(
+      selectTemplate(templates, { topicFilter: "kombinatorik", now: NOW }, first),
+    ).toBeUndefined();
+    expect(selectTemplate([], { now: NOW }, first)).toBeUndefined();
   });
 
   it("wendet den Topic-Filter an", () => {
-    expect(selectTemplate(templates, { topicFilter: "arithmetik.subtraktion" }, first)?.id).toBe(
-      "sub-1",
-    );
-    expect(selectTemplate(templates, { topicFilter: "arithmetik" }, first)?.topic).toMatch(
-      /^arithmetik\./,
-    );
+    expect(
+      selectTemplate(templates, { topicFilter: "arithmetik.subtraktion", now: NOW }, first)?.id,
+    ).toBe("sub-1");
+    expect(
+      selectTemplate(templates, { topicFilter: "arithmetik", now: NOW }, first)?.topic,
+    ).toMatch(/^arithmetik\./);
   });
 
   describe("Themenwahl", () => {

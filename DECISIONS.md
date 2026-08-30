@@ -385,3 +385,49 @@ ist damit erledigt.
 **Preis:** Eine neue Dev-Abhängigkeit (`@types/better-sqlite3`, reine Typen) und ein
 Testlauf, der Dateien anlegt. Die Suite braucht dafür rund eine Sekunde mehr.
 
+
+---
+
+## D-20 — Eine Uhr pro Anfrage, und keine in der Datenbank
+*2026-08-30, M2b*
+
+`now: Date` wird von außen hereingereicht, nie in einer Funktion geholt. Gelesen wird die
+Uhr genau einmal je Anfrage, an ihrem Einstiegspunkt — im Route Handler oder in der Server
+Component —, und von dort an alles weitergereicht, was einen Zeitpunkt braucht.
+`@default(now())` steht in keiner `DateTime`-Spalte mehr.
+
+**Anlass:** Zwei getrennte Befunde, die dieselbe Ursache haben.
+
+Erstens waren `answeredAt` und `dueAt` zwei Uhrablesungen, Millisekunden auseinander,
+obwohl sie denselben Vorgang beschreiben — den Moment, in dem eine Aufgabe beantwortet
+wurde. Dasselbe Muster wie D-12 und D-19: Was eine Funktion sich selbst holt, ist nicht
+testbar und nicht steuerbar.
+
+Zweitens erzeugt `@default(now())` in der Migration ein `DEFAULT CURRENT_TIMESTAMP`.
+Prisma füllt den Wert bei eigenen Inserts selbst und kanonisch; der SQL-Default greift
+nur dort, wo an Prisma vorbei geschrieben wird — und das tut jede Migration, die eine
+Spalte hinzufügt. SQLite schreibt dann `2026-08-30 18:31:27`, der Adapter dagegen
+`2026-08-30T18:31:27.000+00:00`. SQLite vergleicht Text, und das Leerzeichen sortiert vor
+dem `T`: Gemessen liefert `orderBy: desc` die spätere Zeile zuletzt, und ein
+`gte`-Filter übersieht sie ganz (`lib/db/date-storage.test.ts`). Betroffen wäre
+`Attempt.createdAt` — die Spalte, nach der `POST /api/session/[id]/next` die zuletzt
+gestellten Templates sucht. In `User.createdAt` stand der Fall bereits, erzeugt von der
+`RedefineTables`-Migration zu D-18.
+
+**Umsetzung:** `now` ist Pflichtfeld in `CloseAttemptInput`, `AnswerInput` und
+`SelectionInput` — kein Default-Parameter, den ein Aufrufer vergessen kann. Die Migration
+`zeitstempel_ohne_sql_default` entfernt die Defaults und bringt die sieben Bestandszeilen
+mit abweichender Schreibweise über `strftime` auf die kanonische Form; die 225
+Zeitstempel der lokalen `dev.db` tragen danach eine einzige.
+
+**Abgesichert:** `lib/db/one-clock.test.ts` prüft den Quelltext — `new Date()` und
+`Date.now()` ohne Argument stehen nur an Einstiegspunkten (`app/**/route.ts`,
+`app/**/page.tsx`). Als Kriterium formuliert, nicht als Dateiliste, damit eine neue Route
+keinen Eintrag braucht. Die eine benannte Ausnahme ist die Stoppuhr im Browser, die eine
+Dauer misst und keinen Zeitpunkt. `lib/db/date-storage.test.ts` hält das Speicherformat
+fest, `lib/selection/mastery.test.ts` den Terminabstand über die Zeitumstellung hinweg.
+
+**Preis:** `getCurrentUserId(now)` hat einen Parameter bekommen, den es fachlich nicht
+braucht — der Dummy-User schreibt beim Anlegen ein `createdAt`. Mit M2c verschwindet die
+Funktion samt Parameter. Alle Tests, die Zeilen anlegen, setzen ihre Zeitstempel jetzt
+selbst; das ist Absicht, weil ein Testdatum aus der echten Uhr dieselbe Unschärfe hätte.

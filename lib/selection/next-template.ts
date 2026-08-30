@@ -29,7 +29,8 @@ export interface SelectionInput {
   readonly stats?: readonly TopicStats[];
   /** Zuletzt gestellte Template-IDs dieser PracticeSession, jüngste zuerst. */
   readonly recentTemplateIds?: readonly string[];
-  readonly now?: Date;
+  /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
+  readonly now: Date;
 }
 
 export function matchesTopic(topic: string, filter: string | null | undefined): boolean {
@@ -54,7 +55,6 @@ export function selectTemplate(
   const candidates = templates.filter((template) => matchesTopic(template.topic, input.topicFilter));
   if (candidates.length === 0) return undefined;
 
-  const now = input.now ?? new Date();
   const byTopic = new Map(input.stats?.map((entry) => [entry.topic, entry]));
 
   // Nur Themen, die überhaupt Aufgaben haben — die Reihenfolge folgt den
@@ -63,7 +63,7 @@ export function selectTemplate(
     (topic) => byTopic.get(topic) ?? emptyStats(topic),
   );
 
-  const chosen = chooseTopic(topics, now);
+  const chosen = chooseTopic(topics, input.now);
   if (chosen === undefined) return undefined;
 
   const target = targetDifficulty(successRate(chosen));

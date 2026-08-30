@@ -10,8 +10,10 @@ import { prisma } from "@/lib/db/client";
 /**
  * POST /api/attempt/[id]/answer — bewertet eine Antwort.
  *
- * Dünner Adapter: Request lesen, Nutzer ermitteln, Ergebnis auf Statuscodes
- * abbilden. Die Entscheidungen selbst — vor allem, dass die Lösung eine offene
+ * Dünner Adapter: Request lesen, Uhr lesen, Nutzer ermitteln, Ergebnis auf
+ * Statuscodes abbilden. Der Zeitstempel entsteht hier einmal und trägt sowohl
+ * `answeredAt` als auch den neuen Termin (D-20).
+ * Die Entscheidungen selbst — vor allem, dass die Lösung eine offene
  * Aufgabe nicht verlässt — stehen in `lib/db/answer-attempt.ts` und sind dort
  * gegen eine echte Datenbank getestet.
  */
@@ -20,6 +22,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await context.params;
+  const now = new Date();
 
   const raw: unknown = await request.json().catch(() => undefined);
   const body = AnswerRequestSchema.safeParse(raw);
@@ -31,9 +34,10 @@ export async function POST(
     { prisma, findTemplate: getTemplate },
     {
       attemptId: id,
-      userId: await getCurrentUserId(),
+      userId: await getCurrentUserId(now),
       answer: body.data.answer,
       durationMs: body.data.durationMs,
+      now,
     },
   );
 

@@ -1,4 +1,6 @@
 import Database from "better-sqlite3";
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaClient } from "@/lib/generated/prisma/client";
@@ -14,6 +16,22 @@ import { createTempDatabase, type TempDatabase } from "./__testing__/temp-databa
 
 /** Ein Zeitpunkt mit Millisekunden, in der Nacht der Zeitumstellung. */
 const WRITTEN = new Date("2026-03-29T00:30:00.123Z");
+
+/** Die eine Schreibweise, die es nach D-20 noch geben darf. */
+const KANONISCH = /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}[.][0-9]{3}[+]00:00$/;
+
+const MIGRATIONS = join(import.meta.dirname, "..", "..", "prisma", "migrations");
+
+/** Alle Spalten, in denen ein Zeitstempel stehen kann. */
+const ZEITSPALTEN = [
+  ["User", "createdAt"],
+  ["PracticeSession", "startedAt"],
+  ["PracticeSession", "endedAt"],
+  ["Attempt", "createdAt"],
+  ["Attempt", "answeredAt"],
+  ["TopicMastery", "lastSeenAt"],
+  ["TopicMastery", "dueAt"],
+] as const;
 
 let database: TempDatabase;
 let prisma: PrismaClient;
@@ -40,7 +58,9 @@ async function dueAt(id: string): Promise<Date | null> {
 beforeEach(async () => {
   database = createTempDatabase();
   prisma = database.prisma;
-  await prisma.user.create({ data: { id: "user-1", email: "test@localhost" } });
+  await prisma.user.create({
+    data: { id: "user-1", email: "test@localhost", createdAt: WRITTEN },
+  });
 });
 
 afterEach(async () => {
@@ -108,5 +128,107 @@ describe("DateTime in SQLite", () => {
       select: { id: true },
     });
     expect(after).toEqual([]);
+  });
+});
+
+/**
+ * Die Konsequenz aus dem Test darüber: Zeitstempel kommen nur noch aus dem
+ * Anwendungscode, `@default(now())` ist aus dem Schema verschwunden (D-20).
+ */
+describe("eine Schreibweise im ganzen Datenbestand", () => {
+  /** Die UPDATE-Anweisungen aus der Migration, unverändert aus der Datei. */
+  function normalisierung(): string {
+    const marker = "-- Bestandsdaten normalisieren";
+
+    for (const entry of readdirSync(MIGRATIONS, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const sql = readFileSync(join(MIGRATIONS, entry.name, "migration.sql"), "utf8");
+      if (sql.includes(marker)) return sql.slice(sql.indexOf(marker));
+    }
+
+    throw new Error(`Keine Migration mit "${marker}" gefunden.`);
+  }
+
+  /** Alle Zeitstempel, die gerade in der Datei stehen. */
+  function alleZeitstempel(): string[] {
+    const raw = new Database(database.file, { readonly: true });
+    try {
+      return ZEITSPALTEN.flatMap(([table, column]) =>
+        raw
+          .prepare(`select "${column}" as wert from "${table}" where "${column}" is not null`)
+          .all()
+          .map((row) => (row as { wert: string }).wert),
+      );
+    } finally {
+      raw.close();
+    }
+  }
+
+  it("kennt keinen SQL-Default mehr", () => {
+    const raw = new Database(database.file, { readonly: true });
+    const tabellen = raw
+      .prepare("select name, sql from sqlite_master where type = 'table'")
+      .all() as { name: string; sql: string | null }[];
+    raw.close();
+
+    // `_prisma_migrations` gehört Prisma und bleibt, wie sie ist.
+    const mitDefault = tabellen
+      .filter((tabelle) => tabelle.name !== "_prisma_migrations")
+      .filter((tabelle) => tabelle.sql?.includes("CURRENT_TIMESTAMP"))
+      .map((tabelle) => tabelle.name);
+
+    expect(mitDefault).toEqual([]);
+  });
+
+  it("schreibt jeden Zeitstempel in derselben Form", async () => {
+    const session = await prisma.practiceSession.create({
+      data: { userId: "user-1", startedAt: WRITTEN, endedAt: WRITTEN },
+    });
+
+    await prisma.attempt.create({
+      data: {
+        practiceSessionId: session.id,
+        templateId: "aufg_00001",
+        templateVersion: 1,
+        seed: "seed-1",
+        params: {},
+        questionText: "Frage",
+        userId: "user-1",
+        topic: "t.a",
+        difficulty: 1,
+        expectedAnswer: "1",
+        answerType: "integer",
+        status: "ANSWERED",
+        createdAt: WRITTEN,
+        answeredAt: WRITTEN,
+      },
+    });
+
+    await prisma.topicMastery.create({
+      data: { id: "m1", userId: "user-1", topic: "t.a", lastSeenAt: WRITTEN, dueAt: WRITTEN },
+    });
+
+    const werte = alleZeitstempel();
+    expect(werte).toHaveLength(7);
+    expect(werte.filter((wert) => !KANONISCH.test(wert))).toEqual([]);
+  });
+
+  it("bringt Altbestand mit der Migration auf dieselbe Form", () => {
+    insertRaw([
+      ["z", "2026-03-29T00:30:00.123Z"],
+      ["sqlite", "2026-03-29 00:30:00"],
+    ]);
+
+    const raw = new Database(database.file);
+    try {
+      raw.exec(`update "User" set "createdAt" = '2026-03-28 22:15:00'`);
+      expect(alleZeitstempel().filter((wert) => !KANONISCH.test(wert))).toHaveLength(3);
+
+      raw.exec(normalisierung());
+    } finally {
+      raw.close();
+    }
+
+    expect(alleZeitstempel().filter((wert) => !KANONISCH.test(wert))).toEqual([]);
   });
 });

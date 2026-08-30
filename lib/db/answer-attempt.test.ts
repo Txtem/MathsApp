@@ -33,6 +33,9 @@ const TEMPLATE = {
   solution_text: "$${{n}}! = {{result}}$$",
 } as unknown as ValidatedTemplate;
 
+/** Die Uhr der Anfrage — in den Tests eine Konstante (D-20). */
+const NOW = new Date("2026-08-30T12:00:00.000Z");
+
 let database: TempDatabase;
 let prisma: PrismaClient;
 let sessionId: string;
@@ -68,6 +71,7 @@ async function seedAttempt(
       expectedAnswer: overrides.expectedAnswer ?? "720",
       answerType: "integer",
       status: overrides.status ?? "OPEN",
+      createdAt: NOW,
     },
   });
 
@@ -75,16 +79,18 @@ async function seedAttempt(
 }
 
 function antwort(attemptId: string, answer: string) {
-  return { attemptId, userId: USER, answer, durationMs: 5000 };
+  return { attemptId, userId: USER, answer, durationMs: 5000, now: NOW };
 }
 
 beforeEach(async () => {
   database = createTempDatabase();
   prisma = database.prisma;
 
-  await prisma.user.create({ data: { id: USER, email: "test@localhost" } });
-  await prisma.user.create({ data: { id: ANDERER, email: "anderer@localhost" } });
-  const session = await prisma.practiceSession.create({ data: { userId: USER } });
+  await prisma.user.create({ data: { id: USER, email: "test@localhost", createdAt: NOW } });
+  await prisma.user.create({
+    data: { id: ANDERER, email: "anderer@localhost", createdAt: NOW },
+  });
+  const session = await prisma.practiceSession.create({ data: { userId: USER, startedAt: NOW } });
   sessionId = session.id;
 });
 

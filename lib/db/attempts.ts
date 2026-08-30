@@ -5,6 +5,9 @@ import { advanceMastery } from "@/lib/selection/mastery";
  * Einen Attempt schließen und den Themenfortschritt fortschreiben — in einer
  * Transaktion, weil beides zusammengehört (SPEC.md Abschnitt 10).
  *
+ * `answeredAt` und der neue Termin tragen denselben Zeitstempel: Er kommt als
+ * `now` von der Route herein, nicht aus einer Uhr in dieser Funktion (D-20).
+ *
  * Kein `server-only`, und der Prisma-Client kommt als Parameter herein statt aus
  * dem Singleton. Damit ist die Funktion gegen eine Wegwerf-Datenbank testbar,
  * ohne dass sie ihre Rolle ändert; dieselbe Trennung wie bei
@@ -17,8 +20,8 @@ export interface CloseAttemptInput {
   readonly userAnswer: string;
   readonly isCorrect: boolean;
   readonly durationMs: number;
-  /** Wird durchgereicht, damit Tests nicht von der echten Uhr abhängen. */
-  readonly now?: Date;
+  /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
+  readonly now: Date;
 }
 
 /**
@@ -33,7 +36,7 @@ export async function closeAttempt(
   prisma: PrismaClient,
   input: CloseAttemptInput,
 ): Promise<boolean> {
-  const now = input.now ?? new Date();
+  const { now } = input;
 
   return prisma.$transaction(async (tx) => {
     const closed = await tx.attempt.updateMany({

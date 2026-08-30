@@ -14,9 +14,12 @@ import { ensureDevUser } from "@/lib/db/dev-user";
  * In M2a gibt sie den Dummy-User zurück und legt ihn an, falls er fehlt. Der
  * Upsert läuft bei jedem Aufruf, nicht einmal pro Prozess: Er ist idempotent
  * und trifft eine Tabelle mit einer Zeile, und ein Cache würde lügen, sobald
- * die lokale Datenbank zwischendurch zurückgesetzt wird. In M2b verschwindet
+ * die lokale Datenbank zwischendurch zurückgesetzt wird. In M2c verschwindet
  * er ohnehin.
+ *
+ * `now` ist die Uhr der Anfrage (D-20). Sie steht hier nur, weil das Anlegen
+ * des Dummy-Users ein `createdAt` schreibt; die Antwort hängt nicht davon ab.
  */
-export async function getCurrentUserId(): Promise<string> {
-  return ensureDevUser();
+export async function getCurrentUserId(now: Date): Promise<string> {
+  return ensureDevUser(now);
 }

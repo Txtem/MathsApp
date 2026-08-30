@@ -10,18 +10,22 @@ import { prisma } from "@/lib/db/client";
  *
  * Request:  { topicFilter?: string }
  * Response: { sessionId: string }
+ *
+ * Die Uhr wird hier einmal gelesen und weitergereicht (D-20).
  */
 export async function POST(request: Request): Promise<NextResponse> {
+  const now = new Date();
+
   const raw: unknown = await request.json().catch(() => ({}));
   const parsed = CreateSessionRequestSchema.safeParse(raw ?? {});
   if (!parsed.success) {
     return apiError("invalid_request", "topicFilter muss ein nicht-leerer String sein.");
   }
 
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(now);
 
   const session = await prisma.practiceSession.create({
-    data: { userId, topicFilter: parsed.data.topicFilter ?? null },
+    data: { userId, topicFilter: parsed.data.topicFilter ?? null, startedAt: now },
     select: { id: true },
   });
 

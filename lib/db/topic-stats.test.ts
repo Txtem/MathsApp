@@ -15,13 +15,15 @@ import { loadTopicStats } from "./topic-stats";
 const USER = "user-1";
 const ANDERER = "user-2";
 const TOPIC = "kombinatorik.permutation";
+/** Die Uhr der Anfrage — in den Tests eine Konstante (D-20). */
+const NOW = new Date("2026-08-30T12:00:00.000Z");
 
 let database: TempDatabase;
 let prisma: PrismaClient;
 let sessionId: string;
 
 async function seedUser(id: string): Promise<void> {
-  await prisma.user.create({ data: { id, email: `${id}@localhost` } });
+  await prisma.user.create({ data: { id, email: `${id}@localhost`, createdAt: NOW } });
 }
 
 /**
@@ -53,7 +55,8 @@ async function seedAttempt(options: {
       answerType: "integer",
       status: options.status ?? (answered ? "ANSWERED" : "OPEN"),
       isCorrect: options.isCorrect,
-      answeredAt: answered ? new Date(Date.now() - minutesAgo * 60_000) : null,
+      answeredAt: answered ? new Date(NOW.getTime() - minutesAgo * 60_000) : null,
+      createdAt: NOW,
     },
   });
 }
@@ -64,7 +67,7 @@ beforeEach(async () => {
 
   await seedUser(USER);
   await seedUser(ANDERER);
-  const session = await prisma.practiceSession.create({ data: { userId: USER } });
+  const session = await prisma.practiceSession.create({ data: { userId: USER, startedAt: NOW } });
   sessionId = session.id;
 });
 

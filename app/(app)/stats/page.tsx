@@ -31,7 +31,10 @@ import { loadTopicStats } from "@/lib/db/topic-stats";
 export const dynamic = "force-dynamic";
 
 export default async function StatsPage() {
-  const userId = await getCurrentUserId();
+  // Eine Uhr für die ganze Seite: Fälligkeit und Termine werden gegen denselben
+  // Zeitpunkt gerechnet (D-20).
+  const now = new Date();
+  const userId = await getCurrentUserId(now);
 
   const groups = toTopicGroups(getTopicOffers());
   const topics = groups.flatMap((group) => group.leaves.map((leaf) => leaf.topic));
@@ -42,7 +45,6 @@ export default async function StatsPage() {
     loadAnsweredDurations(prisma, userId),
   ]);
 
-  const now = new Date();
   const rows = toStatsGroups(
     groups,
     new Map(totals.map((entry) => [entry.topic, entry])),

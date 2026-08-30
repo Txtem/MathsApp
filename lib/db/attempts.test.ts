@@ -22,11 +22,11 @@ async function seedOpenAttempt(topic = TOPIC): Promise<string> {
   const user = await prisma.user.upsert({
     where: { id: "user-1" },
     update: {},
-    create: { id: "user-1", email: "test@localhost" },
+    create: { id: "user-1", email: "test@localhost", createdAt: NOW },
   });
 
   const session = await prisma.practiceSession.create({
-    data: { userId: user.id, topicFilter: null },
+    data: { userId: user.id, topicFilter: null, startedAt: NOW },
   });
 
   const attempt = await prisma.attempt.create({
@@ -43,6 +43,7 @@ async function seedOpenAttempt(topic = TOPIC): Promise<string> {
       expectedAnswer: "720",
       answerType: "integer",
       status: "OPEN",
+      createdAt: NOW,
     },
   });
 

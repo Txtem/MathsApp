@@ -38,7 +38,8 @@ export interface AnswerInput {
   readonly userId: string;
   readonly answer: string;
   readonly durationMs: number;
-  readonly now?: Date;
+  /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
+  readonly now: Date;
 }
 
 export type AnswerOutcome =
