@@ -735,8 +735,9 @@ Alle Prompts liegen als versionierte Dateien in `lib/llm/prompts/`, nicht inline
 
 ## 10. Aufgabenauswahl
 
-Alles in `lib/selection/`, die DB-Schicht darunter in `lib/db/topic-stats.ts`.
-`lib/engine` bleibt davon unberührt und ohne I/O.
+Alles in `lib/selection/`, die DB-Schicht darunter in `lib/db/topic-stats.ts` und
+`lib/db/session-history.ts`. `lib/engine` bleibt davon unberührt und ohne I/O; die Auswahl
+ruft `instantiate` auf, nicht umgekehrt.
 
 ### Kandidaten
 
@@ -785,15 +786,33 @@ Template ist ganz ausgeschlossen.
 
 ### Wiederholungsvermeidung
 
-Die letzten drei `templateId`s dieser `PracticeSession` ausschließen. Bleibt danach kein
-Kandidat übrig, wird die Sperre für diesen Zug ignoriert statt zu scheitern — bei einem
-Topic mit nur zwei Templates ist Wiederholung besser als ein Abbruch.
+Zwei Mechanismen, die verschiedene Dinge meiden: dieselbe **Aufgabe** hart, dasselbe
+**Verfahren** weich.
 
-**Bekannter Konflikt mit der Templatewahl:** Der harte Ausschluss überlagert die
-Gewichtung nach Schwierigkeit erheblich — bei vier Templates im Topic vollständig, weil
-dann genau ein Kandidat übrig bleibt und die Auswahl zu einem festen Reihum-Durchlauf
-wird. Gemessen in `lib/selection/distribution.test.ts`; die Zahlen stehen in
-`OVERVIEW.md`, Abschnitt 7. Das ist offen und nicht durch mehr Content zu beheben.
+**Harte Sperre — nur für identische Instanzen.** Ein Wurf, dessen `questionText` in dieser
+`PracticeSession` schon gestellt wurde, wird verworfen und neu gezogen, höchstens
+`MAX_DRAWS = 5` mal; danach wird die Wiederholung angenommen. Geprüft wird **nach** der
+Instanziierung, weil die Parameter erst dort entstehen (`lib/selection/next-question.ts`).
+Laut scheitern gibt es hier nicht — derselbe Gedanke wie `MAX_TRIES` in `instantiate`:
+Eine wiederholte Aufgabe ist besser als keine. Bei einem Template, dessen Parameterraum
+ausgeschöpft ist, ist das der Normalfall und kein Fehler.
+
+Der `questionText` ist der Schlüssel, weil Prüfung 4 der Content-Pipeline verlangt, dass
+jeder gewürfelte Parameter im Aufgabentext vorkommt: Gleicher Text heißt damit gleiche
+Parameter. Das gilt, solange kein Template kosmetische Parameter zieht — siehe D-25.
+
+**Weiche Abwertung — für zuletzt gestellte Templates.** Das Gewicht aus der Templatewahl
+wird mit einem Rückschlag multipliziert, je nachdem, wie viele Züge die letzte Verwendung
+zurückliegt: `f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei, sonst 1. Kein Gewicht
+wird null; es bleibt immer ein Kandidat, und einen Sonderfall „alles gesperrt" gibt es
+nicht mehr.
+
+Die Faktoren sind gemessen, nicht geschätzt — die Parametersuche läuft über
+`lib/selection/distribution.test.ts`, die Tabelle steht in `DECISIONS.md`, D-24.
+
+Beide Mechanismen brauchen die bisherigen Attempts der Sitzung. Geladen werden dafür genau
+zwei Spalten, `templateId` und `questionText` (`lib/db/session-history.ts`):
+`expectedAnswer` hat in einem Auswahlpfad nichts verloren.
 
 ### Fortschreibung nach der Antwort
 
@@ -811,9 +830,10 @@ nichts fort.
 
 ### Reinheit
 
-Score-Berechnung, Zielschwierigkeit, gewichtetes Ziehen und die SM-2-Fortschreibung sind
-**reine Funktionen** mit eigenen Tests: Eingabe sind Statistiken und Kandidaten, nicht die
-Datenbank. Der DB-Zugriff liegt in einer dünnen Schicht darüber. Das ist dieselbe Trennung
+Score-Berechnung, Zielschwierigkeit, gewichtetes Ziehen, die Sperre gegen dieselbe Aufgabe
+und die SM-2-Fortschreibung sind **reine Funktionen** mit eigenen Tests: Eingabe sind
+Statistiken, Kandidaten und die bisherigen Fragetexte, nicht die Datenbank. Auch Zufall
+und Seed kommen als Funktionen herein, `now` ebenfalls (D-20). Der DB-Zugriff liegt in einer dünnen Schicht darüber. Das ist dieselbe Trennung
 wie bei `components/topic-groups.ts` — und aus demselben Grund, siehe D-16.
 
 Kein Elo, kein Bayesian Knowledge Tracing. Das kann später ersetzt werden, deshalb liegt
@@ -827,7 +847,8 @@ alles hinter einer Funktion mit klarer Signatur.
 Aufruf frisch, statt beim Build einen Stand von damals einzufrieren.
 
 Pro Thema eine Zeile: Beschriftung aus dem Themenbaum, Zahl der Versuche, Erfolgsquote
-gesamt, Erfolgsquote der letzten zehn, `dueAt` als „fällig" oder als Datum. Gruppiert nach
+gesamt, Erfolgsquote der letzten zehn, der Termin relativ als „fällig", „morgen" oder
+„in N Tagen" (D-22 — nie als Kalenderdatum). Gruppiert nach
 Oberthema, in derselben Form wie die Themenauswahl — die Gruppierung kommt aus
 `toTopicGroups` und nicht aus einer zweiten Umformung (D-16). Jedes Thema mit Aufgaben
 bekommt eine Zeile, auch bei null Versuchen.

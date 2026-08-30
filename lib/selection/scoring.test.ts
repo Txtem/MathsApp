@@ -4,6 +4,8 @@ import {
   chooseTopic,
   isDue,
   MIN_ATTEMPTS_FOR_RATE,
+  RECENCY_FACTORS,
+  recencyFactor,
   successRate,
   targetDifficulty,
   templateWeight,
@@ -180,5 +182,32 @@ describe("templateWeight", () => {
     for (let difficulty = 1; difficulty <= 5; difficulty++) {
       expect(templateWeight(difficulty, 1)).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("recencyFactor", () => {
+  const zuletzt = ["t1", "t2", "t3"];
+
+  it("wertet nach dem Abstand zur letzten Verwendung ab", () => {
+    expect(recencyFactor("t1", zuletzt)).toBe(RECENCY_FACTORS[0]);
+    expect(recencyFactor("t2", zuletzt)).toBe(RECENCY_FACTORS[1]);
+    expect(recencyFactor("t3", zuletzt)).toBe(RECENCY_FACTORS[2]);
+  });
+
+  it("lässt alles Ältere und alles Ungestellte unangetastet", () => {
+    expect(recencyFactor("t4", ["t1", "t2", "t3", "t4"])).toBe(1);
+    expect(recencyFactor("t9", zuletzt)).toBe(1);
+    expect(recencyFactor("t1", [])).toBe(1);
+  });
+
+  it("zählt bei Wiederholungen die jüngste Verwendung", () => {
+    // "t1" steht zweimal drin — der stärkere Abschlag gewinnt.
+    expect(recencyFactor("t1", ["t1", "t2", "t1"])).toBe(RECENCY_FACTORS[0]);
+    expect(recencyFactor("t2", ["t1", "t1", "t2"])).toBe(RECENCY_FACTORS[2]);
+  });
+
+  it("wird nie null — auch das eben gestellte Template bleibt möglich", () => {
+    for (const faktor of RECENCY_FACTORS) expect(faktor).toBeGreaterThan(0);
+    expect(recencyFactor("t1", zuletzt)).toBeGreaterThan(0);
   });
 });

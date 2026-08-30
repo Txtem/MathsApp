@@ -7,9 +7,10 @@ import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplates } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
+import { loadSessionHistory } from "@/lib/db/session-history";
 import { loadTopicStats } from "@/lib/db/topic-stats";
-import { instantiate } from "@/lib/engine/instantiate";
-import { AVOID_COUNT, matchesTopic, selectTemplate } from "@/lib/selection/next-template";
+import { drawQuestion } from "@/lib/selection/next-question";
+import { matchesTopic } from "@/lib/selection/next-template";
 
 /**
  * POST /api/session/[id]/next — stellt die nächste Aufgabe.
@@ -38,12 +39,7 @@ export async function POST(
   if (session.userId !== userId) return apiError("forbidden", "Session gehört zu einem anderen User.");
   if (session.endedAt) return apiError("invalid_request", "Session ist bereits beendet.");
 
-  const recent = await prisma.attempt.findMany({
-    where: { practiceSessionId: session.id },
-    orderBy: { createdAt: "desc" },
-    take: AVOID_COUNT,
-    select: { templateId: true },
-  });
+  const history = await loadSessionHistory(prisma, session.id);
 
   // Statistiken nur zu den Themen holen, die der Filter überhaupt zulässt.
   const templates = getTemplates();
@@ -55,24 +51,27 @@ export async function POST(
     ),
   ];
 
-  const template = selectTemplate(
+  // Der Seed ist die einzige Zufallsquelle der Aufgabe und wird persistiert —
+  // damit ist jede Instanz später exakt reproduzierbar. Beides kommt als
+  // Funktion herein, damit `drawQuestion` rein bleibt und testbar ist.
+  const drawn = drawQuestion(
     templates,
     {
       topicFilter: session.topicFilter,
       stats: await loadTopicStats(prisma, userId, topics),
-      recentTemplateIds: recent.map((attempt) => attempt.templateId),
+      recentTemplateIds: history.recentTemplateIds,
+      askedQuestionTexts: history.askedQuestionTexts,
       now,
     },
     Math.random,
+    randomUUID,
   );
 
-  if (!template) {
+  if (!drawn) {
     return apiError("no_template", `Kein Template für den Filter "${session.topicFilter}".`);
   }
 
-  // Der Seed ist die einzige Zufallsquelle der Aufgabe und wird persistiert —
-  // damit ist jede Instanz später exakt reproduzierbar.
-  const instance = instantiate(template, randomUUID());
+  const { template, instance } = drawn;
 
   const attempt = await prisma.attempt.create({
     data: {

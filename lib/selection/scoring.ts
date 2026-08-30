@@ -115,3 +115,32 @@ export function targetDifficulty(rate: number): number {
 export function templateWeight(difficulty: number, target: number): number {
   return 1 / (1 + Math.abs(difficulty - target));
 }
+
+/**
+ * Rückschlag auf das Gewicht eines Templates, das in dieser Sitzung gerade
+ * erst dran war — `f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei.
+ *
+ * Vorher war das ein harter Ausschluss der letzten drei `templateId`s. Gemessen
+ * hat der die Schwierigkeitsgewichtung überlagert: bei vier Templates im Thema
+ * vollständig, weil dann genau ein Kandidat übrig blieb und aus der Ziehung ein
+ * Reihum-Durchlauf wurde. Ein Abschlag lässt beide Eigenschaften nebeneinander
+ * bestehen — und weil kein Gewicht null wird, entfällt auch der Sonderfall
+ * „alles gesperrt, Sperre fällt weg". Siehe D-24.
+ *
+ * Die Zahlen sind gemessen, nicht geschätzt: `distribution.test.ts` fährt sie
+ * als Parameter durch, die Tabelle steht in `DECISIONS.md`.
+ */
+export const RECENCY_FACTORS: readonly number[] = [0.2, 0.5, 0.8];
+
+/**
+ * `recentTemplateIds` ist die Liste der zuletzt gestellten Templates, jüngste
+ * zuerst. Doppelte Einträge sind erlaubt; es zählt die jüngste Verwendung.
+ */
+export function recencyFactor(
+  templateId: string,
+  recentTemplateIds: readonly string[],
+): number {
+  const zuege = recentTemplateIds.indexOf(templateId);
+  if (zuege === -1 || zuege >= RECENCY_FACTORS.length) return 1;
+  return RECENCY_FACTORS[zuege];
+}

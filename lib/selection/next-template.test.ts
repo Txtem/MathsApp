@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import type { Template } from "@/lib/engine/types";
 
-import { AVOID_COUNT, matchesTopic, selectTemplate, weightedPick } from "./next-template";
-import type { TopicStats } from "./scoring";
+import { matchesTopic, selectTemplate, weightedPick } from "./next-template";
+import { RECENCY_FACTORS, type TopicStats } from "./scoring";
 
 /**
  * Eigene Fixtures statt echter Templates: Die Auswahl soll hier geprüft werden,
@@ -247,36 +247,69 @@ describe("selectTemplate", () => {
     });
   });
 
-  describe("Wiederholungsvermeidung", () => {
+  describe("Abwertung zuletzt gestellter Templates", () => {
     const drei = [
       template("t1", "kombinatorik.permutation"),
       template("t2", "kombinatorik.permutation"),
       template("t3", "kombinatorik.permutation"),
     ];
 
-    it("meidet die zuletzt gestellten Templates", () => {
-      expect(selectTemplate(drei, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t2");
-      expect(selectTemplate(drei, { recentTemplateIds: ["t1", "t2"], now: NOW }, first)?.id).toBe(
-        "t3",
-      );
+    /**
+     * Zählt 400 Ziehungen, indem `random()` den Wertebereich [0, 1) gleichmäßig
+     * abfährt. Damit trifft die Zählung die Gewichte exakt statt ungefähr — der
+     * Test kann nicht gelegentlich umfallen.
+     */
+    function anteile(recentTemplateIds: readonly string[]): Record<string, number> {
+      const counts: Record<string, number> = { t1: 0, t2: 0, t3: 0 };
+      for (let i = 0; i < 400; i++) {
+        const picked = selectTemplate(drei, { recentTemplateIds, now: NOW }, () => i / 400);
+        if (picked) counts[picked.id] += 1;
+      }
+      return counts;
+    }
+
+    it("schließt das zuletzt gestellte Template nicht aus", () => {
+      // Vorher war das ein harter Ausschluss und die Antwort wäre "t2" gewesen.
+      expect(selectTemplate(drei, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t1");
     });
 
-    it("betrachtet nur die letzten drei", () => {
-      expect(AVOID_COUNT).toBe(3);
-      // t1 steht an vierter Stelle und wird damit nicht mehr gemieden.
-      const recent = ["a", "b", "c", "t1"];
-      expect(selectTemplate(drei, { recentTemplateIds: recent, now: NOW }, first)?.id).toBe("t1");
+    it("zieht es aber deutlich seltener", () => {
+      const counts = anteile(["t1"]);
+
+      // Gewichte 0.2, 1, 1 — zusammen 2.2. Von Hand: 0.2/2.2 ≈ 9 %, also rund
+      // 36 von 400, gegen 133 bei Gleichstand.
+      expect(counts.t1).toBeGreaterThan(30);
+      expect(counts.t1).toBeLessThan(42);
+      expect(counts.t2).toBeGreaterThan(counts.t1 * 4);
     });
 
-    it("wiederholt lieber, als gar keine Aufgabe zu liefern", () => {
+    it("wertet zwei und drei Züge zurück schwächer ab", () => {
+      const counts = anteile(["t3", "t2", "t1"]);
+
+      // Gewichte 0.8, 0.5, 0.2 für t1, t2, t3 — die Reihenfolge der Abwertung
+      // folgt der Liste, jüngste zuerst.
+      expect(counts.t1).toBeGreaterThan(counts.t2);
+      expect(counts.t2).toBeGreaterThan(counts.t3);
+      expect(RECENCY_FACTORS).toEqual([0.2, 0.5, 0.8]);
+    });
+
+    it("wertet nach drei Zügen gar nicht mehr ab", () => {
+      const counts = anteile(["a", "b", "c", "t1"]);
+
+      expect(counts).toEqual({ t1: 134, t2: 133, t3: 133 });
+    });
+
+    it("kennt keinen Sonderfall mehr, wenn alle drei zuletzt dran waren", () => {
+      // Früher fiel hier die Sperre weg und beide Zufallszahlen ergaben "t3".
+      // Jetzt wird schlicht weiter gewichtet gezogen — mit den Abschlägen.
+      const alle = ["t1", "t2", "t3"];
+      expect(selectTemplate(drei, { recentTemplateIds: alle, now: NOW }, first)?.id).toBe("t1");
+      expect(selectTemplate(drei, { recentTemplateIds: alle, now: NOW }, last)?.id).toBe("t3");
+    });
+
+    it("liefert auch dann eine Aufgabe, wenn das Thema nur ein Template hat", () => {
       const eins = [template("t1", "kombinatorik.permutation")];
       expect(selectTemplate(eins, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t1");
-    });
-
-    it("hebt die Sperre nur auf, wenn wirklich nichts übrig bleibt", () => {
-      const gesperrt = ["t1", "t2"];
-      expect(selectTemplate(drei, { recentTemplateIds: gesperrt, now: NOW }, first)?.id).toBe("t3");
-      expect(selectTemplate(drei, { recentTemplateIds: gesperrt, now: NOW }, last)?.id).toBe("t3");
     });
   });
 

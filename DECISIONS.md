@@ -462,3 +462,74 @@ wird. Ohne Termin gilt ein Thema als fällig — es wurde nie geübt.
 **Abgesichert:** `components/due-label.test.ts` prüft die Grenzen und rechnet dieselbe
 Eingabe unter beiden Zeitzonen — mit einer Gegenprobe, die zeigt, dass ein Kalenderdatum
 an derselben Stelle auseinanderfällt. Ohne sie wäre der Test grün, ohne etwas zu prüfen.
+
+---
+
+## D-24 — Zuletzt gestellte Templates werden abgewertet, nicht gesperrt
+*2026-08-30, M2b*
+
+`SPEC.md` Abschnitt 10 verlangte, die letzten drei `templateId`s dieser Sitzung
+auszuschließen. Der Ausschluss ist ersetzt durch einen Rückschlag auf das Gewicht:
+`f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei Züge zurück, sonst 1.
+
+**Anlass:** Der Ausschluss arbeitete gegen die Schwierigkeitsgewichtung derselben
+Abschnitts. Gemessen in `lib/selection/distribution.test.ts`, 20 000 geseedete Ziehungen
+je Poolgröße — der Anteil der Gewichtung, der verloren geht:
+
+| Templates im Thema        |    3 |    4 |    5 |    6 |    8 |   10 |   12 |   15 |   20 |
+|---------------------------|------|------|------|------|------|------|------|------|------|
+| harter Ausschluss (vorher) | 76 % |100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
+| Abwertung 0.2 / 0.5 / 0.8  | 46 % | 38 % | 24 % | 26 % | 19 % | 12 % | 13 % |  9 % |  5 % |
+
+Bei vier Templates blieb vorher **nichts** übrig: Drei gesperrte IDs lassen genau einen
+Kandidaten zu, aus der Ziehung wird ein deterministischer Reihum-Durchlauf. Zwischen drei
+und vier Templates sprang das Verhalten zudem von 76 % auf 100 %, weil bei dreien die
+Ausnahme „alles gesperrt, Sperre fällt weg" griff und bei vieren nicht.
+
+**Folge:** Diese Ausnahme entfällt ersatzlos. Kein Gewicht wird null, also bleibt immer
+ein Kandidat — der Sonderfall hat kein Gegenstück mehr.
+
+**Die Faktoren sind noch die Startwerte** `0.2 / 0.5 / 0.8` aus dem Arbeitsplan. Die
+Parametersuche ist ein eigener Schritt; sie ersetzt die untere Zeile der Tabelle durch die
+gefundenen Werte. Wer die Zahlen hier für willkürlich hält: Sie sind es nicht, sie sind
+gemessen — und ohne die Messung sähe man nicht, dass der Verlust bei kleinem Pool bleibt.
+Der Rest bei drei Templates ist keine Frage der Faktoren, sondern der Content-Tiefe (M2d).
+
+---
+
+## D-25 — Dieselbe Aufgabe kommt nicht zweimal, erkannt am Fragetext
+*2026-08-30, M2b*
+
+Zusätzlich zur Abwertung aus D-24 gibt es eine harte Sperre — aber auf der **Instanz**,
+nicht auf dem Template: Ein Wurf, dessen `questionText` in dieser `PracticeSession` schon
+gestellt wurde, wird verworfen und neu gezogen, höchstens fünfmal
+(`lib/selection/next-question.ts`).
+
+**Warum die Instanz und nicht das Template:** Der Sinn des Generators ist, dass ein
+Template viele Aufgaben hervorbringt. „5 Personen" und „8 Personen" sind nicht dieselbe
+Aufgabe; das Verfahren zu wiederholen ist bestenfalls abwertungswürdig, nicht verboten.
+Was wirklich stört, ist die identische Aufgabe.
+
+**Warum `questionText` und nicht `(templateId, params)`:** Prüfung 4 der Content-Pipeline
+verbietet Nicht-`const`-Parameter, die im Aufgabentext nicht vorkommen. Gleicher Text
+heißt deshalb gleiche gewürfelte Parameter — das folgt aus einer erzwungenen Invariante,
+es ist keine Heuristik. Der Text liegt außerdem fertig in der Zeile und braucht keine
+kanonische Form für einen JSON-Vergleich.
+
+**Bedingung, die mitgilt:** Führt M2d kosmetische Parameter ein — etwa einen gewürfelten
+Namen, der die Aufgabe nicht verändert —, macht ein solcher Parameter zwei mathematisch
+identische Aufgaben formal verschieden, und der Schlüssel verliert seine Schärfe. Das ist
+dann kein Fehler in der Auswahl, sondern eine Folge der Content-Änderung, und die
+Entscheidung ist an dieser Stelle neu zu treffen.
+
+**Grenze:** Ein Template mit ausgeschöpftem Parameterraum liefert nach fünf Würfen eine
+Wiederholung. `aufg_00004` (MISSISSIPPI) hat wegen D-13 genau eine Instanz — dort ist das
+der Normalfall und kein Fehler. Gemessen sind die Parameterräume aller Templates: 1, 6, 9,
+10, 21, 28, 33, 36, 48, 396, 6084, 6960. Bei den kleinen trägt allein `f₁` gegen die
+Wiederholung; das ist eine Zielvorgabe für M2d, kein Abnahmekriterium für M2b.
+
+**Abfrage:** Beide Mechanismen brauchen die bisherigen Attempts der Sitzung. Geladen
+werden genau zwei Spalten, `templateId` und `questionText` (`lib/db/session-history.ts`).
+`expectedAnswer` hat in einem Auswahlpfad nichts verloren — das ist keine
+Performance-Frage, sondern die Fortsetzung von Invariante 2 in den Code hinein: Was nie
+geladen wird, kann nicht versehentlich hinausgehen. Ein Test hält die Spaltenauswahl fest.

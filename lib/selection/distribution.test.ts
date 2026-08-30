@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { makeRng } from "@/lib/engine/generate/rng";
 import type { Template } from "@/lib/engine/types";
 
-import { AVOID_COUNT, selectTemplate, weightedPick } from "./next-template";
-import { templateWeight, type TopicStats } from "./scoring";
+import { selectTemplate, weightedPick } from "./next-template";
+import { RECENCY_FACTORS, templateWeight, type TopicStats } from "./scoring";
 
 /**
  * Was die Auswahl über viele Ziehungen tatsächlich tut.
@@ -12,14 +12,15 @@ import { templateWeight, type TopicStats } from "./scoring";
  * Anlass war eine schwache Messung an der laufenden App: Die Schwierigkeit
  * stieg mit der Erfolgsquote, aber viel weniger als die Gewichte erwarten
  * ließen. Die naheliegende Erklärung — zu wenige Templates je Thema — ist hier
- * geprüft und **widerlegt** worden. Der Grund ist die Wiederholungsvermeidung,
- * und sie wirkt auch dann noch, wenn ein Thema zwanzig Templates hat.
+ * geprüft und **widerlegt** worden. Der Grund war der harte Ausschluss der
+ * zuletzt gestellten Templates, und er wirkte auch bei zwanzig noch.
  *
- * Erster Teil: Ohne Vermeidung wird exakt nach Gewicht gezogen. Damit ist die
+ * Erster Teil: Ohne Abwertung wird exakt nach Gewicht gezogen. Damit ist die
  * Ziehfunktion selbst aus dem Verdacht.
  *
- * Zweiter Teil: Mit Vermeidung wird gemessen, wie viel von der Gewichtung
- * übrig bleibt — bei verschiedenen Poolgrößen.
+ * Zweiter Teil: Mit der Abwertung, die den Ausschluss abgelöst hat (D-24), wird
+ * gemessen, wie viel von der Gewichtung übrig bleibt — bei verschiedenen
+ * Poolgrößen.
  *
  * Der Zufall ist geseedet. Die Zahlen sind reproduzierbar, der Test kann nicht
  * gelegentlich umfallen.
@@ -94,7 +95,7 @@ function meanDifficulty(picked: readonly Template[]): number {
 function sitzung(
   templates: readonly Template[],
   seed: string,
-  mitVermeidung: boolean,
+  mitAbwertung: boolean,
 ): Template[] {
   const rng = makeRng(seed);
   let recent: string[] = [];
@@ -106,18 +107,27 @@ function sitzung(
       {
         now: NOW,
         stats: [BEHERRSCHT],
-        recentTemplateIds: mitVermeidung ? recent : [],
+        recentTemplateIds: mitAbwertung ? recent : [],
       },
       rng.next,
     );
 
     if (chosen === undefined) throw new Error("Die Auswahl hat kein Template geliefert.");
     picked.push(chosen);
-    // Länger als AVOID_COUNT wird die Liste nicht gebraucht.
-    recent = [chosen.id, ...recent].slice(0, AVOID_COUNT);
+    // Weiter zurück als die Faktoren reichen, wird die Liste nicht gebraucht.
+    recent = [chosen.id, ...recent].slice(0, RECENCY_FACTORS.length);
   }
 
   return picked;
+}
+
+/** Anteil der Züge, die dasselbe Template wie der Zug davor gestellt haben. */
+function wiederholungsrate(picked: readonly Template[]): number {
+  let wiederholt = 0;
+  for (let i = 1; i < picked.length; i++) {
+    if (picked[i].id === picked[i - 1].id) wiederholt++;
+  }
+  return wiederholt / (picked.length - 1);
 }
 
 /** Der Schwierigkeitsschnitt, den die reinen Gewichte ergeben. */
@@ -146,7 +156,7 @@ function verlust(templates: readonly Template[], seed: string): number {
   return (gewichtet - gemessen) / (gewichtet - gleich);
 }
 
-describe("ohne Vermeidung wird exakt nach Gewicht gezogen", () => {
+describe("ohne Abwertung wird exakt nach Gewicht gezogen", () => {
   /**
    * Zielschwierigkeit 4, Schwierigkeiten 1 bis 5. Die Gewichte
    * `1 / (1 + |difficulty - 4|)` sind 1/4, 1/3, 1/2, 1, 1/2 — in Zwölfteln
@@ -210,51 +220,62 @@ describe("ohne Vermeidung wird exakt nach Gewicht gezogen", () => {
   });
 });
 
-describe("die Wiederholungsvermeidung überlagert die Gewichtung", () => {
+describe("die Abwertung lässt die Gewichtung stehen", () => {
   /**
-   * Gemessene Verluste (geseedet, 20 000 Ziehungen je Poolgröße):
+   * Dieselbe Messung wie vor dem Umbau, 20 000 geseedete Ziehungen je
+   * Poolgröße. Die obere Zeile ist der harte Ausschluss der letzten drei
+   * Templates, die untere die Abwertung mit den Startwerten `0.2 / 0.5 / 0.8`:
    *
-   * | Templates |   3 |   4 |   5 |   6 |   8 |  10 |  12 |  15 |  20 |
-   * |-----------|-----|-----|-----|-----|-----|-----|-----|-----|-----|
-   * | Verlust   | 76% |100% | 73% | 61% | 48% | 33% | 28% | 21% | 16% |
+   * | Templates                 |    3 |    4 |    5 |    6 |    8 |   10 |   12 |   15 |   20 |
+   * |---------------------------|------|------|------|------|------|------|------|------|------|
+   * | vorher, harter Ausschluss | 76 % |100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
+   * | jetzt, 0.2 / 0.5 / 0.8    | 46 % | 38 % | 24 % | 26 % | 19 % | 12 % | 13 % |  9 % |  5 % |
    *
-   * Die Erklärung „zu wenige Templates je Thema" trägt damit nicht: Der
-   * Verlust ist bei vier Templates am größten, nicht bei zwei, und er ist auch
-   * bei zwanzig noch messbar.
+   * Die Faktoren sind noch die Startwerte; die Suche nach den endgültigen ist
+   * ein eigener Schritt und landet als Tabelle in `DECISIONS.md`. Deshalb
+   * prüfen die Tests hier **Schranken und Eigenschaften**, keine Punktwerte —
+   * ein Test, der die Startwerte festnagelt, würde die Suche behindern statt
+   * sie abzusichern.
    */
 
-  it("bei vier Templates bleibt von der Gewichtung nichts übrig", () => {
-    // Vier Templates, drei gemiedene IDs: Nach drei Zügen ist genau ein
-    // Kandidat übrig. Die Auswahl ist dann kein Ziehen mehr, sondern ein
-    // erzwungener Reihum-Durchlauf.
-    expect(verlust(pool(4), "sitzung-vier")).toBeGreaterThan(0.98);
+  it("bei vier Templates bleibt der größte Teil der Gewichtung erhalten", () => {
+    // Vorher war hier nichts übrig: Drei gesperrte IDs ließen genau einen
+    // Kandidaten zu, und die Auswahl wurde ein Reihum-Durchlauf.
+    expect(verlust(pool(4), "sitzung-vier")).toBeLessThan(0.5);
   });
 
-  it("bei vier Templates ist die Reihenfolge sogar deterministisch", () => {
+  it("die Reihenfolge ist nicht mehr deterministisch", () => {
     const picked = sitzung(pool(4), "sitzung-vier-reihenfolge", true);
 
-    // Ab dem vierten Zug wiederholt sich kein Template innerhalb von vier
-    // aufeinanderfolgenden Aufgaben — jedes Fenster enthält alle vier.
+    // Die Gegenprobe zum alten Verhalten: Damals enthielt **jedes** Fenster von
+    // vier Aufgaben alle vier Templates. Jetzt gilt das nicht mehr durchgängig.
+    const fenster = [];
     for (let i = 100; i < 200; i++) {
-      const fenster = new Set(picked.slice(i, i + 4).map((item) => item.id));
-      expect(fenster.size).toBe(4);
+      fenster.push(new Set(picked.slice(i, i + 4).map((item) => item.id)).size);
+    }
+    expect(fenster.some((groesse) => groesse < 4)).toBe(true);
+  });
+
+  it("macht die unmittelbare Wiederholung selten, aber nicht unmöglich", () => {
+    for (const n of [4, 8, 20]) {
+      const rate = wiederholungsrate(sitzung(pool(n), `wiederholung-${n}`, true));
+      expect(rate).toBeGreaterThan(0);
+      expect(rate).toBeLessThan(0.2);
     }
   });
 
-  it("bleibt bei fünf und acht Templates erheblich", () => {
-    expect(verlust(pool(5), "sitzung-fuenf")).toBeGreaterThan(0.6);
-    expect(verlust(pool(8), "sitzung-acht")).toBeGreaterThan(0.35);
+  it("verliert mit wachsendem Pool weniger", () => {
+    expect(verlust(pool(20), "sitzung-zwanzig")).toBeLessThan(verlust(pool(4), "sitzung-vier"));
   });
 
-  it("verschwindet auch bei zwanzig Templates nicht", () => {
-    const gemessen = verlust(pool(20), "sitzung-zwanzig");
-    expect(gemessen).toBeGreaterThan(0.08);
-    // Und sie wird mit wachsendem Pool zumindest kleiner.
-    expect(gemessen).toBeLessThan(verlust(pool(5), "sitzung-zwanzig"));
+  it("bleibt bei kleinem Pool spürbar — das ist eine Content-Frage", () => {
+    // Bei drei Templates ist auch mit Abwertung ein Rest Verzerrung übrig. Das
+    // gehört zu M2d (Content-Tiefe), nicht zur Auswahllogik.
+    expect(verlust(pool(3), "sitzung-drei")).toBeGreaterThan(0.2);
   });
 
-  it("ohne Vermeidung trifft dieselbe Sitzung den gewichteten Schnitt", () => {
-    // Gegenprobe: Es liegt an der Vermeidung, nicht an der Sitzungsform.
+  it("ohne Abwertung trifft dieselbe Sitzung den gewichteten Schnitt", () => {
+    // Gegenprobe: Es liegt an der Abwertung, nicht an der Sitzungsform.
     for (const n of [4, 5, 8, 20]) {
       const templates = pool(n);
       const gemessen = meanDifficulty(sitzung(templates, `ohne-${n}`, false));

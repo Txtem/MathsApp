@@ -2,6 +2,7 @@ import type { Template } from "@/lib/engine/types";
 
 import {
   chooseTopic,
+  recencyFactor,
   successRate,
   targetDifficulty,
   templateWeight,
@@ -12,15 +13,16 @@ import {
  * Welches Template kommt als Nächstes? (SPEC.md Abschnitt 10)
  *
  * Der Weg: Kandidaten nach Topic-Filter → schwächstes bzw. fälligstes Thema
- * wählen → innerhalb des Themas gewichtet nach Schwierigkeit ziehen, die
- * zuletzt gestellten Templates dabei meiden.
+ * wählen → innerhalb des Themas gewichtet nach Schwierigkeit ziehen, das
+ * Gewicht zuletzt gestellter Templates dabei abwerten.
+ *
+ * Die Abwertung ersetzt den harten Ausschluss der letzten drei Templates
+ * (D-24). Gegen dieselbe Aufgabe zweimal in einer Sitzung hilft sie nicht —
+ * das tut die Sperre auf den Fragetext in `next-question.ts`.
  *
  * Rein: Statistiken und Zufall kommen als Parameter herein. Die DB-Schicht
- * darüber steht in `lib/db/topic-stats.ts`.
+ * darüber steht in `lib/db/topic-stats.ts` und `lib/db/session-history.ts`.
  */
-
-/** So viele zuletzt gestellte Templates werden gemieden. */
-export const AVOID_COUNT = 3;
 
 export interface SelectionInput {
   /** Präfix, z.B. "arithmetik" oder "arithmetik.addition". */
@@ -68,17 +70,17 @@ export function selectTemplate(
 
   const target = targetDifficulty(successRate(chosen));
   const inTopic = candidates.filter((template) => template.topic === chosen.topic);
+  const recent = input.recentTemplateIds ?? [];
 
-  // Wiederholungsvermeidung: Bleibt danach nichts übrig, wird die Sperre für
-  // diesen Zug ignoriert. Bei einem Thema mit zwei Templates ist Wiederholung
-  // besser als ein Abbruch.
-  const avoid = new Set((input.recentTemplateIds ?? []).slice(0, AVOID_COUNT));
-  const fresh = inTopic.filter((template) => !avoid.has(template.id));
-  const pool = fresh.length > 0 ? fresh : inTopic;
-
+  // Kein Kandidat wird ausgeschlossen: Beide Faktoren sind größer als null, es
+  // bleibt also immer etwas zu ziehen. Genau deshalb gibt es hier keinen
+  // Sonderfall mehr für „alles gesperrt".
   return weightedPick(
-    pool,
-    pool.map((template) => templateWeight(template.difficulty, target)),
+    inTopic,
+    inTopic.map(
+      (template) =>
+        templateWeight(template.difficulty, target) * recencyFactor(template.id, recent),
+    ),
     random,
   );
 }
