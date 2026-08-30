@@ -720,19 +720,83 @@ Alle Prompts liegen als versionierte Dateien in `lib/llm/prompts/`, nicht inline
 
 ## 10. Aufgabenauswahl
 
-V1 bewusst simpel, in `lib/selection/next-template.ts`:
+Alles in `lib/selection/`, die DB-Schicht darunter in `lib/db/topic-stats.ts`.
+`lib/engine` bleibt davon unberührt und ohne I/O.
 
-1. Kandidaten = Templates im gewählten Topic-Filter.
-2. Score pro Topic: `(1 - erfolgsquote) * 2 + faelligkeitsbonus`, wobei
-   `erfolgsquote` über die letzten 10 Versuche läuft und `faelligkeitsbonus = 1`,
-   wenn `dueAt <= now`.
-3. Aus dem höchstbewerteten Topic ein Template ziehen, gewichtet nach `difficulty`
-   passend zur Erfolgsquote (hohe Quote → höhere Schwierigkeit).
-4. Die letzten 3 gestellten Template-IDs ausschließen (Wiederholungsvermeidung).
-5. Intervall nach SM-2-light: richtig → `intervalDays *= 2`, falsch → `intervalDays = 1`.
+### Kandidaten
 
-Kein Elo, kein Bayesian Knowledge Tracing in V1. Das kann später ersetzt werden —
-deshalb liegt es hinter einer einzigen Funktion mit klarer Signatur.
+Templates, deren `topic` unter dem `topicFilter` der `PracticeSession` liegt. Steht der
+Filter auf einem inneren Knoten, zählen alle Blätter darunter.
+
+### Themenwahl
+
+Pro Kandidaten-Topic:
+
+```
+score = (1 - erfolgsquote) * 2 + faelligkeitsbonus
+```
+
+- `erfolgsquote`: Anteil korrekter unter den **letzten zehn beantworteten** Attempts des
+  Nutzers in diesem Topic. Weniger als drei Attempts ⇒ Topic gilt als unerprobt und
+  bekommt `erfolgsquote = 0.5`, damit weder Bevorzugung noch Meidung entsteht.
+- `faelligkeitsbonus`: `1`, wenn `TopicMastery.dueAt <= now`, sonst `0`.
+  Kein `TopicMastery`-Eintrag ⇒ fällig.
+
+Höchster Score gewinnt. Bei Gleichstand entscheidet der ältere `lastSeenAt`; ein nie
+gestelltes Topic gilt dabei als das älteste.
+
+Die Quote kommt aus den Attempts, nicht aus `TopicMastery` — dort stehen nur
+Gesamtzahlen. Gefiltert wird auf `status: "ANSWERED"`: Ein übersprungener Attempt trägt
+kein Urteil und darf die Quote nicht verwässern.
+
+### Templatewahl innerhalb des Topics
+
+Zielschwierigkeit aus der Erfolgsquote:
+
+| Erfolgsquote | Zielschwierigkeit |
+|---|---|
+| < 0.4 | 1 |
+| 0.4 – 0.7 | 2 |
+| 0.7 – 0.9 | 3 |
+| > 0.9 | 4 |
+
+Die untere Grenze gehört jeweils zur höheren Stufe: `0.7` ergibt 3, und nur echt über
+`0.9` erreicht die 4.
+
+Gewicht eines Templates: `1 / (1 + |difficulty - zielschwierigkeit|)`. Danach gewichtet
+ziehen. Ein Topic ohne Template auf der Zielschwierigkeit fällt so automatisch auf die
+nächstliegende zurück, ohne Sonderfall im Code. Das Gewicht wird nie null — kein
+Template ist ganz ausgeschlossen.
+
+### Wiederholungsvermeidung
+
+Die letzten drei `templateId`s dieser `PracticeSession` ausschließen. Bleibt danach kein
+Kandidat übrig, wird die Sperre für diesen Zug ignoriert statt zu scheitern — bei einem
+Topic mit nur zwei Templates ist Wiederholung besser als ein Abbruch.
+
+### Fortschreibung nach der Antwort
+
+Beim Schließen eines Attempts, in derselben Transaktion wie der Statuswechsel
+(`lib/db/attempts.ts`):
+
+- `TopicMastery` upsert: `attempts + 1`, bei richtig `correct + 1`, `lastSeenAt = now`.
+- SM-2-light: richtig ⇒ `intervalDays *= 2` (Deckel bei 60), falsch ⇒ `intervalDays = 1`.
+- `dueAt = now + intervalDays`.
+
+**Wichtig:** Die Fortschreibung passiert nur, wenn der `updateMany` mit der Bedingung
+`status: "OPEN"` tatsächlich eine Zeile getroffen hat. Sonst zählt ein doppeltes Absenden
+zweimal. Ein `unparseable` schließt den Attempt nicht (D-04) und schreibt folglich auch
+nichts fort.
+
+### Reinheit
+
+Score-Berechnung, Zielschwierigkeit, gewichtetes Ziehen und die SM-2-Fortschreibung sind
+**reine Funktionen** mit eigenen Tests: Eingabe sind Statistiken und Kandidaten, nicht die
+Datenbank. Der DB-Zugriff liegt in einer dünnen Schicht darüber. Das ist dieselbe Trennung
+wie bei `components/topic-groups.ts` — und aus demselben Grund, siehe D-16.
+
+Kein Elo, kein Bayesian Knowledge Tracing. Das kann später ersetzt werden, deshalb liegt
+alles hinter einer Funktion mit klarer Signatur.
 
 ---
 
@@ -755,9 +819,19 @@ Nicht in M1: Auth, `TopicMastery`, Fortschrittsanzeige, LLM, Fotoupload. Die
 Aufgabenauswahl bleibt zufällig innerhalb des Filters; die Mastery-Logik aus Abschnitt 10
 kommt vollständig in M2.
 
-**M2 — Nutzer & Fortschritt**
-Auth.js. Sessions, Attempts, TopicMastery persistiert. Auswahl-Logik. Statistik-Seite
-mit Erfolgsquote pro Topic und Zeitverlauf.
+**M2a — Fortschritt und Auswahl**
+Datenmodell (`PracticeSession`, denormalisierter `Attempt`, `TopicMastery`),
+Mastery-Fortschreibung, Auswahl-Logik nach Abschnitt 10, Statistik-Seite. Läuft
+weiterhin auf dem Dummy-User, aber hinter `getCurrentUserId()`.
+
+**M2b — Auth.js**
+Ersetzt ausschließlich die Implementierung von `getCurrentUserId()`, dazu Login-Oberfläche
+und Routenschutz.
+
+**Warum geteilt:** Fortschritt und Auswahl sind der Produktwert und vollständig ohne Login
+testbar. Auth ist Infrastruktur und gleichzeitig die riskanteste Integration im Projekt
+(Next.js 16 + Prisma 7 + Auth.js v5 gleichzeitig). Scheitert M2b, bleibt trotzdem eine
+App, die sich an die Schwächen des Übenden anpasst.
 
 **M3 — LLM-Einkleidung**
 Anthropic-Client, Prompt-Dateien, Validierungs-Gate, Caching. Feature-Flag `LLM_FLAVOR_ENABLED`,

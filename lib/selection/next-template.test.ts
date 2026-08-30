@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { Template } from "@/lib/engine/types";
 
+import { AVOID_COUNT, matchesTopic, selectTemplate, weightedPick } from "./next-template";
+import type { TopicStats } from "./scoring";
+
 /**
  * Eigene Fixtures statt echter Templates: Die Auswahl soll hier geprüft werden,
  * nicht der Content. Ein neues Template im Repo darf diese Tests nicht kippen.
@@ -17,12 +20,23 @@ const base = {
   question_text: "{{a}} + {{b}}",
 } satisfies Omit<Template, "id" | "topic">;
 
-const devTemplates: readonly Template[] = [
-  { ...base, id: "aufg_00001", topic: "arithmetik.addition" },
-  { ...base, id: "aufg_00002", topic: "arithmetik.subtraktion" },
-];
+function template(id: string, topic: string, difficulty = 1): Template {
+  return { ...base, id, topic, difficulty };
+}
 
-import { matchesTopic, selectTemplate } from "./next-template";
+const NOW = new Date("2026-08-30T12:00:00.000Z");
+const MORGEN = new Date("2026-08-31T12:00:00.000Z");
+
+function stats(topic: string, overrides: Partial<TopicStats> = {}): TopicStats {
+  return {
+    topic,
+    recentCorrect: 0,
+    recentAnswered: 0,
+    dueAt: null,
+    lastSeenAt: null,
+    ...overrides,
+  };
+}
 
 /** Nimmt immer das erste Element des Pools — macht die Auswahl im Test eindeutig. */
 const first = () => 0;
@@ -46,53 +60,227 @@ describe("matchesTopic", () => {
   });
 });
 
+describe("weightedPick", () => {
+  const items = ["a", "b", "c"];
+
+  it("gibt undefined ohne Kandidaten", () => {
+    expect(weightedPick([], [], first)).toBeUndefined();
+  });
+
+  it("trifft bei gleichen Gewichten jedes Element", () => {
+    expect(weightedPick(items, [1, 1, 1], () => 0)).toBe("a");
+    expect(weightedPick(items, [1, 1, 1], () => 0.5)).toBe("b");
+    expect(weightedPick(items, [1, 1, 1], () => 0.9)).toBe("c");
+  });
+
+  it("bevorzugt schwerere Gewichte", () => {
+    // "b" belegt 8 von 10 Anteilen, also fast das ganze Intervall.
+    expect(weightedPick(items, [1, 8, 1], () => 0.2)).toBe("b");
+    expect(weightedPick(items, [1, 8, 1], () => 0.85)).toBe("b");
+    expect(weightedPick(items, [1, 8, 1], () => 0.05)).toBe("a");
+    expect(weightedPick(items, [1, 8, 1], () => 0.95)).toBe("c");
+  });
+
+  it("überspringt Gewichte von null", () => {
+    expect(weightedPick(items, [0, 1, 0], () => 0)).toBe("b");
+    expect(weightedPick(items, [0, 1, 0], () => 0.99)).toBe("b");
+  });
+
+  it("liefert bei lauter Nullgewichten trotzdem etwas", () => {
+    expect(weightedPick(items, [0, 0, 0], first)).toBe("a");
+  });
+
+  it("verteilt über viele Ziehungen ungefähr nach Gewicht", () => {
+    const counts = { a: 0, b: 0 };
+    for (let i = 0; i < 1000; i++) {
+      const picked = weightedPick(["a", "b"], [1, 3], () => i / 1000);
+      counts[picked as "a" | "b"]++;
+    }
+    // 1:3 heißt rund 250 zu 750.
+    expect(counts.a).toBeGreaterThan(200);
+    expect(counts.a).toBeLessThan(300);
+  });
+});
+
 describe("selectTemplate", () => {
-  it("zieht aus allen Templates, wenn kein Filter gesetzt ist", () => {
-    expect(selectTemplate(devTemplates, {}, first)?.id).toBe("aufg_00001");
-    expect(selectTemplate(devTemplates, {}, last)?.id).toBe("aufg_00002");
+  const templates = [
+    template("add-1", "arithmetik.addition"),
+    template("sub-1", "arithmetik.subtraktion"),
+  ];
+
+  it("gibt undefined, wenn kein Template zum Filter passt", () => {
+    expect(selectTemplate(templates, { topicFilter: "kombinatorik" }, first)).toBeUndefined();
+    expect(selectTemplate([], {}, first)).toBeUndefined();
   });
 
   it("wendet den Topic-Filter an", () => {
-    expect(selectTemplate(devTemplates, { topicFilter: "arithmetik.subtraktion" }, first)?.id).toBe(
-      "aufg_00002",
+    expect(selectTemplate(templates, { topicFilter: "arithmetik.subtraktion" }, first)?.id).toBe(
+      "sub-1",
     );
-    expect(selectTemplate(devTemplates, { topicFilter: "arithmetik" }, first)?.topic).toMatch(
+    expect(selectTemplate(templates, { topicFilter: "arithmetik" }, first)?.topic).toMatch(
       /^arithmetik\./,
     );
   });
 
-  it("gibt undefined, wenn kein Template zum Filter passt", () => {
-    expect(selectTemplate(devTemplates, { topicFilter: "kombinatorik" }, first)).toBeUndefined();
-    expect(selectTemplate([], {}, first)).toBeUndefined();
+  describe("Themenwahl", () => {
+    it("stellt das schwächere Thema", () => {
+      const chosen = selectTemplate(
+        templates,
+        {
+          now: NOW,
+          stats: [
+            stats("arithmetik.addition", { recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN }),
+            stats("arithmetik.subtraktion", { recentAnswered: 10, recentCorrect: 1 }),
+          ],
+        },
+        first,
+      );
+
+      expect(chosen?.topic).toBe("arithmetik.subtraktion");
+    });
+
+    it("stellt ein unerprobtes Thema vor einem beherrschten", () => {
+      const chosen = selectTemplate(
+        templates,
+        {
+          now: NOW,
+          stats: [
+            stats("arithmetik.addition", { recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN }),
+          ],
+        },
+        first,
+      );
+
+      expect(chosen?.topic).toBe("arithmetik.subtraktion");
+    });
+
+    it("behandelt ein Thema ohne Statistik wie ein unerprobtes", () => {
+      const ohne = selectTemplate(templates, { now: NOW }, first);
+      const mitLeeren = selectTemplate(
+        templates,
+        {
+          now: NOW,
+          stats: [stats("arithmetik.addition"), stats("arithmetik.subtraktion")],
+        },
+        first,
+      );
+
+      expect(ohne?.id).toBe(mitLeeren?.id);
+    });
+
+    it("ignoriert Statistiken zu Themen, die der Filter ausschließt", () => {
+      const chosen = selectTemplate(
+        templates,
+        {
+          topicFilter: "arithmetik.addition",
+          now: NOW,
+          stats: [stats("arithmetik.subtraktion", { recentAnswered: 10, recentCorrect: 0 })],
+        },
+        first,
+      );
+
+      expect(chosen?.topic).toBe("arithmetik.addition");
+    });
   });
 
-  it("meidet die zuletzt gestellten Templates", () => {
-    expect(selectTemplate(devTemplates, { recentTemplateIds: ["aufg_00001"] }, first)?.id).toBe(
-      "aufg_00002",
-    );
-    expect(selectTemplate(devTemplates, { recentTemplateIds: ["aufg_00002"] }, first)?.id).toBe(
-      "aufg_00001",
-    );
+  describe("Schwierigkeit innerhalb des Themas", () => {
+    const gestaffelt = [
+      template("leicht", "kombinatorik.permutation", 1),
+      template("mittel", "kombinatorik.permutation", 2),
+      template("schwer", "kombinatorik.permutation", 4),
+    ];
+
+    /** Zieht 400-mal und zählt, welches Template wie oft kommt. */
+    function verteilung(topicStats: TopicStats): Record<string, number> {
+      const counts: Record<string, number> = { leicht: 0, mittel: 0, schwer: 0 };
+      for (let i = 0; i < 400; i++) {
+        const picked = selectTemplate(gestaffelt, { now: NOW, stats: [topicStats] }, () => i / 400);
+        if (picked) counts[picked.id]++;
+      }
+      return counts;
+    }
+
+    it("bevorzugt bei schwacher Quote das leichte Template", () => {
+      const counts = verteilung(
+        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 1 }),
+      );
+      expect(counts.leicht).toBeGreaterThan(counts.mittel);
+      expect(counts.mittel).toBeGreaterThan(counts.schwer);
+    });
+
+    it("bevorzugt bei hoher Quote das schwere Template", () => {
+      const counts = verteilung(
+        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 }),
+      );
+      expect(counts.schwer).toBeGreaterThan(counts.mittel);
+      expect(counts.schwer).toBeGreaterThan(counts.leicht);
+    });
+
+    it("schließt kein Template ganz aus", () => {
+      const counts = verteilung(
+        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 }),
+      );
+      expect(counts.leicht).toBeGreaterThan(0);
+    });
+
+    it("fällt ohne Template auf der Zielschwierigkeit auf das nächstliegende zurück", () => {
+      // Zielschwierigkeit 4, vorhanden sind nur 1 und 2.
+      const nurLeicht = [
+        template("eins", "kombinatorik.permutation", 1),
+        template("zwei", "kombinatorik.permutation", 2),
+      ];
+      const counts = { eins: 0, zwei: 0 };
+      for (let i = 0; i < 400; i++) {
+        const picked = selectTemplate(
+          nurLeicht,
+          {
+            now: NOW,
+            stats: [stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 })],
+          },
+          () => i / 400,
+        );
+        if (picked) counts[picked.id as "eins" | "zwei"]++;
+      }
+      expect(counts.zwei).toBeGreaterThan(counts.eins);
+    });
   });
 
-  it("betrachtet nur die letzten drei Wiederholungen", () => {
-    const recent = ["a", "b", "c", "aufg_00001"];
-    // aufg_00001 steht an vierter Stelle und wird damit nicht mehr gemieden.
-    expect(selectTemplate(devTemplates, { recentTemplateIds: recent }, first)?.id).toBe(
-      "aufg_00001",
-    );
-  });
+  describe("Wiederholungsvermeidung", () => {
+    const drei = [
+      template("t1", "kombinatorik.permutation"),
+      template("t2", "kombinatorik.permutation"),
+      template("t3", "kombinatorik.permutation"),
+    ];
 
-  it("wiederholt lieber, als gar keine Aufgabe zu liefern", () => {
-    const onlyOne: readonly Template[] = [devTemplates[0]];
-    expect(selectTemplate(onlyOne, { recentTemplateIds: ["aufg_00001"] }, first)?.id).toBe(
-      "aufg_00001",
-    );
+    it("meidet die zuletzt gestellten Templates", () => {
+      expect(selectTemplate(drei, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t2");
+      expect(selectTemplate(drei, { recentTemplateIds: ["t1", "t2"], now: NOW }, first)?.id).toBe(
+        "t3",
+      );
+    });
+
+    it("betrachtet nur die letzten drei", () => {
+      expect(AVOID_COUNT).toBe(3);
+      // t1 steht an vierter Stelle und wird damit nicht mehr gemieden.
+      const recent = ["a", "b", "c", "t1"];
+      expect(selectTemplate(drei, { recentTemplateIds: recent, now: NOW }, first)?.id).toBe("t1");
+    });
+
+    it("wiederholt lieber, als gar keine Aufgabe zu liefern", () => {
+      const eins = [template("t1", "kombinatorik.permutation")];
+      expect(selectTemplate(eins, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t1");
+    });
+
+    it("hebt die Sperre nur auf, wenn wirklich nichts übrig bleibt", () => {
+      const gesperrt = ["t1", "t2"];
+      expect(selectTemplate(drei, { recentTemplateIds: gesperrt, now: NOW }, first)?.id).toBe("t3");
+      expect(selectTemplate(drei, { recentTemplateIds: gesperrt, now: NOW }, last)?.id).toBe("t3");
+    });
   });
 
   it("bleibt bei gleicher Zufallszahl bei derselben Wahl", () => {
-    const a = selectTemplate(devTemplates, {}, () => 0.4);
-    const b = selectTemplate(devTemplates, {}, () => 0.4);
+    const a = selectTemplate(templates, { now: NOW }, () => 0.4);
+    const b = selectTemplate(templates, { now: NOW }, () => 0.4);
     expect(a?.id).toBe(b?.id);
   });
 });

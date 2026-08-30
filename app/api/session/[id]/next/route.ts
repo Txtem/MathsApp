@@ -7,8 +7,9 @@ import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplates } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
+import { loadTopicStats } from "@/lib/db/topic-stats";
 import { instantiate } from "@/lib/engine/instantiate";
-import { selectTemplate } from "@/lib/selection/next-template";
+import { AVOID_COUNT, matchesTopic, selectTemplate } from "@/lib/selection/next-template";
 
 /**
  * POST /api/session/[id]/next — stellt die nächste Aufgabe.
@@ -36,14 +37,25 @@ export async function POST(
   const recent = await prisma.attempt.findMany({
     where: { practiceSessionId: session.id },
     orderBy: { createdAt: "desc" },
-    take: 3,
+    take: AVOID_COUNT,
     select: { templateId: true },
   });
 
+  // Statistiken nur zu den Themen holen, die der Filter überhaupt zulässt.
+  const templates = getTemplates();
+  const topics = [
+    ...new Set(
+      templates
+        .filter((candidate) => matchesTopic(candidate.topic, session.topicFilter))
+        .map((candidate) => candidate.topic),
+    ),
+  ];
+
   const template = selectTemplate(
-    getTemplates(),
+    templates,
     {
       topicFilter: session.topicFilter,
+      stats: await loadTopicStats(prisma, userId, topics),
       recentTemplateIds: recent.map((attempt) => attempt.templateId),
     },
     Math.random,
