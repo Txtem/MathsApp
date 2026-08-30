@@ -431,3 +431,34 @@ fest, `lib/selection/mastery.test.ts` den Terminabstand über die Zeitumstellung
 braucht — der Dummy-User schreibt beim Anlegen ein `createdAt`. Mit M2c verschwindet die
 Funktion samt Parameter. Alle Tests, die Zeilen anlegen, setzen ihre Zeitstempel jetzt
 selbst; das ist Absicht, weil ein Testdatum aus der echten Uhr dieselbe Unschärfe hätte.
+
+---
+
+## D-22 — Termine stehen relativ da, nicht als Datum
+*2026-08-30, M2b*
+
+Die Statistik-Seite sagt „fällig", „morgen" oder „in N Tagen". Ein Kalenderdatum steht
+nirgends, auch nicht als Titel-Attribut. Die Formulierung entsteht in `dueLabel`
+(`components/due-label.ts`), rein und mit `now` als Parameter.
+
+**Anlass:** Zwei Befunde aus der Diagnose zu M2b.
+
+Der eine war gemessen: Derselbe Datenstand, dieselbe Seite, zweimal gerendert — unter
+`TZ=Europe/Berlin` stand dort 19.10.2026, unter `TZ=UTC` 18.10.2026. Der Rohwert ist
+`2026-10-18T22:01:13.241Z`, und ein Kalendertag entsteht erst durch eine Zeitzone. Weil
+die Seite auf dem Server gerendert wird, ist es dessen Zeitzone, nicht die des Übenden.
+Eine feste Anzeige-Zeitzone würde die Abhängigkeit nur festnageln und bei der ersten
+Reise falsch liegen; eine Differenz dagegen hat keine Zeitzone.
+
+Der andere ist inhaltlich: `dueAt` ist kein Zeitpunkt, den jemand einhalten muss, sondern
+das Ergebnis eines Intervalls von 1, 2, 4, 8 Tagen. Ein Datum auf den Tag genau behauptet
+eine Genauigkeit, die SM-2-light nicht besitzt. Handlungsrelevant ist, ob ein Thema jetzt
+ansteht — alles andere ist eine Größenordnung.
+
+**Festlegungen:** Unter 48 Stunden heißt es „morgen", darüber `ceil(Abstand / 1 Tag)`
+Tage, damit ein angebrochener Tag nicht unterschlagen wird und „in 1 Tag" nie zu „heute"
+wird. Ohne Termin gilt ein Thema als fällig — es wurde nie geübt.
+
+**Abgesichert:** `components/due-label.test.ts` prüft die Grenzen und rechnet dieselbe
+Eingabe unter beiden Zeitzonen — mit einer Gegenprobe, die zeigt, dass ein Kalenderdatum
+an derselben Stelle auseinanderfällt. Ohne sie wäre der Test grün, ohne etwas zu prüfen.

@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { dueLabel } from "@/components/due-label";
 import {
   type AnsweredDuration,
   type StatsGroup,
@@ -69,14 +70,14 @@ export default async function StatsPage() {
         </h1>
         <p className="text-zinc-600 dark:text-zinc-400">
           Je Thema die Zahl der Versuche, die Quote insgesamt und die über die letzten zehn
-          Aufgaben. „Fällig“ heißt: Das Thema steht wieder an.
+          Aufgaben. Rechts steht, wann das Thema wieder ansteht — „fällig“ heißt: jetzt.
         </p>
       </div>
 
       <Summary summary={summary} />
 
       {rows.map((group) => (
-        <Group key={group.topic} group={group} />
+        <Group key={group.topic} group={group} now={now} />
       ))}
 
       <p className="text-sm text-zinc-500">
@@ -115,7 +116,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Group({ group }: { group: StatsGroup }) {
+function Group({ group, now }: { group: StatsGroup; now: Date }) {
   return (
     <section className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
       <h2 className="px-5 py-4 text-xs font-semibold uppercase tracking-widest text-zinc-500">
@@ -128,7 +129,7 @@ function Group({ group }: { group: StatsGroup }) {
             className="flex items-baseline justify-between gap-4 border-t border-zinc-100 px-5 py-3 first:border-t-0 dark:border-zinc-800"
           >
             <span className="text-zinc-900 dark:text-zinc-50">{row.label}</span>
-            <Numbers row={row} />
+            <Numbers row={row} now={now} />
           </li>
         ))}
       </ul>
@@ -136,7 +137,7 @@ function Group({ group }: { group: StatsGroup }) {
   );
 }
 
-function Numbers({ row }: { row: StatsRow }) {
+function Numbers({ row, now }: { row: StatsRow; now: Date }) {
   if (row.attempts === 0) {
     return <span className="shrink-0 text-sm text-zinc-500">noch nicht geübt</span>;
   }
@@ -150,24 +151,26 @@ function Numbers({ row }: { row: StatsRow }) {
       <span title="Quote über die letzten zehn beantworteten Aufgaben">
         zuletzt {formatRate(row.recentRate)}
       </span>
-      <Due row={row} />
+      <Due row={row} now={now} />
     </span>
   );
 }
 
-function Due({ row }: { row: StatsRow }) {
+/**
+ * Der Termin, relativ ausgesprochen (D-22). Die Worte kommen aus `dueLabel`;
+ * hier steht nur, dass ein fälliges Thema hervorgehoben wird.
+ */
+function Due({ row, now }: { row: StatsRow; now: Date }) {
+  const label = dueLabel(row.dueAt, now);
+
   if (row.isDue) {
-    return <span className="font-medium text-zinc-900 dark:text-zinc-50">fällig</span>;
+    return <span className="font-medium text-zinc-900 dark:text-zinc-50">{label}</span>;
   }
-  return <span>{row.dueAt === null ? "—" : `wieder ab ${formatDate(row.dueAt)}`}</span>;
+  return <span>{label}</span>;
 }
 
 function formatRate(rate: number | null): string {
   return rate === null ? "—" : `${Math.round(rate * 100)} %`;
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 function formatSeconds(ms: number): string {

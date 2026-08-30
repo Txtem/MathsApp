@@ -173,6 +173,18 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
   **Ungelöst**, und nicht durch mehr Templates zu beheben. Denkbar wäre, die Vermeidung
   als Gewichtsabschlag statt als Ausschluss zu bauen; das wäre eine Änderung an
   Abschnitt 10 und braucht eine Entscheidung.
+- **Veraltete Zahlen nach „Zurück" sind nicht ausgeschlossen.** Beobachtet wurde, dass
+  `/stats` gelegentlich alte Werte zeigt. Serverseitig ist das erledigt und belegt: Die
+  Seite ist dynamisch, antwortet mit `no-store`, und eine Änderung an der Datenbank ist
+  in der nächsten Antwort sichtbar — gemessen gegen den laufenden Produktions-Build.
+  Für die Navigation über einen `Link` gilt dasselbe: Ein dynamisches Segment ohne
+  `loading.js` wird nicht vorab geladen und nicht zwischengespeichert.
+  **Nicht gemessen** ist die Wiederherstellung über den Zurück-Knopf des Browsers — die
+  nimmt Next.js bewusst vom Cache aus, um Sprünge und verlorene Scrollposition zu
+  vermeiden. Wenn der Effekt wiederkommt, ist das die verbliebene Erklärung, und das
+  Gegenmittel heißt `router.refresh()` beim Wiederauftauchen der Seite, nicht
+  `revalidatePath`. Kein Umbau auf Verdacht — ein echter Browser wäre nötig, um es
+  festzustellen.
 
 Erledigt in M2a: Die Namenskollision mit dem `Session`-Modell des Auth.js-Adapters
 (D-17), das fehlende Topic auf dem `Attempt` (D-18), die veralteten Codebeispiele in
