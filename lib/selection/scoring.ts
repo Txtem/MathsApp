@@ -127,20 +127,28 @@ export function templateWeight(difficulty: number, target: number): number {
  * bestehen — und weil kein Gewicht null wird, entfällt auch der Sonderfall
  * „alles gesperrt, Sperre fällt weg". Siehe D-24.
  *
- * Die Zahlen sind gemessen, nicht geschätzt: `distribution.test.ts` fährt sie
- * als Parameter durch, die Tabelle steht in `DECISIONS.md`.
+ * Die Zahlen sind gemessen, nicht geschätzt: Eine Rastersuche über 120
+ * Kombinationen hat sie bestimmt, die Tabelle steht in `DECISIONS.md` D-24.
+ * Es sind die **stärksten** Abschläge, unter denen der Gewichtungsverlust bei
+ * vier bis acht Templates unter 15 % bleibt. Wer sie schärfer stellt, senkt die
+ * Wiederholungen und verliert Gewichtung — der Tausch ist gemessen und steht
+ * dort als Tabelle, damit ihn niemand blind verstellt.
  */
-export const RECENCY_FACTORS: readonly number[] = [0.2, 0.5, 0.8];
+export const RECENCY_FACTORS: readonly number[] = [0.7, 0.9, 0.9];
 
 /**
  * `recentTemplateIds` ist die Liste der zuletzt gestellten Templates, jüngste
  * zuerst. Doppelte Einträge sind erlaubt; es zählt die jüngste Verwendung.
+ *
+ * `factors` ist nur für die Parametersuche in `distribution.test.ts` da — die
+ * Anwendung übergibt es nie und bekommt die gemessenen Werte.
  */
 export function recencyFactor(
   templateId: string,
   recentTemplateIds: readonly string[],
+  factors: readonly number[] = RECENCY_FACTORS,
 ): number {
   const zuege = recentTemplateIds.indexOf(templateId);
-  if (zuege === -1 || zuege >= RECENCY_FACTORS.length) return 1;
-  return RECENCY_FACTORS[zuege];
+  if (zuege === -1 || zuege >= factors.length) return 1;
+  return factors[zuege];
 }

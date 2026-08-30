@@ -273,24 +273,24 @@ describe("selectTemplate", () => {
       expect(selectTemplate(drei, { recentTemplateIds: ["t1"], now: NOW }, first)?.id).toBe("t1");
     });
 
-    it("zieht es aber deutlich seltener", () => {
+    it("zieht es aber seltener", () => {
       const counts = anteile(["t1"]);
 
-      // Gewichte 0.2, 1, 1 — zusammen 2.2. Von Hand: 0.2/2.2 ≈ 9 %, also rund
-      // 36 von 400, gegen 133 bei Gleichstand.
-      expect(counts.t1).toBeGreaterThan(30);
-      expect(counts.t1).toBeLessThan(42);
-      expect(counts.t2).toBeGreaterThan(counts.t1 * 4);
+      // Gewichte 0.7, 1, 1 — zusammen 2.7. Von Hand: 0.7/2.7 ≈ 26 %, also rund
+      // 104 von 400, gegen 133 bei Gleichstand.
+      expect(counts.t1).toBeGreaterThan(98);
+      expect(counts.t1).toBeLessThan(110);
+      expect(counts.t2).toBeGreaterThan(counts.t1);
     });
 
     it("wertet zwei und drei Züge zurück schwächer ab", () => {
       const counts = anteile(["t3", "t2", "t1"]);
 
-      // Gewichte 0.8, 0.5, 0.2 für t1, t2, t3 — die Reihenfolge der Abwertung
+      // Gewichte 0.9, 0.9, 0.7 für t1, t2, t3 — die Reihenfolge der Abwertung
       // folgt der Liste, jüngste zuerst.
-      expect(counts.t1).toBeGreaterThan(counts.t2);
+      expect(counts.t1).toBeGreaterThan(counts.t3);
       expect(counts.t2).toBeGreaterThan(counts.t3);
-      expect(RECENCY_FACTORS).toEqual([0.2, 0.5, 0.8]);
+      expect(RECENCY_FACTORS).toEqual([0.7, 0.9, 0.9]);
     });
 
     it("wertet nach drei Zügen gar nicht mehr ab", () => {

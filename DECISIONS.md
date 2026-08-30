@@ -470,16 +470,17 @@ an derselben Stelle auseinanderfällt. Ohne sie wäre der Test grün, ohne etwas
 
 `SPEC.md` Abschnitt 10 verlangte, die letzten drei `templateId`s dieser Sitzung
 auszuschließen. Der Ausschluss ist ersetzt durch einen Rückschlag auf das Gewicht:
-`f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei Züge zurück, sonst 1.
+`f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei Züge zurück, sonst 1. Gemessen und
+gesetzt sind **0.7 / 0.9 / 0.9**.
 
 **Anlass:** Der Ausschluss arbeitete gegen die Schwierigkeitsgewichtung derselben
 Abschnitts. Gemessen in `lib/selection/distribution.test.ts`, 20 000 geseedete Ziehungen
 je Poolgröße — der Anteil der Gewichtung, der verloren geht:
 
-| Templates im Thema        |    3 |    4 |    5 |    6 |    8 |   10 |   12 |   15 |   20 |
-|---------------------------|------|------|------|------|------|------|------|------|------|
+| Templates im Thema         |    3 |    4 |    5 |    6 |    8 |   10 |   12 |   15 |   20 |
+|----------------------------|------|------|------|------|------|------|------|------|------|
 | harter Ausschluss (vorher) | 76 % |100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
-| Abwertung 0.2 / 0.5 / 0.8  | 46 % | 38 % | 24 % | 26 % | 19 % | 12 % | 13 % |  9 % |  5 % |
+| Abwertung 0.7 / 0.9 / 0.9  | 10 % | 11 % |  8 % |  9 % |  5 % |  4 % |  5 % |  3 % |  0 % |
 
 Bei vier Templates blieb vorher **nichts** übrig: Drei gesperrte IDs lassen genau einen
 Kandidaten zu, aus der Ziehung wird ein deterministischer Reihum-Durchlauf. Zwischen drei
@@ -489,11 +490,61 @@ Ausnahme „alles gesperrt, Sperre fällt weg" griff und bei vieren nicht.
 **Folge:** Diese Ausnahme entfällt ersatzlos. Kein Gewicht wird null, also bleibt immer
 ein Kandidat — der Sonderfall hat kein Gegenstück mehr.
 
-**Die Faktoren sind noch die Startwerte** `0.2 / 0.5 / 0.8` aus dem Arbeitsplan. Die
-Parametersuche ist ein eigener Schritt; sie ersetzt die untere Zeile der Tabelle durch die
-gefundenen Werte. Wer die Zahlen hier für willkürlich hält: Sie sind es nicht, sie sind
-gemessen — und ohne die Messung sähe man nicht, dass der Verlust bei kleinem Pool bleibt.
-Der Rest bei drei Templates ist keine Frage der Faktoren, sondern der Content-Tiefe (M2d).
+### Wie die Faktoren gefunden wurden
+
+Rastersuche über 120 Kombinationen mit `f₁ ≤ f₂ ≤ f₃` aus `0.2 … 0.9`, je 20 000
+geseedete Ziehungen. Gesucht war der stärkste Abschlag, unter dem der Verlust bei vier bis
+acht Templates unter 15 % bleibt. Genau **fünf** Kombinationen erfüllen das, alle im
+Bereich 0.7 bis 0.9; die stärkste davon ist `0.7 / 0.9 / 0.9`.
+
+Der Tausch, gemessen bei vier bzw. acht Templates — „Wdh." ist der Anteil der Züge, die
+dasselbe Template wie der Zug davor stellen:
+
+| f₁ / f₂ / f₃    | Verlust N=4 | N=8 | Wdh. N=4 | Wdh. N=8 |
+|-----------------|-------------|-----|----------|----------|
+| 1 / 1 / 1 (keine Abwertung) |  1 % | −1 % | 32 % | 15 % |
+| 0.9 / 0.9 / 0.9 |  5 % |  2 % | 30 % | 14 % |
+| **0.7 / 0.9 / 0.9** | **11 %** | **5 %** | **26 %** | **11 %** |
+| 0.6 / 0.8 / 0.9 | 16 % |  8 % | 23 % | 10 % |
+| 0.5 / 0.7 / 0.9 | 20 % | 11 % | 21 % |  9 % |
+| 0.2 / 0.5 / 0.8 (Startwerte) | 38 % | 19 % | 11 % |  4 % |
+
+Zwei Dinge, die man der Tabelle ansehen muss:
+
+**Das Messverfahren hat einen Boden.** Ohne jede Abwertung misst dieselbe Sitzung
+zwischen −4 % und +2 % — das ist Rauschen bei 20 000 Ziehungen. Die 15-%-Schranke liegt
+also rund dreizehn Punkte über null, nicht fünfzehn.
+
+**Die Schranke ist teuer.** Der Tausch ist glatt und ungefähr linear: Je fünf Punkte
+Gewichtungsverlust kaufen zwei bis drei Punkte weniger Wiederholung. Wer die Schranke
+einhält, bekommt eine milde Abwertung — 32 % auf 26 % bei vier Templates. Wer die
+Wiederholung wirklich drücken will, muss die Schranke lockern. Das ist eine Entscheidung
+über das Kriterium, keine über den Code, und deshalb steht die Tabelle hier.
+
+### Was das gegen den echten Content bedeutet
+
+Dieselbe Messung mit den echten Templates, 20 Sitzungen à 20 Aufgaben je Thema, mit der
+harten Sperre aus D-25 davor. „Wdh." ist hier der Anteil der Aufgaben, die in derselben
+Sitzung schon einmal gestellt wurden:
+
+| Thema | Templates | verschiedene Aufgaben von 20 | Wdh. | identisch direkt hintereinander |
+|---|---|---|---|---|
+| arithmetik.grundrechenarten | 2 | 20,0 | 0 % | 0 % |
+| kombinatorik.kombination | 3 | 20,0 | 0 % | 0 % |
+| kombinatorik.variation | 2 | 19,1 | 5 % | 0 % |
+| kombinatorik.verteilung | 1 | 19,6 | 2 % | 0 % |
+| wahrscheinlichkeit.hypergeometrisch | 2 | 20,0 | 0 % | 0 % |
+| **kombinatorik.permutation** | 2 | **7,0** | **65 %** | **18 %** |
+
+Fünf von sechs Themen wiederholen praktisch nichts. `kombinatorik.permutation` hat
+überhaupt nur sieben verschiedene Aufgaben — sechs aus `aufg_00003` und die eine aus
+`aufg_00004` (D-13). Ab der achten Aufgabe **muss** sich dort etwas wiederholen; keine
+Wahl der Faktoren ändert das. Das ist die Zielvorgabe für M2d und kein Abnahmekriterium
+für M2b.
+
+Reproduzieren: `verlust` und `wiederholungsrate` in `lib/selection/distribution.test.ts`
+über `recencyFactors` durchfahren; die Content-Zahlen entstehen aus `readContent()` und
+`drawQuestion` mit geseedetem Zufall.
 
 ---
 

@@ -31,6 +31,8 @@ export interface SelectionInput {
   readonly stats?: readonly TopicStats[];
   /** Zuletzt gestellte Template-IDs dieser PracticeSession, jüngste zuerst. */
   readonly recentTemplateIds?: readonly string[];
+  /** Nur für die Parametersuche in `distribution.test.ts`; sonst der Default. */
+  readonly recencyFactors?: readonly number[];
   /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
   readonly now: Date;
 }
@@ -79,7 +81,8 @@ export function selectTemplate(
     inTopic,
     inTopic.map(
       (template) =>
-        templateWeight(template.difficulty, target) * recencyFactor(template.id, recent),
+        templateWeight(template.difficulty, target) *
+        recencyFactor(template.id, recent, input.recencyFactors),
     ),
     random,
   );

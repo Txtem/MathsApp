@@ -96,6 +96,7 @@ function sitzung(
   templates: readonly Template[],
   seed: string,
   mitAbwertung: boolean,
+  factors?: readonly number[],
 ): Template[] {
   const rng = makeRng(seed);
   let recent: string[] = [];
@@ -108,6 +109,7 @@ function sitzung(
         now: NOW,
         stats: [BEHERRSCHT],
         recentTemplateIds: mitAbwertung ? recent : [],
+        recencyFactors: factors,
       },
       rng.next,
     );
@@ -149,8 +151,12 @@ function gleichverteilterSchnitt(templates: readonly Template[]): number {
  * durch die Vermeidung verloren? `0` heißt: keine Verzerrung. `1` heißt: die
  * Gewichtung ist wirkungslos, gezogen wird effektiv gleichverteilt.
  */
-function verlust(templates: readonly Template[], seed: string): number {
-  const gemessen = meanDifficulty(sitzung(templates, seed, true));
+function verlust(
+  templates: readonly Template[],
+  seed: string,
+  factors?: readonly number[],
+): number {
+  const gemessen = meanDifficulty(sitzung(templates, seed, true, factors));
   const gewichtet = gewichteterSchnitt(templates);
   const gleich = gleichverteilterSchnitt(templates);
   return (gewichtet - gemessen) / (gewichtet - gleich);
@@ -220,28 +226,39 @@ describe("ohne Abwertung wird exakt nach Gewicht gezogen", () => {
   });
 });
 
+/** Zum Vergleich: Abwertung, die nichts abwertet. */
+const OHNE_ABSCHLAG: readonly number[] = [1, 1, 1];
+
 describe("die Abwertung lässt die Gewichtung stehen", () => {
   /**
-   * Dieselbe Messung wie vor dem Umbau, 20 000 geseedete Ziehungen je
-   * Poolgröße. Die obere Zeile ist der harte Ausschluss der letzten drei
-   * Templates, die untere die Abwertung mit den Startwerten `0.2 / 0.5 / 0.8`:
+   * 20 000 geseedete Ziehungen je Poolgröße. Der Anteil der Gewichtung, der
+   * verloren geht — vorher der harte Ausschluss der letzten drei Templates,
+   * jetzt die Abwertung mit den gemessenen Faktoren:
    *
    * | Templates                 |    3 |    4 |    5 |    6 |    8 |   10 |   12 |   15 |   20 |
    * |---------------------------|------|------|------|------|------|------|------|------|------|
    * | vorher, harter Ausschluss | 76 % |100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
-   * | jetzt, 0.2 / 0.5 / 0.8    | 46 % | 38 % | 24 % | 26 % | 19 % | 12 % | 13 % |  9 % |  5 % |
+   * | jetzt, 0.7 / 0.9 / 0.9    | 10 % | 11 % |  8 % |  9 % |  5 % |  4 % |  5 % |  3 % |  0 % |
    *
-   * Die Faktoren sind noch die Startwerte; die Suche nach den endgültigen ist
-   * ein eigener Schritt und landet als Tabelle in `DECISIONS.md`. Deshalb
-   * prüfen die Tests hier **Schranken und Eigenschaften**, keine Punktwerte —
-   * ein Test, der die Startwerte festnagelt, würde die Suche behindern statt
-   * sie abzusichern.
+   * Das Messverfahren hat einen Boden: Ohne jede Abwertung misst dieselbe
+   * Sitzung zwischen -4 % und +2 %. Die Schranke von 15 % liegt also rund
+   * dreizehn Punkte über dem Rauschen, nicht fünfzehn. Die Suche über die
+   * Faktoren und der Tausch gegen die Wiederholungsrate stehen in
+   * `DECISIONS.md`, D-24.
    */
 
-  it("bei vier Templates bleibt der größte Teil der Gewichtung erhalten", () => {
-    // Vorher war hier nichts übrig: Drei gesperrte IDs ließen genau einen
-    // Kandidaten zu, und die Auswahl wurde ein Reihum-Durchlauf.
-    expect(verlust(pool(4), "sitzung-vier")).toBeLessThan(0.5);
+  it("hält den Verlust bei vier bis acht Templates unter 15 %", () => {
+    // Das Abnahmekriterium. Vorher lag es bei 48 % bis 100 %.
+    for (const n of [4, 5, 6, 8]) {
+      expect(verlust(pool(n), `kriterium-${n}`)).toBeLessThan(0.15);
+    }
+  });
+
+  it("hält es auch bei drei und bei zwanzig Templates", () => {
+    // Nicht Teil des Kriteriums, aber gemessen: Der Verlust wächst nach unten
+    // hin nicht davon.
+    expect(verlust(pool(3), "sitzung-drei")).toBeLessThan(0.15);
+    expect(verlust(pool(20), "sitzung-zwanzig")).toBeLessThan(0.15);
   });
 
   it("die Reihenfolge ist nicht mehr deterministisch", () => {
@@ -256,22 +273,18 @@ describe("die Abwertung lässt die Gewichtung stehen", () => {
     expect(fenster.some((groesse) => groesse < 4)).toBe(true);
   });
 
-  it("macht die unmittelbare Wiederholung selten, aber nicht unmöglich", () => {
-    for (const n of [4, 8, 20]) {
-      const rate = wiederholungsrate(sitzung(pool(n), `wiederholung-${n}`, true));
-      expect(rate).toBeGreaterThan(0);
-      expect(rate).toBeLessThan(0.2);
+  it("senkt die unmittelbare Wiederholung, hebt sie aber nicht auf", () => {
+    // Gemessen gegen dieselbe Sitzung ohne Abschlag — das ist die Größe, die
+    // die Faktoren überhaupt beeinflussen sollen.
+    for (const n of [4, 8]) {
+      const mit = wiederholungsrate(sitzung(pool(n), `wiederholung-${n}`, true));
+      const ohne = wiederholungsrate(
+        sitzung(pool(n), `wiederholung-${n}`, true, OHNE_ABSCHLAG),
+      );
+
+      expect(mit).toBeGreaterThan(0);
+      expect(mit).toBeLessThan(ohne);
     }
-  });
-
-  it("verliert mit wachsendem Pool weniger", () => {
-    expect(verlust(pool(20), "sitzung-zwanzig")).toBeLessThan(verlust(pool(4), "sitzung-vier"));
-  });
-
-  it("bleibt bei kleinem Pool spürbar — das ist eine Content-Frage", () => {
-    // Bei drei Templates ist auch mit Abwertung ein Rest Verzerrung übrig. Das
-    // gehört zu M2d (Content-Tiefe), nicht zur Auswahllogik.
-    expect(verlust(pool(3), "sitzung-drei")).toBeGreaterThan(0.2);
   });
 
   it("ohne Abwertung trifft dieselbe Sitzung den gewichteten Schnitt", () => {
@@ -281,5 +294,16 @@ describe("die Abwertung lässt die Gewichtung stehen", () => {
       const gemessen = meanDifficulty(sitzung(templates, `ohne-${n}`, false));
       expect(gemessen).toBeCloseTo(gewichteterSchnitt(templates), 1);
     }
+  });
+
+  it("ein schärferer Abschlag kostet Gewichtung — der Tausch ist gemessen", () => {
+    // Die Startwerte aus dem Arbeitsplan zum Vergleich: Sie halbieren die
+    // Wiederholung noch einmal und reißen dafür das Kriterium.
+    const scharf: readonly number[] = [0.2, 0.5, 0.8];
+
+    expect(verlust(pool(4), "tausch", scharf)).toBeGreaterThan(0.15);
+    expect(wiederholungsrate(sitzung(pool(4), "tausch-w", true, scharf))).toBeLessThan(
+      wiederholungsrate(sitzung(pool(4), "tausch-w", true)),
+    );
   });
 });
