@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/client";
-import { DEV_USER_ID } from "@/lib/db/dev-user";
 
 import { PracticeLoop } from "./practice-loop";
 
@@ -19,13 +19,14 @@ export default async function PracticeSessionPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
+  const userId = await getCurrentUserId();
 
   const session = await prisma.practiceSession.findUnique({
     where: { id: sessionId },
     select: { id: true, userId: true, topicFilter: true },
   });
 
-  if (!session || session.userId !== DEV_USER_ID) notFound();
+  if (!session || session.userId !== userId) notFound();
 
   return (
     <div className="flex flex-col gap-8">

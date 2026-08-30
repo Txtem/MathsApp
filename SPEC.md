@@ -134,9 +134,12 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   │   └── __fixtures__/               # ein Negativ-Fall pro Prüfung
 │   │
 │   ├── api/                            # Request- und Response-Verträge (Zod)
+│   ├── auth/current-user.ts            # getCurrentUserId(), einzige Nutzerquelle
 │   ├── selection/next-template.ts      # Welches Template als Nächstes?
 │   ├── llm/                            # ab M3
-│   └── db/client.ts                    # Prisma-Singleton, server-only
+│   └── db/
+│       ├── client.ts                   # Prisma-Singleton, server-only
+│       └── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
 │
 ├── scripts/check-templates.ts          # npm run content:check
 ├── prisma/schema.prisma
@@ -609,6 +612,24 @@ Dieses Modul hat eine Tabellen-Testsuite mit mindestens 40 Fällen pro Typ.
 ## 8. API-Verträge
 
 Route Handlers für alles, was streamt oder LLM aufruft. Server Actions für simple Mutationen.
+
+### Nutzerermittlung
+
+`lib/auth/current-user.ts`:
+
+```ts
+export async function getCurrentUserId(): Promise<string>
+```
+
+**Jede** Route und jede Server Component, die einen Nutzer braucht, ruft diese Funktion —
+nie direkt den Dev-User aus `lib/db/dev-user.ts`. In M2a gibt sie den Dummy-User zurück
+und legt ihn an, falls er fehlt; in M2b liest sie die Auth.js-Session und wirft bei
+fehlender Anmeldung. Weil sie die einzige Stelle ist, an der die Frage beantwortet wird,
+ist der Umbau in M2b ein Funktionsrumpf und keine Wanderung durch die Routen.
+
+Die Regel ist getestet: `lib/auth/current-user.test.ts` liest den Quelltext unter `app/`,
+`lib/`, `components/` und `scripts/` und schlägt fehl, sobald eine andere Datei
+`lib/db/dev-user` importiert.
 
 ### `POST /api/session`
 ```ts

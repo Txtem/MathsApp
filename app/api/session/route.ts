@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 
 import { type CreateSessionResponse, CreateSessionRequestSchema } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/client";
-import { ensureDevUser } from "@/lib/db/dev-user";
 
 /**
  * POST /api/session — startet eine Übungssitzung.
@@ -18,7 +18,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     return apiError("invalid_request", "topicFilter muss ein nicht-leerer String sein.");
   }
 
-  const userId = await ensureDevUser();
+  const userId = await getCurrentUserId();
 
   const session = await prisma.practiceSession.create({
     data: { userId, topicFilter: parsed.data.topicFilter ?? null },

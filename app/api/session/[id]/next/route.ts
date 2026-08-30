@@ -4,9 +4,9 @@ import { NextResponse } from "next/server";
 
 import { AnswerTypeSchema, toNextQuestionResponse } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplates } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
-import { DEV_USER_ID } from "@/lib/db/dev-user";
 import { instantiate } from "@/lib/engine/instantiate";
 import { selectTemplate } from "@/lib/selection/next-template";
 
@@ -22,6 +22,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
   const { id } = await context.params;
+  const userId = await getCurrentUserId();
 
   const session = await prisma.practiceSession.findUnique({
     where: { id },
@@ -29,9 +30,7 @@ export async function POST(
   });
 
   if (!session) return apiError("not_found", "Session existiert nicht.");
-  // Steht hier schon, obwohl M0 kein Auth hat: Mit M2 wird DEV_USER_ID durch die
-  // User-ID aus der Auth-Session ersetzt, die Prüfung selbst bleibt.
-  if (session.userId !== DEV_USER_ID) return apiError("forbidden", "Session gehört zu einem anderen User.");
+  if (session.userId !== userId) return apiError("forbidden", "Session gehört zu einem anderen User.");
   if (session.endedAt) return apiError("invalid_request", "Session ist bereits beendet.");
 
   const recent = await prisma.attempt.findMany({

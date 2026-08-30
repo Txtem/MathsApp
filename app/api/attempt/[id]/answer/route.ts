@@ -9,10 +9,10 @@ import {
   ParamsSchema,
 } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
+import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplate } from "@/lib/content/load";
 import type { ValidatedTemplate } from "@/lib/content/schema";
 import { prisma } from "@/lib/db/client";
-import { DEV_USER_ID } from "@/lib/db/dev-user";
 import { grade } from "@/lib/engine/grade";
 import { renderSolution } from "@/lib/engine/instantiate";
 
@@ -35,6 +35,8 @@ export async function POST(
     return apiError("invalid_request", "Erwartet { answer: string, durationMs: number }.");
   }
 
+  const userId = await getCurrentUserId();
+
   const attempt = await prisma.attempt.findUnique({
     where: { id },
     select: {
@@ -50,7 +52,7 @@ export async function POST(
   });
 
   if (!attempt) return apiError("not_found", "Attempt existiert nicht.");
-  if (attempt.userId !== DEV_USER_ID) {
+  if (attempt.userId !== userId) {
     return apiError("forbidden", "Attempt gehört zu einem anderen User.");
   }
   if (AttemptStatusSchema.parse(attempt.status) !== "OPEN") {
