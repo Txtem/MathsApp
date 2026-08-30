@@ -69,7 +69,8 @@ content/templates/*.yaml          Template: Wertebereiche, kein fertiger Wert
         ▼
      Instanz                      Fragetext interpoliert, Lösung berechnet
         │
-        │  DB: Attempt (Seed, templateId, templateVersion, params, expectedAnswer)
+        │  DB: Attempt (Seed, templateId, templateVersion, params, expectedAnswer,
+        │               dazu userId, topic und difficulty für Auswahl und Statistik)
         ▼
    Aufgabe im Browser             ohne die Lösung — das ist der wichtigste Vertrag
         │
@@ -83,7 +84,8 @@ Drei Eigenschaften dieses Ablaufs sind Absicht und keine Details:
 **Die Engine ist rein.** `lib/engine` hat kein I/O — keine Datenbank, kein Netz, keine
 Dateien, kein React. Templates werden ihr übergeben, nicht von ihr geladen. Deshalb ist
 sie vollständig ohne Mocks testbar, und deshalb liegen dort inzwischen die meisten der
-727 Tests.
+863 Tests. Was sich nicht rein testen lässt — Transaktionen, doppeltes Absenden,
+`@@unique` — läuft gegen eine Wegwerf-SQLite aus den echten Migrationen (D-19).
 
 **Es wird exakt gerechnet.** Der Ausdruckskern arbeitet mit gekürzten Brüchen auf
 `BigInt`, nicht mit `number`. Ab `21!` wäre `number` still ungenau, und ab der
@@ -102,14 +104,21 @@ Practice-Loop im Browser.
 **M1 — Content-Pipeline & Kombinatorik** ✅ Platzhalter `{{name}}`, exakte Brüche,
 Themenbaum, YAML-Loader mit neun statischen Prüfungen und `npm run content:check`,
 zwölf Compute-Funktionen, zwölf Templates, Grading für `integer`, `numeric`, `fraction`
-und `choice`, KaTeX-Rendering. 727 Tests grün.
+und `choice`, KaTeX-Rendering.
+
+**M2a — Fortschritt und Auswahl** ✅ Die App passt sich an. Sie merkt sich pro Thema,
+wie es läuft (`TopicMastery`), stellt bevorzugt, was schwach ist oder ansteht, und wählt
+die Schwierigkeit passend zur Erfolgsquote. `/stats` zeigt den Stand. Die Übungsrunde
+heißt jetzt `PracticeSession`, weil Auth.js den Namen `Session` belegt (D-17), und
+`Attempt` trägt Nutzer, Thema und Schwierigkeit selbst (D-18). 863 Tests grün.
 
 **Offen:** Keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-zurückgestellt). Die Aufgabenauswahl ist zufällig innerhalb des Filters. Es gibt keinen
-Login; alles läuft auf einem Dummy-User.
+zurückgestellt). Es gibt keinen Login; alles läuft hinter `getCurrentUserId()` auf einem
+Dummy-User.
 
-**Als Nächstes:** M2 — Fortschritt pro Thema, Auswahl nach Schwäche und Fälligkeit,
-Statistik-Seite, danach Auth.
+**Als Nächstes:** M2b — Auth.js. Ersetzt nur den Rumpf von `getCurrentUserId()`, dazu
+Login-Oberfläche und Routenschutz. Bewusst von M2a getrennt: Fortschritt und Auswahl sind
+der Produktwert und ohne Login testbar, Auth ist die riskanteste Integration im Projekt.
 
 Dann M3 (LLM-Einkleidung der Aufgabentexte hinter einem Validierungs-Gate) und
 M4 (Foto des Rechenwegs, Transkription, Schritt-Review). **Nicht in V1:** Python-Service,
@@ -126,6 +135,12 @@ steht in `CLAUDE.md`; das hier sind die, die am häufigsten überrascht haben:
   sowohl die Bewertung als auch die Constraint-Auswertung. (D-01, D-06)
 - **Registry-Einträge validieren sich selbst** über `entry.run(params)`. `instantiate`
   ruft nichts anderes auf. (D-14)
+- **Routen sind Adapter.** Was eine Route entscheidet, steht in einem Modul unter `lib/`,
+  das seine Umgebung als Parameter bekommt — eine Route lässt sich nicht importieren und
+  bliebe sonst ungetestet. Deshalb tragen nicht alle Dateien unter `lib/db` ein
+  `server-only`, sondern nur die, die sich ihre Umgebung selbst holen. (D-12, D-19)
+- **Die Übungsrunde heißt `PracticeSession`.** `Session` gehört Auth.js. Die URLs bleiben
+  `/api/session` und `/practice/[sessionId]` — ein Pfad ist kein Modellname. (D-17)
 - **SQLite kennt keine Prisma-Enums.** `status` und `answerType` sind `String`,
   die erlaubten Werte erzwingt Zod.
 - **Prisma 7** braucht einen Driver Adapter, der Client kommt aus
@@ -143,13 +158,26 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
 - **Tests, die aus dem Template abgeleitet sind, prüfen nichts.** D-15 ist der Lehrfall:
   Template und Test teilten dieselbe falsche Annahme, die Suite blieb grün, das Ergebnis
   war falsch. Erwartungswerte gehören unabhängig nachgerechnet.
-- **`TopicMastery` gibt es noch nicht.** Das Modell steht in `SPEC.md`, aber weder
-  Migration noch Fortschreibung existieren — das ist Schritt 3 von M2a.
+- **Die Wiederholungsvermeidung frisst die Schwierigkeitsgewichtung.** Abschnitt 10 der
+  `SPEC.md` verlangt zweierlei: gewichtet nach Schwierigkeit ziehen und die letzten drei
+  Templates meiden. Beides zusammen geht schlecht. Gemessen in
+  `lib/selection/distribution.test.ts`, jeweils 20 000 geseedete Ziehungen:
 
-Erledigt in M2a, Schritt 1: Die Namenskollision zwischen der Übungsrunde und dem
-`Session`-Modell des Auth.js-Adapters (jetzt `PracticeSession`, D-17), das fehlende Topic
-auf dem `Attempt` (jetzt denormalisiert, D-18) und die veralteten Codebeispiele in
-`SPEC.md` Abschnitt 4 und 6.
+  | Templates im Thema |   3 |   4 |   5 |   6 |   8 |  10 |  12 |  15 |  20 |
+  |---|---|---|---|---|---|---|---|---|---|
+  | Anteil der Gewichtung, der verloren geht | 76 % | 100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
+
+  Bei vier Templates bleibt gar nichts übrig: Drei gemiedene IDs lassen genau einen
+  Kandidaten zu, die Auswahl wird ein deterministischer Reihum-Durchlauf. Ohne
+  Vermeidung trifft die Ziehung die Gewichte exakt — der Fehler liegt nicht im Sampler.
+  **Ungelöst**, und nicht durch mehr Templates zu beheben. Denkbar wäre, die Vermeidung
+  als Gewichtsabschlag statt als Ausschluss zu bauen; das wäre eine Änderung an
+  Abschnitt 10 und braucht eine Entscheidung.
+
+Erledigt in M2a: Die Namenskollision mit dem `Session`-Modell des Auth.js-Adapters
+(D-17), das fehlende Topic auf dem `Attempt` (D-18), die veralteten Codebeispiele in
+`SPEC.md` Abschnitt 4 und 6 — und Invariante 2, die seit M0 nur durch Lesen gesichert
+war und jetzt in `lib/db/answer-attempt.test.ts` geprüft wird.
 
 ## 8. Wie man einen neuen Chat sinnvoll beginnt
 

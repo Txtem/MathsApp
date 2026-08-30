@@ -789,6 +789,12 @@ Die letzten drei `templateId`s dieser `PracticeSession` ausschließen. Bleibt da
 Kandidat übrig, wird die Sperre für diesen Zug ignoriert statt zu scheitern — bei einem
 Topic mit nur zwei Templates ist Wiederholung besser als ein Abbruch.
 
+**Bekannter Konflikt mit der Templatewahl:** Der harte Ausschluss überlagert die
+Gewichtung nach Schwierigkeit erheblich — bei vier Templates im Topic vollständig, weil
+dann genau ein Kandidat übrig bleibt und die Auswahl zu einem festen Reihum-Durchlauf
+wird. Gemessen in `lib/selection/distribution.test.ts`; die Zahlen stehen in
+`OVERVIEW.md`, Abschnitt 7. Das ist offen und nicht durch mehr Content zu beheben.
+
 ### Fortschreibung nach der Antwort
 
 Beim Schließen eines Attempts, in derselben Transaktion wie der Statuswechsel

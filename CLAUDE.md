@@ -18,17 +18,25 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M1 (Content-Pipeline & Kombinatorik)** abgeschlossen
+- Meilenstein: **M2a (Fortschritt und Auswahl)** abgeschlossen
 - M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
 - M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
   `npm run content:check`; zwölf Compute-Funktionen; zwölf Templates als YAML;
   Grading für `integer`, `numeric`, `fraction`, `choice` inkl. `round_to`;
-  KaTeX über `components/MathText.tsx` — 727 Tests grün
+  KaTeX über `components/MathText.tsx`
+- M2a: Übungsrunde heißt `PracticeSession` (D-17); `Attempt` trägt `userId`, `topic` und
+  `difficulty` denormalisiert (D-18); `getCurrentUserId()` als einzige Nutzerquelle;
+  `TopicMastery` mit SM-2-light, fortgeschrieben in derselben Transaktion wie der
+  Statuswechsel; Auswahl nach Erfolgsquote, Fälligkeit und Schwierigkeit in
+  `lib/selection/`; Statistik-Seite unter `/stats`; Entscheidungslogik der
+  Antwort-Route in `lib/db/answer-attempt.ts`, damit Invariante 2 getestet ist;
+  Datenbanktests gegen eine Wegwerf-SQLite (D-19) — 863 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-  zurückgestellt); die Aufgabenauswahl ist zufällig innerhalb des Filters
-- Als Nächstes: M2 — Auth.js, `TopicMastery`, Auswahl nach Erfolgsquote und Fälligkeit,
-  Statistik-Seite
+  zurückgestellt); die Wiederholungsvermeidung überlagert die Gewichtung nach
+  Schwierigkeit — gemessen in `lib/selection/distribution.test.ts`, ungelöst
+- Als Nächstes: M2b — Auth.js. Ersetzt den Rumpf von `getCurrentUserId()`, dazu
+  Login-Oberfläche und Routenschutz. `User.email` muss dafür optional werden.
 
 ### Lokale Einrichtung
 

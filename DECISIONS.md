@@ -321,8 +321,9 @@ umbenanntes Template die Historie nicht entwerten — wer vor drei Wochen zehn A
 Hypergeometrischen gerechnet hat, hat sie gerechnet, auch wenn das Template inzwischen
 weg ist.
 
-**Warum `userId` dazukam:** In `SPEC-M2.md` stand nur `topic` und `difficulty`, mit dem
-Index `[topic, answeredAt]`. Der trägt die Abfrage aber nur zur Hälfte: Die
+**Warum `userId` dazukam:** Im Arbeitsplan zu M2a (`SPEC-M2.md`, inzwischen eingearbeitet
+und gelöscht) standen nur `topic` und `difficulty`, mit dem Index `[topic, answeredAt]`.
+Der trägt die Abfrage aber nur zur Hälfte: Die
 Einschränkung auf den Nutzer hängt an `PracticeSession` und käme als Join obendrauf —
 bei der Auswahl vor jeder einzelnen Aufgabe und auf der Statistik-Seite für jedes Topic.
 Das ist dasselbe Argument, mit dem `topic` denormalisiert wird, nur eine Ebene höher.
@@ -355,7 +356,7 @@ Testdaten, für die es keinen sinnvollen Wert für die neuen Pflichtspalten gibt
 Temp-Verzeichnis an, spielt die **echten** Migrationen aus `prisma/migrations/` darauf
 ab und gibt einen Prisma-Client darauf zurück. Nach dem Test wird die Datei gelöscht.
 
-**Anlass:** `SPEC-M2.md` verlangt für die Fortschreibung des Themenfortschritts zwei
+**Anlass:** Der Arbeitsplan zu M2a verlangte für die Fortschreibung des Themenfortschritts zwei
 Tests — „doppeltes Absenden zählt einmal" und „`unparseable` zählt gar nicht". Beide
 prüfen kein Rechenergebnis, sondern Verhalten der Datenbank: dass `updateMany` mit der
 Bedingung `status: "OPEN"` genau einmal trifft und dass die Fortschreibung an dieselbe
