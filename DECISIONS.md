@@ -271,3 +271,77 @@ Funktion in `components/topic-groups.ts` und hat eigene Tests.
 Thema unter seinem Oberthema, weil beide dasselbe aussagen. In der Praxis war das
 schlechter: Zwei von drei Gebieten standen ohne Unterpunkte da, und es sah aus, als fehlte
 dort etwas. Einheitlichkeit schlägt hier Sparsamkeit — die Regel ist gestrichen.
+
+---
+
+## D-17 — Die Übungsrunde heißt `PracticeSession`, nicht `Session`
+*2026-08-30, M2a*
+
+Das Domänenmodell für eine Übungsrunde heißt im Prisma-Schema `PracticeSession`, mit
+`Attempt.practiceSessionId` und `User.practiceSessions`. Die HTTP-Routen und die URLs
+bleiben, wie sie sind: `POST /api/session`, `/practice/[sessionId]`, und das
+Response-Feld heißt weiter `sessionId`.
+
+**Grund:** Der Prisma-Adapter von Auth.js bringt ein eigenes Modell `Session`
+(`sessionToken`, `userId`, `expires`) mit und spricht es fest als `prisma.session` an —
+der Name ist nicht konfigurierbar. Prisma-Modellnamen sind im Schema eindeutig, also
+kann nur das Domänenmodell ausweichen. Auch das Feld `User.sessions` musste weichen,
+weil Prisma für die Auth-Relation eine Gegenseite auf `User` braucht.
+
+**Warum die Routen nicht mitwandern:** Ein URL-Pfad ist kein Modellname. Eine
+Umbenennung bis in die UI hätte den Praxis-Loop, die API-Verträge und die Tests
+angefasst, ohne dass irgendetwas davon mit Auth.js kollidiert.
+
+**Gilt auch ohne Auth-Tabelle:** Sollte sich in M2b zeigen, dass die gewählte
+Auth-Strategie (z.B. JWT statt Datenbank-Sessions) gar keine `Session`-Tabelle braucht,
+bleibt die Umbenennung trotzdem. Zwei Bedeutungen von „Session" im selben Projekt sind
+eine Fehlerquelle, unabhängig davon, ob Prisma sie erzwingt.
+
+**Offen für M2b:** `User.email` ist derzeit `String @unique` und nicht optional. Der
+Auth.js-Adapter erwartet `email String?`. Das ist eine eigene Migration und gehört in
+die Planung von M2b, nicht hierher.
+
+---
+
+## D-18 — `Attempt` trägt `userId`, `topic` und `difficulty` denormalisiert
+*2026-08-30, M2a*
+
+`Attempt` speichert beim Anlegen zusätzlich den Nutzer, das Topic und die Schwierigkeit,
+obwohl alle drei ableitbar wären — der Nutzer über `PracticeSession`, Topic und
+Schwierigkeit über `templateId`. Dazu ein Index `@@index([userId, topic, answeredAt])`.
+
+**Anlass:** `SPEC.md` Abschnitt 10 verlangt eine Erfolgsquote „über die letzten 10
+Versuche". Aus `TopicMastery` ist die nicht rekonstruierbar — dort stehen nur kumulative
+Zähler. Sie muss also aus den Attempts selbst kommen, und die Abfrage dafür lautet
+„die letzten zehn beantworteten Attempts *dieses Nutzers* in *diesem Topic*".
+
+**Warum `topic` und nicht der Umweg über das Template:** Die Statistik-Seite und die
+Auswahl fragen nach Topic, nicht nach Template. Vor allem aber darf ein gelöschtes oder
+umbenanntes Template die Historie nicht entwerten — wer vor drei Wochen zehn Aufgaben zur
+Hypergeometrischen gerechnet hat, hat sie gerechnet, auch wenn das Template inzwischen
+weg ist.
+
+**Warum `userId` dazukam:** In `SPEC-M2.md` stand nur `topic` und `difficulty`, mit dem
+Index `[topic, answeredAt]`. Der trägt die Abfrage aber nur zur Hälfte: Die
+Einschränkung auf den Nutzer hängt an `PracticeSession` und käme als Join obendrauf —
+bei der Auswahl vor jeder einzelnen Aufgabe und auf der Statistik-Seite für jedes Topic.
+Das ist dasselbe Argument, mit dem `topic` denormalisiert wird, nur eine Ebene höher.
+
+**Warum `difficulty`, obwohl M2a sie nicht liest:** Die Auswahl liest die Schwierigkeit
+aus dem Template, die Statistik-Seite zeigt sie nicht an — in M2a hat das Feld also
+keinen Abnehmer. Es steht trotzdem im Schema, weil es sich später nicht nachtragen lässt:
+Ändert ein Template seine `difficulty`, ist die Schwierigkeit, gegen die tatsächlich
+geübt wurde, verloren. Das ist der einzige Grund; wer das Feld unbenutzt vorfindet,
+soll es deshalb nicht wegräumen.
+
+**Preis:** Drei redundante Spalten, die beim Anlegen eines Attempts stimmen müssen. Sie
+werden an genau einer Stelle gesetzt (`POST /api/session/[id]/next`) und danach nie mehr
+geändert — ein Attempt ist nach dem Anlegen bis auf Antwort und Urteil unveränderlich.
+
+**Folge für die Abfrage:** Gefiltert wird auf `status: "ANSWERED"`, nicht auf
+`answeredAt != null`. Eine unlesbare Eingabe schließt den Attempt ohnehin nicht (D-04),
+aber `SKIPPED` ist in `SPEC.md` vorgesehen, und ein übersprungener Attempt mit
+`isCorrect: null` darf die Quote nicht verwässern.
+
+**Migration:** Die vorhandenen Attempts in der lokalen `dev.db` wurden dabei verworfen —
+Testdaten, für die es keinen sinnvollen Wert für die neuen Pflichtspalten gibt.

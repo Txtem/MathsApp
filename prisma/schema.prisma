@@ -12,14 +12,17 @@ datasource db {
   provider = "sqlite"
 }
 
-// M0: nur id und email. createdAt, masteries und TopicMastery kommen in M2.
+// M2a: nur id und email. createdAt und TopicMastery kommen mit Schritt 3.
 model User {
-  id       String    @id @default(cuid())
-  email    String    @unique
-  sessions Session[]
+  id               String            @id @default(cuid())
+  email            String            @unique
+  practiceSessions PracticeSession[]
+  attempts         Attempt[]
 }
 
-model Session {
+// Heißt `PracticeSession`, nicht `Session`: Der Prisma-Adapter von Auth.js
+// belegt den Namen `Session` fest. Siehe DECISIONS.md, D-17.
+model PracticeSession {
   id          String    @id @default(cuid())
   userId      String
   user        User      @relation(fields: [userId], references: [id])
@@ -30,9 +33,9 @@ model Session {
 }
 
 model Attempt {
-  id        String  @id @default(cuid())
-  sessionId String
-  session   Session @relation(fields: [sessionId], references: [id])
+  id                String          @id @default(cuid())
+  practiceSessionId String
+  practiceSession   PracticeSession @relation(fields: [practiceSessionId], references: [id])
 
   // Reproduzierbarkeit
   templateId      String
@@ -40,6 +43,14 @@ model Attempt {
   seed            String
   params          Json // gewürfelte, konkrete Werte
   questionText    String // gerendert, so wie angezeigt
+
+  // Denormalisiert beim Anlegen, siehe DECISIONS.md, D-18.
+  // Tragen Auswahl und Statistik, ohne dass ein verschwundenes Template
+  // die Historie entwertet.
+  userId     String
+  user       User   @relation(fields: [userId], references: [id])
+  topic      String
+  difficulty Int
 
   // Lösung — NIE an den Client, solange status = OPEN
   expectedAnswer Json
@@ -59,5 +70,8 @@ model Attempt {
   createdAt  DateTime  @default(now())
   answeredAt DateTime?
 
-  @@index([sessionId])
+  @@index([practiceSessionId])
+  // Trägt die gleitende Erfolgsquote: letzte n beantwortete Attempts
+  // eines Nutzers in einem Topic.
+  @@index([userId, topic, answeredAt])
 }

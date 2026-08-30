@@ -23,7 +23,7 @@ export async function POST(
 ): Promise<NextResponse> {
   const { id } = await context.params;
 
-  const session = await prisma.session.findUnique({
+  const session = await prisma.practiceSession.findUnique({
     where: { id },
     select: { id: true, userId: true, topicFilter: true, endedAt: true },
   });
@@ -35,7 +35,7 @@ export async function POST(
   if (session.endedAt) return apiError("invalid_request", "Session ist bereits beendet.");
 
   const recent = await prisma.attempt.findMany({
-    where: { sessionId: session.id },
+    where: { practiceSessionId: session.id },
     orderBy: { createdAt: "desc" },
     take: 3,
     select: { templateId: true },
@@ -60,12 +60,17 @@ export async function POST(
 
   const attempt = await prisma.attempt.create({
     data: {
-      sessionId: session.id,
+      practiceSessionId: session.id,
       templateId: instance.templateId,
       templateVersion: instance.templateVersion,
       seed: instance.seed,
       params: { ...instance.params },
       questionText: instance.questionText,
+      // Denormalisiert, siehe D-18: Auswahl und Statistik lesen diese Felder
+      // vom Attempt, nicht über Session und Template.
+      userId: session.userId,
+      topic: template.topic,
+      difficulty: template.difficulty,
       expectedAnswer: instance.expectedAnswer,
       answerType: instance.answerType,
       status: "OPEN",

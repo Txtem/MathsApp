@@ -143,13 +143,13 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
 - **Tests, die aus dem Template abgeleitet sind, prüfen nichts.** D-15 ist der Lehrfall:
   Template und Test teilten dieselbe falsche Annahme, die Suite blieb grün, das Ergebnis
   war falsch. Erwartungswerte gehören unabhängig nachgerechnet.
-- **`Session` heißt wie das Session-Modell des Auth.js-Prisma-Adapters.** Muss vor dem
-  Einbau von Auth aufgelöst werden.
-- **Das Datenmodell trägt die Auswahl-Logik noch nicht.** `Attempt` kennt sein Topic
-  nicht, und `TopicMastery` speichert nur kumulative Zähler — eine Erfolgsquote „über die
-  letzten 10 Versuche" ist daraus nicht rekonstruierbar.
-- **`SPEC.md` Abschnitt 4 und 6 enthalten veraltete Codebeispiele**, die
-  überholten Entscheidungen widersprechen.
+- **`TopicMastery` gibt es noch nicht.** Das Modell steht in `SPEC.md`, aber weder
+  Migration noch Fortschreibung existieren — das ist Schritt 3 von M2a.
+
+Erledigt in M2a, Schritt 1: Die Namenskollision zwischen der Übungsrunde und dem
+`Session`-Modell des Auth.js-Adapters (jetzt `PracticeSession`, D-17), das fehlende Topic
+auf dem `Attempt` (jetzt denormalisiert, D-18) und die veralteten Codebeispiele in
+`SPEC.md` Abschnitt 4 und 6.
 
 ## 8. Wie man einen neuen Chat sinnvoll beginnt
 

@@ -151,16 +151,23 @@ Abhängigkeitsrichtung ist die wichtigste Struktureigenschaft des Projekts.
 
 ## 4. Datenmodell (Prisma)
 
+Der Block gibt `prisma/schema.prisma` wieder. Nicht implementiert sind bisher nur
+`User.createdAt` und `TopicMastery` — beides kommt in M2a.
+
 ```prisma
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  createdAt   DateTime @default(now())
-  sessions    Session[]
-  masteries   TopicMastery[]
+  id               String   @id @default(cuid())
+  email            String   @unique
+  createdAt        DateTime @default(now())
+  practiceSessions PracticeSession[]
+  attempts         Attempt[]
+  masteries        TopicMastery[]
 }
 
-model Session {
+// Heißt PracticeSession, nicht Session: Der Prisma-Adapter von Auth.js belegt
+// den Namen `Session` fest. Siehe DECISIONS.md, D-17. Die HTTP-Routen bleiben
+// unter /api/session und /practice/[sessionId] — ein URL-Pfad ist kein Modellname.
+model PracticeSession {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id])
@@ -171,9 +178,9 @@ model Session {
 }
 
 model Attempt {
-  id              String   @id @default(cuid())
-  sessionId       String
-  session         Session  @relation(fields: [sessionId], references: [id])
+  id                String   @id @default(cuid())
+  practiceSessionId String
+  practiceSession   PracticeSession @relation(fields: [practiceSessionId], references: [id])
 
   // Reproduzierbarkeit
   templateId      String
@@ -181,6 +188,12 @@ model Attempt {
   seed            String
   params          Json             // gewürfelte, konkrete Werte
   questionText    String           // gerendert, so wie angezeigt
+
+  // Beim Anlegen denormalisiert, siehe DECISIONS.md, D-18
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  topic           String
+  difficulty      Int
 
   // Lösung — NIE an den Client, solange status = OPEN
   expectedAnswer  Json
@@ -192,7 +205,7 @@ model Attempt {
   transcript      String?          // M4
 
   // Urteil
-  status          AttemptStatus @default(OPEN)
+  status          String   @default("OPEN")   // OPEN | ANSWERED | SKIPPED
   isCorrect       Boolean?
   reviewVerdict   Json?            // M4: LLM-Schritturteil
   durationMs      Int?
@@ -200,17 +213,16 @@ model Attempt {
   createdAt       DateTime @default(now())
   answeredAt      DateTime?
 
-  @@index([sessionId])
+  @@index([practiceSessionId])
+  @@index([userId, topic, answeredAt])   // trägt die gleitende Erfolgsquote
 }
-
-enum AttemptStatus { OPEN ANSWERED SKIPPED }
 
 model TopicMastery {
   id           String   @id @default(cuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id])
   topic        String                   // "kombinatorik.permutation"
-  attempts     Int      @default(0)
+  attempts     Int      @default(0)     // Gesamtzahl, für die Statistik-Seite
   correct      Int      @default(0)
   lastSeenAt   DateTime?
   dueAt        DateTime?
@@ -219,6 +231,10 @@ model TopicMastery {
   @@unique([userId, topic])
 }
 ```
+
+`Attempt.status` ist ein `String` mit Default `"OPEN"`, kein Prisma-`enum`: Für SQLite
+kennt Prisma keine Enum-Typen. Die gültigen Werte erzwingt Zod an den Grenzen
+(`lib/api/contracts.ts`), nicht die Datenbank. Dasselbe gilt für `answerType`.
 
 `expectedAnswer` liegt bewusst in der DB und nicht nur im Speicher: Der Nutzer soll die
 Seite neu laden können, ohne dass die Aufgabe kaputtgeht.
@@ -407,20 +423,31 @@ ganze Repo liegt.
 ## 6. Engine: Template → Instanz
 
 ```ts
-// lib/engine/instantiate.ts
+// lib/engine/instantiate.ts — gekürzt, der echte Code steht in der Datei
 export function instantiate(tpl: Template, seed: string): Instance {
+  if (!isComputeRef(tpl.compute_ref)) {
+    throw new UnknownComputeRefError(tpl.id, tpl.compute_ref);
+  }
+  const entry = registry[tpl.compute_ref];
+
+  // Constraints, die `result` nennen, sind vor dem Rechnen nicht entscheidbar
+  // und werden im ersten Durchgang übersprungen.
+  const beforeCompute = tpl.constraints.filter(
+    (constraint) => !constraintVariables(constraint).has(RESULT_KEY),
+  );
+
   const rng = makeRng(seed);
 
-  for (let i = 0; i < MAX_TRIES; i++) {     // MAX_TRIES = 50
+  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {   // MAX_TRIES = 50
     const params = sampleParams(tpl.param_spec, rng);
-    if (!checkConstraints(tpl.constraints, params)) continue;
+    if (!checkConstraints(beforeCompute, params)) continue;
 
-    const entry = registry[tpl.compute_ref];
-    const parsed = entry.input.safeParse(params);
-    if (!parsed.success) continue;
+    // Ein Eintrag validiert selbst: `run` prüft gegen sein Zod-Schema und
+    // rechnet nur bei Erfolg. `undefined` ist ein verworfener Wurf, kein Fehler.
+    const result = entry.run(params);
+    if (result === undefined) continue;
 
-    const result = entry.compute(parsed.data);
-    if (!checkConstraints(tpl.constraints, { ...params, result })) continue;
+    if (!checkConstraints(tpl.constraints, { ...params, [RESULT_KEY]: result })) continue;
 
     return {
       templateId: tpl.id,
@@ -428,11 +455,12 @@ export function instantiate(tpl: Template, seed: string): Instance {
       seed,
       params,
       questionText: interpolate(tpl.question_text, params),
-      expectedAnswer: result,
+      expectedAnswer: toStorageString(result),
       answerType: tpl.answer_type,
     };
   }
-  throw new TemplateUnsatisfiableError(tpl.id);
+
+  throw new TemplateUnsatisfiableError(tpl.id, MAX_TRIES);
 }
 ```
 
@@ -452,19 +480,24 @@ Generator stumm in `TemplateUnsatisfiableError`.
 Compute-Registry:
 
 ```ts
-// lib/engine/compute/registry.ts
+// lib/engine/compute/registry.ts — zwei von zwölf Einträgen
 export const registry = {
-  "kombinatorik.permutation.permute": {
-    input: z.object({ n: z.number().int().min(0), ordered: z.boolean(), with_repetition: z.boolean() }),
-    compute: ({ n }) => factorial(BigInt(n)).toString(),
-  },
-  "kombinatorik.kombination.choose": {
-    input: z.object({ n: z.number().int().min(0), k: z.number().int().min(0) })
-             .refine(v => v.k <= v.n, "k darf nicht größer als n sein"),
-    compute: ({ n, k }) => binomial(BigInt(n), BigInt(k)).toString(),
-  },
-} as const satisfies Record<string, ComputeEntry>;
+  /** Permutationen ohne Wiederholung: n! */
+  "kombinatorik.permutation.factorial": defineCompute({
+    input: Single,                         // z.strictObject({ n: int, 0..N_MAX })
+    compute: ({ n }) => Q.fromBigInt(factorial(BigInt(n))),
+  }),
+
+  /** Kombinationen ohne Wiederholung: C(n, k) */
+  "kombinatorik.kombination.ohne_wdh": defineCompute({
+    input: PairOrdered,                    // Pair.refine((v) => v.k <= v.n, ...)
+    compute: ({ n, k }) => Q.fromBigInt(binomial(BigInt(n), BigInt(k))),
+  }),
+} as const satisfies Record<string, AnyComputeEntry>;
 ```
+
+Die Eingabeschemata sind `strictObject`: Ein Template mit einem Parameter zu viel fällt
+beim `content:check` auf, statt still ignoriert zu werden.
 
 Ergebnisse sind `Rational`, nicht `number` — sonst verlierst du bei `20!` still Präzision,
 und ab der hypergeometrischen Verteilung sind die Werte ohnehin Brüche.

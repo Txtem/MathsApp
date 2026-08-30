@@ -35,7 +35,7 @@ die naheliegende Variante nicht gewählt wurde.
 `.env` und die SQLite-Datei sind gitignored und entstehen nicht beim Clone:
 
 ```bash
-echo 'DATABASE_URL="file:./prisma/dev.db"' > .env
+echo 'DATABASE_URL="file:./dev.db"' > .env
 npm install          # baut better-sqlite3 nativ — braucht Python + Build Tools
 npx prisma migrate dev
 ```

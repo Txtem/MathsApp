@@ -20,7 +20,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const userId = await ensureDevUser();
 
-  const session = await prisma.session.create({
+  const session = await prisma.practiceSession.create({
     data: { userId, topicFilter: parsed.data.topicFilter ?? null },
     select: { id: true },
   });

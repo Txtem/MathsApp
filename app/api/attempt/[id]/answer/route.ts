@@ -45,12 +45,12 @@ export async function POST(
       params: true,
       templateId: true,
       templateVersion: true,
-      session: { select: { userId: true } },
+      userId: true,
     },
   });
 
   if (!attempt) return apiError("not_found", "Attempt existiert nicht.");
-  if (attempt.session.userId !== DEV_USER_ID) {
+  if (attempt.userId !== DEV_USER_ID) {
     return apiError("forbidden", "Attempt gehört zu einem anderen User.");
   }
   if (AttemptStatusSchema.parse(attempt.status) !== "OPEN") {

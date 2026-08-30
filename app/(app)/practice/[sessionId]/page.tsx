@@ -20,7 +20,7 @@ export default async function PracticeSessionPage({
 }) {
   const { sessionId } = await params;
 
-  const session = await prisma.session.findUnique({
+  const session = await prisma.practiceSession.findUnique({
     where: { id: sessionId },
     select: { id: true, userId: true, topicFilter: true },
   });
