@@ -157,7 +157,7 @@ function Due({ row }: { row: StatsRow }) {
   if (row.isDue) {
     return <span className="font-medium text-zinc-900 dark:text-zinc-50">fällig</span>;
   }
-  return <span>{row.dueAt === null ? "—" : formatDate(row.dueAt)}</span>;
+  return <span>{row.dueAt === null ? "—" : `wieder ab ${formatDate(row.dueAt)}`}</span>;
 }
 
 function formatRate(rate: number | null): string {

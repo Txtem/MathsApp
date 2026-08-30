@@ -21,6 +21,8 @@ const MIGRATIONS = join(import.meta.dirname, "..", "..", "..", "prisma", "migrat
 
 export interface TempDatabase {
   readonly prisma: PrismaClient;
+  /** Pfad der Datei — für Tests, die an Prisma vorbei in die Datenbank sehen. */
+  readonly file: string;
   /** Verbindung schließen und die Datei löschen. Gehört in `afterEach`. */
   readonly destroy: () => Promise<void>;
 }
@@ -53,6 +55,7 @@ export function createTempDatabase(): TempDatabase {
 
   return {
     prisma,
+    file,
     destroy: async () => {
       await prisma.$disconnect();
       rmSync(directory, { recursive: true, force: true });
