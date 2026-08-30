@@ -1,5 +1,7 @@
 # MathsApp
 
+Zur Orientierung: OVERVIEW.md
+
 Web-App zum Üben von Mathematik. Aufgaben entstehen aus versionierten Templates mit
 zufälligen, validierten Parametern. Die richtige Lösung wird immer deterministisch
 berechnet, nie von einem LLM.
