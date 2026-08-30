@@ -12,6 +12,7 @@ import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplate } from "@/lib/content/load";
 import type { ValidatedTemplate } from "@/lib/content/schema";
+import { closeAttempt } from "@/lib/db/attempts";
 import { prisma } from "@/lib/db/client";
 import { grade } from "@/lib/engine/grade";
 import { renderSolution } from "@/lib/engine/instantiate";
@@ -79,20 +80,18 @@ export async function POST(
     return NextResponse.json(unreadable, { status: 200 });
   }
 
-  // Atomar: Nur wer den Attempt von OPEN auf ANSWERED dreht, darf antworten.
-  // Zwei gleichzeitige Absenden können so nicht beide bewertet werden.
-  const closed = await prisma.attempt.updateMany({
-    where: { id: attempt.id, status: "OPEN" },
-    data: {
-      status: "ANSWERED",
-      userAnswer: body.data.answer,
-      isCorrect: verdict.isCorrect,
-      durationMs: body.data.durationMs,
-      answeredAt: new Date(),
-    },
+  // Atomar: Nur wer den Attempt von OPEN auf ANSWERED dreht, darf antworten,
+  // und nur derselbe Aufruf schreibt den Themenfortschritt fort. Zwei
+  // gleichzeitige Absenden können so weder beide bewertet werden noch doppelt
+  // zählen.
+  const closed = await closeAttempt(prisma, {
+    attemptId: attempt.id,
+    userAnswer: body.data.answer,
+    isCorrect: verdict.isCorrect,
+    durationMs: body.data.durationMs,
   });
 
-  if (closed.count === 0) {
+  if (!closed) {
     return apiError("already_answered", "Dieser Attempt wurde bereits beantwortet.");
   }
 

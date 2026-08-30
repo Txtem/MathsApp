@@ -12,12 +12,13 @@ datasource db {
   provider = "sqlite"
 }
 
-// M2a: nur id und email. createdAt und TopicMastery kommen mit Schritt 3.
 model User {
   id               String            @id @default(cuid())
   email            String            @unique
+  createdAt        DateTime          @default(now())
   practiceSessions PracticeSession[]
   attempts         Attempt[]
+  masteries        TopicMastery[]
 }
 
 // Heißt `PracticeSession`, nicht `Session`: Der Prisma-Adapter von Auth.js
@@ -74,4 +75,22 @@ model Attempt {
   // Trägt die gleitende Erfolgsquote: letzte n beantwortete Attempts
   // eines Nutzers in einem Topic.
   @@index([userId, topic, answeredAt])
+}
+
+// Fortschritt pro Thema und Nutzer. `attempts`/`correct` sind Gesamtzahlen für
+// die Statistik-Seite; die gleitende Erfolgsquote der letzten Versuche kommt
+// dagegen aus den Attempts selbst (D-18). `dueAt`/`intervalDays` tragen die
+// Terminplanung nach SM-2-light, siehe SPEC.md Abschnitt 10.
+model TopicMastery {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  topic        String
+  attempts     Int       @default(0)
+  correct      Int       @default(0)
+  lastSeenAt   DateTime?
+  dueAt        DateTime?
+  intervalDays Float     @default(1)
+
+  @@unique([userId, topic])
 }

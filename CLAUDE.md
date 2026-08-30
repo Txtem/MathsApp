@@ -120,6 +120,8 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
 - Neue statische Content-Prüfung ⇒ Negativ-Fixture, das genau daran scheitert.
 - Kein Normalizer ohne Template, das ihn benutzt.
 - `import "server-only"` in allem unter `lib/db`, `lib/content` und `lib/llm`.
+  Zwei begründete Ausnahmen: `lib/content/read.ts` (D-12) und `lib/db/attempts.ts`
+  (D-19) — beide nehmen ihre Umgebung als Parameter entgegen und sind deshalb testbar.
 - Dateien unter 300 Zeilen. Vorher aufteilen.
 - Kleine, thematische Commits. Ein Meilenstein ist kein Commit.
 - Am Ende eines Meilensteins stoppen und Rückmeldung einholen, nicht durchziehen.

@@ -345,3 +345,40 @@ aber `SKIPPED` ist in `SPEC.md` vorgesehen, und ein übersprungener Attempt mit
 
 **Migration:** Die vorhandenen Attempts in der lokalen `dev.db` wurden dabei verworfen —
 Testdaten, für die es keinen sinnvollen Wert für die neuen Pflichtspalten gibt.
+
+---
+
+## D-19 — Datenbanknahe Tests laufen gegen eine temporäre SQLite-Datei
+*2026-08-30, M2a*
+
+`lib/db/__testing__/temp-database.ts` legt pro Test eine eigene SQLite-Datei im
+Temp-Verzeichnis an, spielt die **echten** Migrationen aus `prisma/migrations/` darauf
+ab und gibt einen Prisma-Client darauf zurück. Nach dem Test wird die Datei gelöscht.
+
+**Anlass:** `SPEC-M2.md` verlangt für die Fortschreibung des Themenfortschritts zwei
+Tests — „doppeltes Absenden zählt einmal" und „`unparseable` zählt gar nicht". Beide
+prüfen kein Rechenergebnis, sondern Verhalten der Datenbank: dass `updateMany` mit der
+Bedingung `status: "OPEN"` genau einmal trifft und dass die Fortschreibung an dieselbe
+Transaktion gekoppelt ist. Mit einem Mock hätte der Test nur nachgespielt, was ich
+ohnehin annehme — genau der Fehler aus D-15.
+
+**Warum die echten Migrationen und kein handgeschriebenes Test-Schema:** Ein zweites
+Schema würde mit dem ersten auseinanderlaufen. So fällt eine vergessene Migration im Test
+auf, nicht erst beim nächsten `migrate dev`.
+
+**Folge — `lib/db/attempts.ts` trägt kein `server-only`:** Die Regel „`import "server-only"`
+in allem unter `lib/db`" ist hier bewusst ausgesetzt, aus demselben Grund
+wie bei `lib/content/read.ts` (D-12). Die Datei nimmt den Prisma-Client als Parameter
+entgegen, statt ihn aus dem Singleton zu ziehen; sie liest kein `process.env` und öffnet
+keine Verbindung. Was nie in den Browser darf, ist `lib/db/client.ts` — und dort steht
+das `server-only` weiterhin.
+
+**Was das nicht abdeckt:** Dass die Route bei `unparseable` gar nicht erst schließt, ist
+Verhalten der Route und nicht dieser Schicht. Der Test prüft die andere Hälfte — ein
+offener Attempt erzeugt keinen Fortschritt. Die Route selbst ist weiterhin ungetestet;
+sie zu importieren scheitert an `server-only` und am Client-Singleton aus `process.env`.
+Nachgestellt wurde der Fall von Hand gegen die laufende App.
+
+**Preis:** Eine neue Dev-Abhängigkeit (`@types/better-sqlite3`, reine Typen) und ein
+Testlauf, der Dateien anlegt. Die Suite braucht dafür rund eine Sekunde mehr.
+

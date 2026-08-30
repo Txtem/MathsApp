@@ -135,11 +135,15 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   │
 │   ├── api/                            # Request- und Response-Verträge (Zod)
 │   ├── auth/current-user.ts            # getCurrentUserId(), einzige Nutzerquelle
-│   ├── selection/next-template.ts      # Welches Template als Nächstes?
+│   ├── selection/
+│   │   ├── next-template.ts            # Welches Template als Nächstes?
+│   │   └── mastery.ts                  # SM-2-light, rein
 │   ├── llm/                            # ab M3
 │   └── db/
 │       ├── client.ts                   # Prisma-Singleton, server-only
-│       └── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
+│       ├── attempts.ts                 # Attempt schließen + Fortschritt, eine Transaktion
+│       ├── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
+│       └── __testing__/                # Wegwerf-SQLite aus den echten Migrationen
 │
 ├── scripts/check-templates.ts          # npm run content:check
 ├── prisma/schema.prisma
