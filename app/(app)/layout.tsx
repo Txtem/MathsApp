@@ -10,12 +10,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           <Link href="/" className="font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             MathsApp
           </Link>
-          <Link
-            href="/practice"
-            className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
-          >
-            Themenauswahl
-          </Link>
+          <nav className="flex items-center gap-5">
+            <Link
+              href="/practice"
+              className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
+            >
+              Themenauswahl
+            </Link>
+            <Link
+              href="/stats"
+              className="text-sm text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
+            >
+              Fortschritt
+            </Link>
+          </nav>
         </div>
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-10">{children}</main>

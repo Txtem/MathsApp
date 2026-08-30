@@ -75,6 +75,7 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   ├── (marketing)/page.tsx            # Landing
 │   ├── (app)/
 │   │   ├── layout.tsx
+│   │   ├── stats/page.tsx              # Fortschritt je Thema, force-dynamic
 │   │   └── practice/
 │   │       ├── page.tsx                # Themenauswahl aus dem Themenbaum
 │   │       ├── topic-picker.tsx        # Client: startet die Session
@@ -92,6 +93,8 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 ├── components/
 │   ├── MathText.tsx                    # KaTeX-Rendering nach der Interpolation
 │   ├── split-math.ts                   # trennt Text von $…$ und $$…$$
+│   ├── topic-groups.ts                 # Gruppierung der Themen, rein
+│   ├── stats-rows.ts                   # Zeilen der Statistik-Seite, rein
 │   └── answer-format.ts                # Formathinweis je answer_type
 │
 ├── content/
@@ -144,6 +147,7 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │       ├── answer-attempt.ts           # was beim Beantworten passiert, ohne HTTP
 │       ├── attempts.ts                 # Attempt schließen + Fortschritt, eine Transaktion
 │       ├── topic-stats.ts              # Stand je Thema für die Auswahl
+│       ├── stats.ts                    # Zahlen für die Statistik-Seite
 │       ├── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
 │       └── __testing__/                # Wegwerf-SQLite aus den echten Migrationen
 │
@@ -808,6 +812,32 @@ wie bei `components/topic-groups.ts` — und aus demselben Grund, siehe D-16.
 
 Kein Elo, kein Bayesian Knowledge Tracing. Das kann später ersetzt werden, deshalb liegt
 alles hinter einer Funktion mit klarer Signatur.
+
+---
+
+## 10a. Statistik-Seite
+
+`app/(app)/stats/page.tsx`, Server Component, `force-dynamic` — die Seite liest bei jedem
+Aufruf frisch, statt beim Build einen Stand von damals einzufrieren.
+
+Pro Thema eine Zeile: Beschriftung aus dem Themenbaum, Zahl der Versuche, Erfolgsquote
+gesamt, Erfolgsquote der letzten zehn, `dueAt` als „fällig" oder als Datum. Gruppiert nach
+Oberthema, in derselben Form wie die Themenauswahl — die Gruppierung kommt aus
+`toTopicGroups` und nicht aus einer zweiten Umformung (D-16). Jedes Thema mit Aufgaben
+bekommt eine Zeile, auch bei null Versuchen.
+
+Dazu eine Gesamtzeile: Versuche insgesamt, Quote insgesamt, Median der Bearbeitungszeit
+gegen die Zielzeit derselben Aufgaben.
+
+Die angezeigte Quote ist **nicht** `successRate` aus Abschnitt 10. Deren `0.5` für
+unerprobte Themen ist ein Steuerungswert für die Auswahl; als Messwert wäre sie falsch.
+Ohne Versuche steht hier nichts.
+
+Die Umformung steht als reine Funktion in `components/stats-rows.ts` und hat eigene
+Tests. Die Seite selbst holt nur Daten und rendert.
+
+Kein Diagramm. Ein Zeitverlauf braucht mehr Daten, als bisher existieren; eine Kurve über
+zwölf Attempts sieht nach Aussage aus, wo keine ist.
 
 ---
 
