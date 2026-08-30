@@ -139,9 +139,6 @@ export const RECENCY_FACTORS: readonly number[] = [0.7, 0.9, 0.9];
 /**
  * `recentTemplateIds` ist die Liste der zuletzt gestellten Templates, jüngste
  * zuerst. Doppelte Einträge sind erlaubt; es zählt die jüngste Verwendung.
- *
- * `factors` ist nur für die Parametersuche in `distribution.test.ts` da — die
- * Anwendung übergibt es nie und bekommt die gemessenen Werte.
  */
 export function recencyFactor(
   templateId: string,
@@ -151,4 +148,38 @@ export function recencyFactor(
   const zuege = recentTemplateIds.indexOf(templateId);
   if (zuege === -1 || zuege >= factors.length) return 1;
   return factors[zuege];
+}
+
+/** So viel muss die Auswahl von einem Kandidaten wissen, um ihn zu gewichten. */
+export interface WeightableTemplate {
+  readonly id: string;
+  readonly difficulty: number;
+}
+
+/**
+ * Das Gewicht jedes Kandidaten: Schwierigkeit mal Rückschlag für kürzlich
+ * Gestelltes. Die ganze Gewichtung an einer Stelle, damit es keine zweite gibt.
+ *
+ * `factors` hat einen Modul-Default und ist **kein** Feld von `SelectionInput`.
+ * Der Grund ist derselbe wie bei D-12 und D-19, nur andersherum: Dort wurde eine
+ * Abhängigkeit zum Parameter gemacht, um sie testbar zu machen. Hier ist ein
+ * Testbedarf beinahe in einen Anwendungstyp gewandert — und `SelectionInput`
+ * wird aus Anfragedaten gebaut. Ein Feld, das nur ein Test setzen soll, wird
+ * irgendwann von woanders gesetzt. Die Parametersuche in `distribution.test.ts`
+ * ruft deshalb diese Funktion direkt, statt über die Auswahl zu greifen.
+ *
+ * Kein Gewicht wird null: Es bleibt immer ein Kandidat übrig, und deshalb gibt
+ * es keinen Sonderfall „alles gesperrt" mehr (D-24).
+ */
+export function candidateWeights(
+  candidates: readonly WeightableTemplate[],
+  target: number,
+  recentTemplateIds: readonly string[],
+  factors: readonly number[] = RECENCY_FACTORS,
+): number[] {
+  return candidates.map(
+    (candidate) =>
+      templateWeight(candidate.difficulty, target) *
+      recencyFactor(candidate.id, recentTemplateIds, factors),
+  );
 }

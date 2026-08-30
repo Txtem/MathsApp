@@ -831,8 +831,17 @@ zurückliegt: `f₁` für den Zug davor, `f₂` für zwei, `f₃` für drei, son
 wird null; es bleibt immer ein Kandidat, und einen Sonderfall „alles gesperrt" gibt es
 nicht mehr.
 
-Die Faktoren sind gemessen, nicht geschätzt — die Parametersuche läuft über
-`lib/selection/distribution.test.ts`, die Tabelle steht in `DECISIONS.md`, D-24.
+Die Faktoren dienen der **Methodenabwechslung** — nicht zweimal hintereinander dasselbe
+Verfahren. Gegen dieselbe *Aufgabe* zweimal hilft die harte Sperre darüber; wo die nicht
+reicht, ist der Parameterraum zu klein und kein Faktor ändert daran etwas.
+
+Die Faktoren sind gemessen, nicht geschätzt — die Tabelle steht in `DECISIONS.md`, D-24.
+Sie stehen als Modul-Default in `lib/selection/scoring.ts`; die ganze Gewichtung liegt in
+`candidateWeights`, das sie als optionalen Parameter nimmt. `SelectionInput` hat dafür
+**kein** Feld: Dieser Typ wird aus Anfragedaten gebaut, und ein Feld, das nur eine
+Parametersuche setzen soll, wird irgendwann von woanders gesetzt. Die Suche in
+`lib/selection/distribution.test.ts` ruft `candidateWeights` deshalb direkt; ein Test hält
+fest, dass `selectTemplate` dieselbe Gewichtung benutzt.
 
 Beide Mechanismen brauchen die bisherigen Attempts der Sitzung. Geladen werden dafür genau
 zwei Spalten, `templateId` und `questionText` (`lib/db/session-history.ts`):

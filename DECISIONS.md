@@ -490,6 +490,20 @@ Ausnahme „alles gesperrt, Sperre fällt weg" griff und bei vieren nicht.
 **Folge:** Diese Ausnahme entfällt ersatzlos. Kein Gewicht wird null, also bleibt immer
 ein Kandidat — der Sonderfall hat kein Gegenstück mehr.
 
+### Wofür die Faktoren da sind
+
+**Methodenabwechslung** — nicht zweimal hintereinander dasselbe Verfahren, auch wenn die
+Zahlen andere sind. Ausdrücklich **nicht**: dieselbe Aufgabe zweimal. Die verhindert die
+harte Sperre aus D-25, und wo sie trotzdem auftritt, ist der Parameterraum die Ursache;
+kein Faktor hilft dagegen.
+
+Das ist zu betonen, weil „Wdh." in den beiden Tabellen unten Verschiedenes bedeutet: in
+der synthetischen *dasselbe Template wie im Zug davor*, in der Content-Tabelle *dieselbe
+Aufgabe schon einmal in dieser Sitzung*. Nur die zweite sieht der Übende überhaupt — bei
+ausreichendem Parameterraum liefert dasselbe Template zweimal hintereinander zwei
+verschiedene Aufgaben. Wer die Faktoren an der ersten Zahl optimiert, im Glauben, gegen
+sichtbare Wiederholungen zu arbeiten, zahlt mit der Schwierigkeitssteuerung für nichts.
+
 ### Wie die Faktoren gefunden wurden
 
 Rastersuche über 120 Kombinationen mit `f₁ ≤ f₂ ≤ f₃` aus `0.2 … 0.9`, je 20 000

@@ -1,13 +1,6 @@
 import type { Template } from "@/lib/engine/types";
 
-import {
-  chooseTopic,
-  recencyFactor,
-  successRate,
-  targetDifficulty,
-  templateWeight,
-  type TopicStats,
-} from "./scoring";
+import { candidateWeights, chooseTopic, successRate, targetDifficulty, type TopicStats } from "./scoring";
 
 /**
  * Welches Template kommt als Nächstes? (SPEC.md Abschnitt 10)
@@ -31,8 +24,6 @@ export interface SelectionInput {
   readonly stats?: readonly TopicStats[];
   /** Zuletzt gestellte Template-IDs dieser PracticeSession, jüngste zuerst. */
   readonly recentTemplateIds?: readonly string[];
-  /** Nur für die Parametersuche in `distribution.test.ts`; sonst der Default. */
-  readonly recencyFactors?: readonly number[];
   /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
   readonly now: Date;
 }
@@ -77,15 +68,11 @@ export function selectTemplate(
   // Kein Kandidat wird ausgeschlossen: Beide Faktoren sind größer als null, es
   // bleibt also immer etwas zu ziehen. Genau deshalb gibt es hier keinen
   // Sonderfall mehr für „alles gesperrt".
-  return weightedPick(
-    inTopic,
-    inTopic.map(
-      (template) =>
-        templateWeight(template.difficulty, target) *
-        recencyFactor(template.id, recent, input.recencyFactors),
-    ),
-    random,
-  );
+  //
+  // Ohne `factors`-Argument: Die Anwendung nimmt immer die gemessenen Werte aus
+  // `RECENCY_FACTORS`. Wer andere durchprobieren will, ruft `candidateWeights`
+  // direkt — dafür gibt es kein Feld in `SelectionInput`.
+  return weightedPick(inTopic, candidateWeights(inTopic, target, recent), random);
 }
 
 /**

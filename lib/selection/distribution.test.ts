@@ -4,7 +4,13 @@ import { makeRng } from "@/lib/engine/generate/rng";
 import type { Template } from "@/lib/engine/types";
 
 import { selectTemplate, weightedPick } from "./next-template";
-import { RECENCY_FACTORS, templateWeight, type TopicStats } from "./scoring";
+import {
+  candidateWeights,
+  RECENCY_FACTORS,
+  targetDifficulty,
+  templateWeight,
+  type TopicStats,
+} from "./scoring";
 
 /**
  * Was die Auswahl über viele Ziehungen tatsächlich tut.
@@ -96,23 +102,23 @@ function sitzung(
   templates: readonly Template[],
   seed: string,
   mitAbwertung: boolean,
-  factors?: readonly number[],
+  factors: readonly number[] = RECENCY_FACTORS,
 ): Template[] {
   const rng = makeRng(seed);
   let recent: string[] = [];
   const picked: Template[] = [];
 
+  // Alle Kandidaten liegen im selben Thema, die Themenwahl ist also fest.
+  // Deshalb wird hier die Gewichtung direkt aufgerufen, statt über
+  // `selectTemplate` zu greifen: Andere Faktoren durchzuprobieren ist ein
+  // Testbedarf und hat in `SelectionInput` nichts zu suchen. Dass beide Wege
+  // dasselbe tun, sichert der Test „selectTemplate benutzt dieselbe
+  // Gewichtung" weiter unten.
+  const target = targetDifficulty(BEHERRSCHT.recentCorrect / BEHERRSCHT.recentAnswered);
+
   for (let i = 0; i < DRAWS; i++) {
-    const chosen = selectTemplate(
-      templates,
-      {
-        now: NOW,
-        stats: [BEHERRSCHT],
-        recentTemplateIds: mitAbwertung ? recent : [],
-        recencyFactors: factors,
-      },
-      rng.next,
-    );
+    const weights = candidateWeights(templates, target, mitAbwertung ? recent : [], factors);
+    const chosen = weightedPick(templates, weights, rng.next);
 
     if (chosen === undefined) throw new Error("Die Auswahl hat kein Template geliefert.");
     picked.push(chosen);
@@ -201,10 +207,45 @@ describe("ohne Abwertung wird exakt nach Gewicht gezogen", () => {
   });
 
   it("selectTemplate kommt auf dieselbe Verteilung", () => {
-    // Der ganze Weg: Quote → Zielschwierigkeit → Gewicht → Ziehung. Weicht das
-    // hier ab, liegt der Fehler zwischen Quote und Gewicht.
-    const counts = count(sitzung(FUENF, "verteilung-selecttemplate", false));
+    // Der ganze Weg durch die Anwendung: Quote → Zielschwierigkeit → Gewicht →
+    // Ziehung. Weicht das hier ab, liegt der Fehler zwischen Quote und Gewicht.
+    const rng = makeRng("verteilung-selecttemplate");
+
+    const picked: Template[] = [];
+    for (let i = 0; i < DRAWS; i++) {
+      const chosen = selectTemplate(FUENF, { now: NOW, stats: [BEHERRSCHT] }, rng.next);
+      if (chosen === undefined) throw new Error("Die Auswahl hat kein Template geliefert.");
+      picked.push(chosen);
+    }
+
+    const counts = count(picked);
     for (const [id, expected] of ERWARTET) expectShare(counts, id, expected);
+  });
+
+  it("selectTemplate benutzt dieselbe Gewichtung wie die Parametersuche", () => {
+    // Die Messungen weiter unten rufen `candidateWeights` direkt, weil sie die
+    // Faktoren durchprobieren — die Anwendung geht über `selectTemplate`. Ohne
+    // diesen Test könnten beide Wege auseinanderlaufen, und die gemessenen
+    // Zahlen gälten für Code, den niemand ausführt.
+    const ausSelect = makeRng("gleichheit");
+    const ausGewichten = makeRng("gleichheit");
+    let recent: string[] = [];
+
+    for (let i = 0; i < 2000; i++) {
+      const überSelect = selectTemplate(
+        FUENF,
+        { now: NOW, stats: [BEHERRSCHT], recentTemplateIds: recent },
+        ausSelect.next,
+      );
+      const überGewichte = weightedPick(
+        FUENF,
+        candidateWeights(FUENF, TARGET, recent),
+        ausGewichten.next,
+      );
+
+      expect(überSelect?.id).toBe(überGewichte?.id);
+      recent = [überSelect?.id ?? "", ...recent].slice(0, RECENCY_FACTORS.length);
+    }
   });
 
   it("spiegelt sich bei schwacher Quote", () => {
