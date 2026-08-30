@@ -40,8 +40,21 @@ Keine Route vertraut einer ID aus dem Request-Body ohne diese beiden Prüfungen.
 
 ## Server-only
 
-`import "server-only"` ganz oben in jeder Datei unter `lib/db` und `lib/llm`.
-Der Prisma-Client ist ein Singleton (Dev-HMR erzeugt sonst Connection-Leaks).
+`import "server-only"` ganz oben in jedem Modul unter `lib/db` und `lib/llm`, das sich
+seine Umgebung selbst holt — den Prisma-Singleton, `process.env`, das Dateisystem.
+Der Prisma-Client ist ein Singleton (Dev-HMR erzeugt sonst Connection-Leaks), und er
+trägt das `server-only`.
+
+Module, die ihren Client als Parameter bekommen, tragen es **nicht** — sonst wären sie
+nicht testbar, weil `server-only` unter Vitest wirft. Das betrifft `lib/db/attempts.ts`,
+`lib/db/answer-attempt.ts` und `lib/db/topic-stats.ts`. Begründung in D-12 und D-19.
+
+## Routen sind Adapter
+
+Eine Route liest den Request, ermittelt den Nutzer über `getCurrentUserId()` und bildet
+ein Ergebnis auf Statuscodes ab. Die Entscheidungen selbst — was die Antwort enthält, ob
+ein Attempt geschlossen wird — stehen in einem Modul unter `lib/`, das seine Umgebung als
+Parameter bekommt. Eine Route lässt sich nicht importieren und wäre sonst ungetestet.
 
 ## LLM-Aufrufe
 

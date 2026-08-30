@@ -119,9 +119,12 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
   kein Platzhalterrest im gerenderten Text.
 - Neue statische Content-Prüfung ⇒ Negativ-Fixture, das genau daran scheitert.
 - Kein Normalizer ohne Template, das ihn benutzt.
-- `import "server-only"` in allem unter `lib/db`, `lib/content` und `lib/llm`.
-  Zwei begründete Ausnahmen: `lib/content/read.ts` (D-12) und `lib/db/attempts.ts`
-  (D-19) — beide nehmen ihre Umgebung als Parameter entgegen und sind deshalb testbar.
+- `import "server-only"` in jedem Modul unter `lib/db`, `lib/content` und `lib/llm`,
+  **das sich seine Umgebung selbst holt** — den Prisma-Singleton, `process.env`, das
+  Dateisystem. Das sind heute `lib/db/client.ts` und `lib/content/load.ts`.
+  Module, die ihre Umgebung als Parameter bekommen, tragen es nicht: Sie sind damit
+  ohne laufenden Server testbar, und genau daran hing bis M2a die einzige ungetestete
+  Stelle von Invariante 2. Siehe D-12 und D-19.
 - Dateien unter 300 Zeilen. Vorher aufteilen.
 - Kleine, thematische Commits. Ein Meilenstein ist kein Commit.
 - Am Ende eines Meilensteins stoppen und Rückmeldung einholen, nicht durchziehen.

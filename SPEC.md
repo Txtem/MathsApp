@@ -141,7 +141,9 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   ├── llm/                            # ab M3
 │   └── db/
 │       ├── client.ts                   # Prisma-Singleton, server-only
+│       ├── answer-attempt.ts           # was beim Beantworten passiert, ohne HTTP
 │       ├── attempts.ts                 # Attempt schließen + Fortschritt, eine Transaktion
+│       ├── topic-stats.ts              # Stand je Thema für die Auswahl
 │       ├── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
 │       └── __testing__/                # Wegwerf-SQLite aus den echten Migrationen
 │
@@ -654,6 +656,15 @@ Response: {
 }
 ```
 **Enthält niemals `expectedAnswer`.** Das ist der wichtigste Vertrag im ganzen System.
+
+### Routen sind Adapter
+
+Eine Route liest den Request, ermittelt den Nutzer über `getCurrentUserId()` und bildet
+ein Ergebnis auf Statuscodes ab. Die Entscheidungen selbst stehen in einem Modul unter
+`lib/`, das seine Umgebung als Parameter bekommt — für `POST /api/attempt/[id]/answer`
+ist das `lib/db/answer-attempt.ts`. Grund: Eine Route lässt sich nicht importieren
+(`server-only`, Client-Singleton aus `process.env`) und bliebe sonst ungetestet. Siehe
+D-19.
 
 ### `POST /api/attempt/[id]/answer`
 ```ts

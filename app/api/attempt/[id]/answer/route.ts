@@ -1,28 +1,19 @@
 import { NextResponse } from "next/server";
 
-import {
-  AnswerRequestSchema,
-  type AnswerResponse,
-  AnswerTypeSchema,
-  AttemptStatusSchema,
-  ExpectedAnswerSchema,
-  ParamsSchema,
-} from "@/lib/api/contracts";
+import { AnswerRequestSchema } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplate } from "@/lib/content/load";
-import type { ValidatedTemplate } from "@/lib/content/schema";
-import { closeAttempt } from "@/lib/db/attempts";
+import { answerAttempt } from "@/lib/db/answer-attempt";
 import { prisma } from "@/lib/db/client";
-import { grade } from "@/lib/engine/grade";
-import { renderSolution } from "@/lib/engine/instantiate";
 
 /**
  * POST /api/attempt/[id]/answer — bewertet eine Antwort.
  *
- * Erst hier darf die Lösung den Server verlassen, und auch nur, nachdem der
- * Attempt auf ANSWERED gesetzt wurde. Eine nicht lesbare Eingabe lässt die
- * Aufgabe offen und gibt nichts preis (Entscheidung E-04).
+ * Dünner Adapter: Request lesen, Nutzer ermitteln, Ergebnis auf Statuscodes
+ * abbilden. Die Entscheidungen selbst — vor allem, dass die Lösung eine offene
+ * Aufgabe nicht verlässt — stehen in `lib/db/answer-attempt.ts` und sind dort
+ * gegen eine echte Datenbank getestet.
  */
 export async function POST(
   request: Request,
@@ -36,89 +27,24 @@ export async function POST(
     return apiError("invalid_request", "Erwartet { answer: string, durationMs: number }.");
   }
 
-  const userId = await getCurrentUserId();
-
-  const attempt = await prisma.attempt.findUnique({
-    where: { id },
-    select: {
-      id: true,
-      status: true,
-      answerType: true,
-      expectedAnswer: true,
-      params: true,
-      templateId: true,
-      templateVersion: true,
-      userId: true,
+  const outcome = await answerAttempt(
+    { prisma, findTemplate: getTemplate },
+    {
+      attemptId: id,
+      userId: await getCurrentUserId(),
+      answer: body.data.answer,
+      durationMs: body.data.durationMs,
     },
-  });
+  );
 
-  if (!attempt) return apiError("not_found", "Attempt existiert nicht.");
-  if (attempt.userId !== userId) {
-    return apiError("forbidden", "Attempt gehört zu einem anderen User.");
+  switch (outcome.kind) {
+    case "not_found":
+      return apiError("not_found", "Attempt existiert nicht.");
+    case "forbidden":
+      return apiError("forbidden", "Attempt gehört zu einem anderen User.");
+    case "already_answered":
+      return apiError("already_answered", "Dieser Attempt wurde bereits beantwortet.");
+    case "answered":
+      return NextResponse.json(outcome.response, { status: 200 });
   }
-  if (AttemptStatusSchema.parse(attempt.status) !== "OPEN") {
-    return apiError("already_answered", "Dieser Attempt wurde bereits beantwortet.");
-  }
-
-  // Zod auch an der Datenbankgrenze: status und answerType sind in SQLite
-  // gewöhnliche Strings, expectedAnswer ist eine Json-Spalte.
-  const answerType = AnswerTypeSchema.parse(attempt.answerType);
-  const expectedAnswer = ExpectedAnswerSchema.parse(attempt.expectedAnswer);
-
-  // Das Template wird einmal geholt: Es liefert `round_to` für die Bewertung
-  // und den Lösungstext. Passt die Version nicht mehr, gilt es als nicht
-  // vorhanden — dann wird exakt bewertet und kein Lösungsweg gezeigt.
-  const template = getTemplate(attempt.templateId);
-  const current = template?.version === attempt.templateVersion ? template : undefined;
-
-  const verdict = grade(body.data.answer, expectedAnswer, answerType, {
-    roundTo: current?.round_to,
-  });
-
-  if (!verdict.ok) {
-    const unreadable: AnswerResponse = { isCorrect: false, parseError: "unparseable" };
-    return NextResponse.json(unreadable, { status: 200 });
-  }
-
-  // Atomar: Nur wer den Attempt von OPEN auf ANSWERED dreht, darf antworten,
-  // und nur derselbe Aufruf schreibt den Themenfortschritt fort. Zwei
-  // gleichzeitige Absenden können so weder beide bewertet werden noch doppelt
-  // zählen.
-  const closed = await closeAttempt(prisma, {
-    attemptId: attempt.id,
-    userAnswer: body.data.answer,
-    isCorrect: verdict.isCorrect,
-    durationMs: body.data.durationMs,
-  });
-
-  if (!closed) {
-    return apiError("already_answered", "Dieser Attempt wurde bereits beantwortet.");
-  }
-
-  const response: AnswerResponse = {
-    isCorrect: verdict.isCorrect,
-    expectedAnswer,
-    ...buildSolution(current, attempt.params, expectedAnswer),
-  };
-
-  return NextResponse.json(response, { status: 200 });
-}
-
-/**
- * Der Lösungstext wird aus den persistierten Parametern neu gerendert. Wurde das
- * Template seit dem Stellen der Aufgabe geändert, bleibt er weg — ein Text zu
- * einer anderen Version wäre schlechter als gar keiner.
- */
-function buildSolution(
-  template: ValidatedTemplate | undefined,
-  params: unknown,
-  expectedAnswer: string,
-): { solutionText?: string } {
-  if (!template) return {};
-
-  const parsedParams = ParamsSchema.safeParse(params);
-  if (!parsedParams.success) return {};
-
-  const solutionText = renderSolution(template, parsedParams.data, expectedAnswer);
-  return solutionText === undefined ? {} : { solutionText };
 }

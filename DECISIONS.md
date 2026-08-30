@@ -366,18 +366,20 @@ ohnehin annehme — genau der Fehler aus D-15.
 Schema würde mit dem ersten auseinanderlaufen. So fällt eine vergessene Migration im Test
 auf, nicht erst beim nächsten `migrate dev`.
 
-**Folge — `lib/db/attempts.ts` trägt kein `server-only`:** Die Regel „`import "server-only"`
-in allem unter `lib/db`" ist hier bewusst ausgesetzt, aus demselben Grund
-wie bei `lib/content/read.ts` (D-12). Die Datei nimmt den Prisma-Client als Parameter
-entgegen, statt ihn aus dem Singleton zu ziehen; sie liest kein `process.env` und öffnet
-keine Verbindung. Was nie in den Browser darf, ist `lib/db/client.ts` — und dort steht
-das `server-only` weiterhin.
+**Folge — Module unter `lib/db` tragen kein `server-only`, wenn sie ihre Umgebung als
+Parameter bekommen:** Die Regel „`import "server-only"` in allem unter `lib/db`" ist hier
+bewusst ausgesetzt, aus demselben Grund wie bei `lib/content/read.ts` (D-12). Diese Module
+nehmen den Prisma-Client entgegen, statt ihn aus dem Singleton zu ziehen; sie lesen kein
+`process.env` und öffnen keine Verbindung. Was nie in den Browser darf, ist
+`lib/db/client.ts` — und dort steht das `server-only` weiterhin.
 
-**Was das nicht abdeckt:** Dass die Route bei `unparseable` gar nicht erst schließt, ist
-Verhalten der Route und nicht dieser Schicht. Der Test prüft die andere Hälfte — ein
-offener Attempt erzeugt keinen Fortschritt. Die Route selbst ist weiterhin ungetestet;
-sie zu importieren scheitert an `server-only` und am Client-Singleton aus `process.env`.
-Nachgestellt wurde der Fall von Hand gegen die laufende App.
+**Nachtrag, M2a Schritt 4b:** Dieselbe Trennung hat danach die Route
+`POST /api/attempt/[id]/answer` erreicht. Ihre Entscheidungslogik steht jetzt in
+`lib/db/answer-attempt.ts` und ist gegen die Wegwerf-Datenbank getestet, die Route ist
+nur noch der Adapter auf Statuscodes. Damit ist Invariante 2 — `expectedAnswer` verlässt
+den Server nicht, solange der Attempt offen ist — erstmals seit M0 durch Tests gedeckt
+statt nur durch Lesen. Der ursprüngliche Vermerk „die Route selbst bleibt ungetestet"
+ist damit erledigt.
 
 **Preis:** Eine neue Dev-Abhängigkeit (`@types/better-sqlite3`, reine Typen) und ein
 Testlauf, der Dateien anlegt. Die Suite braucht dafür rund eine Sekunde mehr.
