@@ -84,10 +84,14 @@ export const TIME_MIN_SAMPLES = 5;
  */
 export const INTERRUPTED_FACTOR = 10;
 
-/** Unter diesem Anteil der Zielzeit gilt eine falsche Antwort als geraten. */
+/**
+ * Unter diesem Anteil der Zielzeit gilt eine falsche Antwort als auffällig
+ * schnell. Gemessen wird die Zeit, nicht die Absicht — wer ein Verfahren sicher,
+ * aber falsch anwendet, ist genauso schnell wie jemand, der rät.
+ */
 export const SNAP_SHARE = 0.2;
 
-/** So viele Schnellschüsse braucht es, bevor die Zahl etwas aussagt. */
+/** So viele braucht es, bevor die Zahl etwas aussagt. */
 export const SNAP_MIN_COUNT = 3;
 
 function rate(correct: number, attempts: number): number | null {
@@ -142,9 +146,10 @@ function withTarget(
  * Falsche Antworten je Thema, die deutlich unter der Zielzeit lagen.
  *
  * Die Umkehrung des Einwands gegen die alte Medianzeit: Wer in einem Fünftel
- * der vorgesehenen Zeit falsch antwortet, hat geraten oder das Verfahren nicht
- * erkannt. Das ist etwas anderes als jemand, der lange gerechnet und sich
- * verrechnet hat — und damit eine Information, kein Schlupfloch (D-21).
+ * der vorgesehenen Zeit falsch antwortet, hat das Verfahren nicht angewandt,
+ * sondern etwas anderes getan — geraten, verlesen, oder sicher das Falsche
+ * gerechnet. Das ist etwas anderes als eine lange Fehlrechnung und damit eine
+ * Information, kein Schlupfloch (D-21).
  */
 export function countSnaps(answered: readonly AnsweredDuration[]): ReadonlyMap<string, number> {
   const counts = new Map<string, number>();

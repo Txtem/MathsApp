@@ -18,7 +18,7 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M2a (Fortschritt und Auswahl)** abgeschlossen
+- Meilenstein: **M2b (Auswahl, Zeit und Termine)** abgeschlossen
 - M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
 - M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
@@ -31,12 +31,19 @@ die naheliegende Variante nicht gewählt wurde.
   Statuswechsel; Auswahl nach Erfolgsquote, Fälligkeit und Schwierigkeit in
   `lib/selection/`; Statistik-Seite unter `/stats`; Entscheidungslogik der
   Antwort-Route in `lib/db/answer-attempt.ts`, damit Invariante 2 getestet ist;
-  Datenbanktests gegen eine Wegwerf-SQLite (D-19) — 863 Tests grün
+  Datenbanktests gegen eine Wegwerf-SQLite (D-19)
+- M2b: eine Uhr pro Anfrage, `now` als Parameter statt `@default(now())` (D-20);
+  Termine relativ statt als Datum (D-22); harte Sperre auf die identische Aufgabe,
+  weiche Abwertung auf zuletzt gestellte Templates mit gemessenen Faktoren
+  (D-24, D-25); Parameterraum je Template in `content:check` mit Warnung unter 20;
+  Medianzeit nur über richtige Antworten und relativ zur Zielzeit (D-21) —
+  955 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-  zurückgestellt); die Wiederholungsvermeidung überlagert die Gewichtung nach
-  Schwierigkeit — gemessen in `lib/selection/distribution.test.ts`, ungelöst
-- Als Nächstes: M2b — Auth.js. Ersetzt den Rumpf von `getCurrentUserId()`, dazu
-  Login-Oberfläche und Routenschutz. `User.email` muss dafür optional werden.
+  zurückgestellt); `kombinatorik.permutation` liefert nur sieben verschiedene Aufgaben
+  und wiederholt sich ab der achten — das ist M2d
+- Als Nächstes: M2d — Content-Tiefe, siehe `SPEC-M2d.md`. Danach M2c (Auth.js):
+  ersetzt den Rumpf von `getCurrentUserId()`, dazu Login-Oberfläche und Routenschutz.
+  `User.email` muss dafür optional werden.
 
 ### Lokale Einrichtung
 
@@ -117,6 +124,15 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
 - **`content/` wird von Next.js nicht automatisch gebündelt.** Der Ordner muss in
   `next.config.ts` unter `outputFileTracingIncludes` stehen, sonst fehlen die Templates im
   Produktions-Build. Lokal fällt das nie auf.
+- **Keine `DateTime`-Spalte hat `@default(now())`.** Zeitstempel entstehen im
+  Anwendungscode aus dem einen `now`, das die Anfrage hereinreicht. Zwei Gründe: Der
+  SQLite-Default schreibt ein anderes Textformat als der Adapter (`2026-08-30 18:31:27`
+  gegen `…T…+00:00`), und SQLite vergleicht Text — auf einer Spalte, nach der sortiert
+  wird. Und was sich die Datenbank selbst holt, ist in keinem Test steuerbar. Siehe D-20.
+- **`now: Date` ist ein Pflichtparameter, kein optionales Extra.** Jede Funktion, die
+  einen Zeitpunkt braucht, bekommt ihn; `new Date()` steht ausschließlich in einem
+  Einstiegspunkt (`route.ts`, `page.tsx`). `lib/db/one-clock.test.ts` erzwingt das über
+  den Quelltext.
 
 ## Konventionen
 
@@ -127,6 +143,12 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
   kein Platzhalterrest im gerenderten Text.
 - Neue statische Content-Prüfung ⇒ Negativ-Fixture, das genau daran scheitert.
 - Kein Normalizer ohne Template, das ihn benutzt.
+- **Wer eine Funktion extrahiert, damit ein Test sie direkt aufrufen kann, braucht einen
+  Test, der zeigt, dass der Anwendungspfad dieselbe Funktion benutzt.** Sonst misst der
+  Test toten Code, und die Extraktion ist selbst der Bug. Beleg: Nach dem Herausziehen von
+  `candidateWeights` lief die Parametersuche in `distribution.test.ts` nicht mehr durch
+  `selectTemplate` — die gemessenen Abwertungsfaktoren hätten für einen Pfad gegolten, den
+  die Anwendung nie nimmt. Dieselbe Überlegung wie D-12 und D-19, nur die Kehrseite.
 - `import "server-only"` in jedem Modul unter `lib/db`, `lib/content` und `lib/llm`,
   **das sich seine Umgebung selbst holt** — den Prisma-Singleton, `process.env`, das
   Dateisystem. Das sind heute `lib/db/client.ts` und `lib/content/load.ts`.

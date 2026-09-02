@@ -171,8 +171,13 @@ function Numbers({ row, now }: { row: StatsRow; now: Date }) {
 }
 
 /**
- * Schnell und falsch — geraten statt gerechnet. Erscheint erst, wenn es
- * mehrfach vorkam; einmal ist Zufall (D-21).
+ * Falsche Antworten, die sehr schnell kamen. Erscheint erst, wenn es mehrfach
+ * vorkam; einmal ist Zufall (D-21).
+ *
+ * Beschriftet als „sehr schnell falsch", nicht als „geraten": Gemessen ist die
+ * Zeit, nicht die Absicht. Wer ein Verfahren sicher, aber falsch anwendet, ist
+ * genauso schnell wie jemand, der rät — die Zahl ist derselbe Hinweis, und die
+ * Erklärung dafür gehört dem Übenden, nicht der Seite.
  */
 function Snaps({ row }: { row: StatsRow }) {
   if (row.snapAnswers === null) return null;
@@ -182,7 +187,7 @@ function Snaps({ row }: { row: StatsRow }) {
       className="text-amber-700 dark:text-amber-500"
       title={`Falsche Antworten in weniger als ${Math.round(SNAP_SHARE * 100)} % der Zielzeit`}
     >
-      {row.snapAnswers}× geraten
+      {row.snapAnswers}× sehr schnell falsch
     </span>
   );
 }

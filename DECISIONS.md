@@ -465,6 +465,17 @@ an derselben Stelle auseinanderfällt. Ohne sie wäre der Test grün, ohne etwas
 
 ---
 
+## D-23 — *Nummer nicht vergeben*
+
+Der Nachtrag zu M2b hatte den Dedup-Schlüssel samt seiner Bedingung als `D-23` vorgesehen.
+Beim Umsetzen ist er in **D-25** gelandet, und die Nummer blieb leer. Sie wird nicht
+nachträglich belegt — eine später vergebene `D-23` würde in älteren Notizen etwas anderes
+bedeuten als in neuen.
+
+Wer hier nach dem Vorbehalt zu kosmetischen Parametern sucht: Er steht in D-25.
+
+---
+
 ## D-24 — Zuletzt gestellte Templates werden abgewertet, nicht gesperrt
 *2026-08-30, M2b*
 

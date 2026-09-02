@@ -84,7 +84,7 @@ Drei Eigenschaften dieses Ablaufs sind Absicht und keine Details:
 **Die Engine ist rein.** `lib/engine` hat kein I/O — keine Datenbank, kein Netz, keine
 Dateien, kein React. Templates werden ihr übergeben, nicht von ihr geladen. Deshalb ist
 sie vollständig ohne Mocks testbar, und deshalb liegen dort inzwischen die meisten der
-863 Tests. Was sich nicht rein testen lässt — Transaktionen, doppeltes Absenden,
+955 Tests. Was sich nicht rein testen lässt — Transaktionen, doppeltes Absenden,
 `@@unique` — läuft gegen eine Wegwerf-SQLite aus den echten Migrationen (D-19).
 
 **Es wird exakt gerechnet.** Der Ausdruckskern arbeitet mit gekürzten Brüchen auf
@@ -110,15 +110,27 @@ und `choice`, KaTeX-Rendering.
 wie es läuft (`TopicMastery`), stellt bevorzugt, was schwach ist oder ansteht, und wählt
 die Schwierigkeit passend zur Erfolgsquote. `/stats` zeigt den Stand. Die Übungsrunde
 heißt jetzt `PracticeSession`, weil Auth.js den Namen `Session` belegt (D-17), und
-`Attempt` trägt Nutzer, Thema und Schwierigkeit selbst (D-18). 863 Tests grün.
+`Attempt` trägt Nutzer, Thema und Schwierigkeit selbst (D-18).
+
+**M2b — Auswahl, Zeit und Termine** ✅ Drei Korrekturen an dem, was M2a gebaut hat. Es
+gibt jetzt genau eine Uhr pro Anfrage statt Zeitstempeln aus der Datenbank (D-20), Termine
+stehen relativ da statt als Kalenderdatum (D-22), und die Wiederholungsvermeidung ist
+umgebaut: hart gesperrt wird nur noch die identische Aufgabe, zuletzt gestellte Templates
+werden abgewertet statt ausgeschlossen (D-24, D-25). Dazu misst `content:check` den
+Parameterraum jedes Templates, und die Medianzeit zählt nur richtige Antworten (D-21).
+955 Tests grün.
 
 **Offen:** Keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
 zurückgestellt). Es gibt keinen Login; alles läuft hinter `getCurrentUserId()` auf einem
 Dummy-User.
 
-**Als Nächstes:** M2b — Auth.js. Ersetzt nur den Rumpf von `getCurrentUserId()`, dazu
-Login-Oberfläche und Routenschutz. Bewusst von M2a getrennt: Fortschritt und Auswahl sind
-der Produktwert und ohne Login testbar, Auth ist die riskanteste Integration im Projekt.
+**Als Nächstes:** M2d — Content-Tiefe. `kombinatorik.permutation` hat nur sieben
+verschiedene Aufgaben; ab der achten wiederholt sich dort etwas. Der Plan steht in
+`SPEC-M2d.md`.
+
+Danach M2c — Auth.js. Ersetzt nur den Rumpf von `getCurrentUserId()`, dazu
+Login-Oberfläche und Routenschutz. Bewusst nach hinten gestellt: Auth macht die App
+teilbar, Content macht sie gut — und es gibt einen Nutzer.
 
 Dann M3 (LLM-Einkleidung der Aufgabentexte hinter einem Validierungs-Gate) und
 M4 (Foto des Rechenwegs, Transkription, Schritt-Review). **Nicht in V1:** Python-Service,
@@ -141,6 +153,13 @@ steht in `CLAUDE.md`; das hier sind die, die am häufigsten überrascht haben:
   `server-only`, sondern nur die, die sich ihre Umgebung selbst holen. (D-12, D-19)
 - **Die Übungsrunde heißt `PracticeSession`.** `Session` gehört Auth.js. Die URLs bleiben
   `/api/session` und `/practice/[sessionId]` — ein Pfad ist kein Modellname. (D-17)
+- **Es gibt eine Uhr pro Anfrage.** `now: Date` wird als Parameter hereingereicht;
+  `new Date()` steht nur in einem Einstiegspunkt, und keine `DateTime`-Spalte hat einen
+  Datenbank-Default. Ein Test über den Quelltext erzwingt das. (D-20)
+- **Zahlen ohne Grundlage werden nicht angezeigt.** Erfolgsquote, Medianzeit und die
+  Schnellschüsse haben je eine Mindestzahl, unter der nichts dasteht — und die Auswahl
+  benutzt für unerprobte Themen einen Steuerungswert, der auf der Statistik-Seite
+  ausdrücklich nicht auftaucht. (D-21)
 - **SQLite kennt keine Prisma-Enums.** `status` und `answerType` sind `String`,
   die erlaubten Werte erzwingt Zod.
 - **Prisma 7** braucht einen Driver Adapter, der Client kommt aus
@@ -158,21 +177,23 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
 - **Tests, die aus dem Template abgeleitet sind, prüfen nichts.** D-15 ist der Lehrfall:
   Template und Test teilten dieselbe falsche Annahme, die Suite blieb grün, das Ergebnis
   war falsch. Erwartungswerte gehören unabhängig nachgerechnet.
-- **Die Wiederholungsvermeidung frisst die Schwierigkeitsgewichtung.** Abschnitt 10 der
-  `SPEC.md` verlangt zweierlei: gewichtet nach Schwierigkeit ziehen und die letzten drei
-  Templates meiden. Beides zusammen geht schlecht. Gemessen in
-  `lib/selection/distribution.test.ts`, jeweils 20 000 geseedete Ziehungen:
+- **`kombinatorik.permutation` wiederholt sich ab der achten Aufgabe.** Das Thema hat
+  zwei Templates mit zusammen sieben verschiedenen Aufgaben — sechs aus `aufg_00003`,
+  eine aus `aufg_00004`, das wegen D-13 auf feste Gruppen verdrahtet ist. Gemessen über
+  zwanzig Sitzungen à zwanzig Aufgaben:
 
-  | Templates im Thema |   3 |   4 |   5 |   6 |   8 |  10 |  12 |  15 |  20 |
-  |---|---|---|---|---|---|---|---|---|---|
-  | Anteil der Gewichtung, der verloren geht | 76 % | 100 % | 73 % | 61 % | 48 % | 33 % | 28 % | 21 % | 16 % |
+  | Thema | Templates | verschiedene Aufgaben von 20 |
+  |---|---|---|
+  | arithmetik.grundrechenarten | 2 | 20,0 |
+  | kombinatorik.kombination | 3 | 20,0 |
+  | kombinatorik.variation | 2 | 19,1 |
+  | kombinatorik.verteilung | 1 | 19,6 |
+  | wahrscheinlichkeit.hypergeometrisch | 2 | 20,0 |
+  | **kombinatorik.permutation** | 2 | **7,0** |
 
-  Bei vier Templates bleibt gar nichts übrig: Drei gemiedene IDs lassen genau einen
-  Kandidaten zu, die Auswahl wird ein deterministischer Reihum-Durchlauf. Ohne
-  Vermeidung trifft die Ziehung die Gewichte exakt — der Fehler liegt nicht im Sampler.
-  **Ungelöst**, und nicht durch mehr Templates zu beheben. Denkbar wäre, die Vermeidung
-  als Gewichtsabschlag statt als Ausschluss zu bauen; das wäre eine Änderung an
-  Abschnitt 10 und braucht eine Entscheidung.
+  Fünf von sechs Themen sind in Ordnung; eines ist kaputt, und zwar das meistgeübte.
+  Keine Wahl der Auswahlparameter ändert daran etwas — es fehlen Aufgaben, nicht
+  Gewichtung. Das ist der Inhalt von M2d, siehe `SPEC-M2d.md`.
 - **Veraltete Zahlen nach „Zurück" sind nicht ausgeschlossen.** Beobachtet wurde, dass
   `/stats` gelegentlich alte Werte zeigt. Serverseitig ist das erledigt und belegt: Die
   Seite ist dynamisch, antwortet mit `no-store`, und eine Änderung an der Datenbank ist
@@ -190,6 +211,14 @@ Erledigt in M2a: Die Namenskollision mit dem `Session`-Modell des Auth.js-Adapte
 (D-17), das fehlende Topic auf dem `Attempt` (D-18), die veralteten Codebeispiele in
 `SPEC.md` Abschnitt 4 und 6 — und Invariante 2, die seit M0 nur durch Lesen gesichert
 war und jetzt in `lib/db/answer-attempt.test.ts` geprüft wird.
+
+Erledigt in M2b: Der Konflikt zwischen Schwierigkeitsgewichtung und
+Wiederholungsvermeidung. Der harte Ausschluss der letzten drei Templates kostete bei vier
+Templates im Thema die gesamte Gewichtung; die Abwertung, die ihn abgelöst hat, kostet
+noch 5 bis 11 Prozent. Die Faktoren sind gemessen, beide Tabellen stehen in D-24. Dass die
+Ursache **nicht** zu wenige Templates waren, ist dabei der lehrreiche Teil: Die
+naheliegende Erklärung war falsch und wurde durch eine Messung widerlegt, nicht durch ein
+Argument.
 
 ## 8. Wie man einen neuen Chat sinnvoll beginnt
 

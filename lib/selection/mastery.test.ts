@@ -111,7 +111,7 @@ describe("advanceMastery", () => {
 
   /**
    * Der Termin wird über Millisekunden gerechnet, nicht über Kalendertage
-   * (SPEC-M2b B-3). Über eine Zeitumstellung hinweg hat ein lokaler Kalendertag
+   * (D-20). Über eine Zeitumstellung hinweg hat ein lokaler Kalendertag
    * 23 oder 25 Stunden — wer `setDate()` benutzt, verschiebt den Termin.
    */
   describe("über die Zeitumstellung hinweg", () => {

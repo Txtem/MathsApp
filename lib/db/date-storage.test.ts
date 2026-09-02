@@ -11,7 +11,7 @@ import { createTempDatabase, type TempDatabase } from "./__testing__/temp-databa
  * Wie legt der better-sqlite3-Adapter `DateTime` ab, und kommt derselbe
  * Zeitpunkt zurück? SQLite kennt keinen Datumstyp; alles ist Text, und Text
  * wird zeichenweise verglichen. Diese Tests halten fest, was gemessen ist —
- * sie sind der Nachweis zu Abschnitt C-5 von SPEC-M2b.
+ * sie sind der Nachweis dafür, dass es nur eine Schreibweise gibt (D-20).
  */
 
 /** Ein Zeitpunkt mit Millisekunden, in der Nacht der Zeitumstellung. */

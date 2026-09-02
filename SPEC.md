@@ -44,7 +44,7 @@ Diese Regeln gelten in jeder Phase. Verstöße sind Bugs, keine Trade-offs.
 
 | Bereich | Wahl | Begründung |
 |---|---|---|
-| Framework | Next.js 15, App Router, TypeScript strict | Eine Runtime für UI + API |
+| Framework | Next.js 16, App Router, TypeScript strict | Eine Runtime für UI + API |
 | DB | SQLite (lokale Datei via Prisma) | Relationale Daten, kein Grund für NoSQL; kein Server-Setup für die Entwicklung |
 | ORM | Prisma | Typsicheres Schema, Migrationen |
 | Validierung | Zod | Contracts an allen Grenzen (API, Content, LLM-Output) |
@@ -55,7 +55,7 @@ Diese Regeln gelten in jeder Phase. Verstöße sind Bugs, keine Trade-offs.
 | Ausdrucks-Parsing | eigener Parser in `lib/engine/expr` (exakte Brüche, leerer Scope) | Für den Antwortvergleich; siehe `DECISIONS.md`, D-01 und D-06 |
 | Tests | Vitest | Engine-Unit-Tests sind Pflicht |
 | LLM | `@anthropic-ai/sdk` | Erst ab Meilenstein M3 relevant |
-| Auth | Auth.js (Credentials + optional GitHub) | Erst ab M2 |
+| Auth | Auth.js (Credentials + optional GitHub) | Erst ab M2c |
 
 **SQLite-Konsequenz:** Prisma kennt für SQLite keine `enum`-Typen. `AttemptStatus` aus
 Abschnitt 4 wird deshalb als `String` mit Default `"OPEN"` modelliert; die erlaubten Werte
@@ -937,19 +937,33 @@ Nicht in M1: Auth, `TopicMastery`, Fortschrittsanzeige, LLM, Fotoupload. Die
 Aufgabenauswahl bleibt zufällig innerhalb des Filters; die Mastery-Logik aus Abschnitt 10
 kommt vollständig in M2.
 
-**M2a — Fortschritt und Auswahl**
+**M2a — Fortschritt und Auswahl** ✅
 Datenmodell (`PracticeSession`, denormalisierter `Attempt`, `TopicMastery`),
 Mastery-Fortschreibung, Auswahl-Logik nach Abschnitt 10, Statistik-Seite. Läuft
 weiterhin auf dem Dummy-User, aber hinter `getCurrentUserId()`.
 
-**M2b — Auth.js**
-Ersetzt ausschließlich die Implementierung von `getCurrentUserId()`, dazu Login-Oberfläche
-und Routenschutz.
+**M2b — Auswahl, Zeit und Termine** ✅
+Eine Uhr pro Anfrage statt Datenbank-Defaults (D-20). Termine relativ statt als Datum
+(D-22). Die Wiederholungsvermeidung aus Abschnitt 10 umgebaut: harte Sperre auf die
+identische Aufgabe, weiche Abwertung auf zuletzt gestellte Templates, Faktoren gemessen
+(D-24, D-25). Parameterraum je Template in `content:check`. Medianzeit neu definiert
+(D-21).
 
-**Warum geteilt:** Fortschritt und Auswahl sind der Produktwert und vollständig ohne Login
-testbar. Auth ist Infrastruktur und gleichzeitig die riskanteste Integration im Projekt
-(Next.js 16 + Prisma 7 + Auth.js v5 gleichzeitig). Scheitert M2b, bleibt trotzdem eine
-App, die sich an die Schwächen des Übenden anpasst.
+**M2d — Content-Tiefe**
+`kombinatorik.permutation` liefert nur sieben verschiedene Aufgaben und wiederholt sich ab
+der achten. Ziel: jedes Thema liefert in einer Sitzung von zwanzig Aufgaben mindestens 18
+verschiedene. Content-Arbeit ohne Codeänderung.
+
+**M2c — Auth.js**
+Ersetzt ausschließlich die Implementierung von `getCurrentUserId()`, dazu Login-Oberfläche
+und Routenschutz. Vorarbeit bekannt: `User.email` ist `String @unique` und nicht optional,
+der Adapter erwartet `String?`.
+
+**Warum in dieser Reihenfolge:** Fortschritt, Auswahl und Content sind der Produktwert und
+vollständig ohne Login testbar. Auth macht die App teilbar, aber es gibt einen Nutzer —
+und es ist die riskanteste Integration im Projekt (Next.js 16 + Prisma 7 + Auth.js v5
+gleichzeitig). Scheitert M2c, bleibt trotzdem eine App, die sich an die Schwächen des
+Übenden anpasst.
 
 **M3 — LLM-Einkleidung**
 Anthropic-Client, Prompt-Dateien, Validierungs-Gate, Caching. Feature-Flag `LLM_FLAVOR_ENABLED`,
