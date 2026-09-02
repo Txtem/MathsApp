@@ -1,0 +1,137 @@
+# SPEC-M2d — Content-Tiefe
+
+> Arbeitsanweisung. Wird nach Abschluss in `SPEC.md` eingearbeitet und gelöscht.
+> Übernimmt Abschnitt M aus `SPEC-M2b-Restarbeiten.md`, damit der Plan nicht mit
+> jener Datei verschwindet.
+
+---
+
+## A. Der Befund
+
+Aus der Content-Messung in D-24, zwanzig Sitzungen à zwanzig Aufgaben je Thema:
+
+| Thema | Templates | verschiedene Aufgaben von 20 |
+|---|---|---|
+| arithmetik.grundrechenarten | 2 | 20,0 |
+| kombinatorik.kombination | 3 | 20,0 |
+| kombinatorik.variation | 2 | 19,1 |
+| kombinatorik.verteilung | 1 | 19,6 |
+| wahrscheinlichkeit.hypergeometrisch | 2 | 20,0 |
+| kombinatorik.permutation | 2 | **7,0** |
+
+Fünf von sechs Themen sind in Ordnung. Eines ist kaputt, und zwar das meistgeübte.
+`kombinatorik.permutation` liefert insgesamt sieben verschiedene Aufgaben — sechs aus
+`aufg_00003` und die eine aus `aufg_00004`. Ab der achten Aufgabe **muss** sich dort
+etwas wiederholen.
+
+M2d ist deshalb nicht „vier bis fünf Templates je Thema", wie die alte Meilensteinliste
+sagte. Es ist eine gezielte Reparatur.
+
+---
+
+## B. Abnahmekriterien
+
+1. **Jedes Thema liefert in einer Sitzung von zwanzig Aufgaben mindestens 18
+   verschiedene.** Gemessen mit der Simulation aus M2b Schritt 5, Ergebnis als Tabelle in
+   `DECISIONS.md`.
+2. **Keine Warnung aus `content:check` mehr**, also Parameterraum ≥ 20 je Template.
+3. `kombinatorik.permutation` deckt die Schwierigkeiten 1 bis 4 ab.
+4. Alle Tests grün, `lint`, `content:check` und `build` sauber.
+
+Die beiden Zahlen sind gesetzt, bevor die Arbeit beginnt, und werden nicht an das Ergebnis
+angepasst. Stellt sich eine als unerreichbar heraus, ist das eine Rückfrage mit
+Messwerten — keine stille Absenkung.
+
+**Zur Beziehung der beiden Schwellen:** Die 20 gilt je Template, die 18-von-20 je Thema.
+Ein Thema mit mehreren Templates addiert deren Räume und kommt mit weniger je Template
+aus; ein Thema, das allein von einem Template getragen wird, braucht laut Messung rund 25.
+Die Warnung bei 20 ist ein Geruch, kein Urteil — entschieden wird durch die Simulation.
+Dieser Satz gehört in `content/templates/_README.md`.
+
+---
+
+## C. Die Arbeit
+
+### C-1 `aufg_00004` (MISSISSIPPI), Raum 1
+
+Wegen D-13 auf feste Gruppen verdrahtet; jede Instanz ist wörtlich dieselbe Aufgabe. Das
+Template wird nach D-25 nach der ersten Verwendung gesperrt und fällt faktisch aus dem
+Pool — es trägt nichts bei.
+
+**Weg:** ein `choice`-Parameter über eine Liste von Wörtern mit Buchstabenwiederholungen,
+jedes mit seinen Gruppengrößen.
+
+**Zwei Fallen, ausdrücklich benannt:**
+
+- Die Compute-Funktion nimmt seit D-15 zwei bis vier Gruppen. Ein Wort hat so viele
+  Gruppen, wie es verschiedene Buchstaben hat — MISSISSIPPI hat vier (M, I, S, P), viele
+  gängige Wörter haben mehr. Die Liste muss das einhalten. Reicht die Auswahl an Wörtern
+  mit höchstens vier verschiedenen Buchstaben nicht für Raum ≥ 20, wäre die
+  Compute-Funktion zu erweitern — und das ist eine **Rückfrage**, keine stille Zutat, weil
+  M2d ausdrücklich keine Compute-Änderungen vorsieht.
+- Die erwarteten Ergebnisse werden **unabhängig nachgerechnet**, nicht aus dem Template
+  abgeleitet. D-15 entstand genau so: Template und Test teilten dieselbe falsche Annahme,
+  die Suite blieb grün.
+
+`version` erhöhen — die Bedeutung ändert sich.
+
+### C-2 Wertebereiche weiten: `aufg_00003` (6), `aufg_00006` (9), `aufg_00009` (10)
+
+Bereiche vergrößern, soweit die Ergebnisgrenzen in den `constraints` das hergeben. Wo ein
+größerer Bereich das Ergebnis unrealistisch groß werden lässt: einen zweiten Parameter
+einführen statt den ersten zu strecken.
+
+Nach jeder Änderung `content:check` — die gezählte Raumgröße ist die Kontrolle.
+`version` erhöhen.
+
+### C-3 Neue Templates in `kombinatorik.permutation`
+
+Bis das Thema die Schwierigkeiten 1 bis 4 abdeckt. Heute liegen dort zwei.
+
+Nach Konvention gehört zu jedem neuen Template ein Property-Test mit 200 Seeds: keine
+Exception, alle Constraints erfüllt, kein Platzhalterrest im gerenderten Text.
+
+### C-4 Nicht Teil von M2d
+
+Neue Compute-Funktionen, neue Themen, neue `answer_type`s. Zeigt sich beim Schreiben, dass
+eines davon nötig ist, ist das eine Rückfrage.
+
+---
+
+## D. Der Vorbehalt aus D-25
+
+Kosmetische Parameter — ein gewürfelter Name, der die Aufgabe nicht verändert — machen
+zwei mathematisch identische Aufgaben formal verschieden und entwerten `questionText` als
+Dedup-Schlüssel.
+
+Die Wortliste aus C-1 ist **kein** solcher Fall: Das Wort bestimmt die Gruppengrößen und
+damit das Ergebnis.
+
+Sobald ein Template einen Parameter zieht, der die Rechnung nicht berührt, ist D-25 neu zu
+entscheiden. Vorher melden, nicht nachher bemerken.
+
+---
+
+## E. Reihenfolge
+
+**Schritt 1 — `aufg_00004`.** Wortliste, Gruppengrößen unabhängig nachgerechnet, Tests.
+*→ Hier stoppen, wenn die Vier-Gruppen-Grenze nicht reicht.*
+
+**Schritt 2 — Bereiche weiten.** `aufg_00003`, `aufg_00006`, `aufg_00009`.
+
+**Schritt 3 — Neue Permutations-Templates.** Bis Schwierigkeit 1 bis 4 abgedeckt ist.
+
+**Schritt 4 — Messen.** Simulation über alle Themen, Tabelle in `DECISIONS.md`, Vergleich
+mit der Ausgangstabelle aus Abschnitt A. *→ Hier stoppen und berichten.*
+
+**Schritt 5 — Abschluss.** `SPEC.md`, `CLAUDE.md`, `OVERVIEW.md` nachziehen,
+`_README.md` um den Satz aus Abschnitt B ergänzen, diese Datei löschen.
+
+---
+
+## F. Danach
+
+**M2c — Auth.js.** Ersetzt den Rumpf von `getCurrentUserId()`, dazu Login-Oberfläche und
+Routenschutz. Bekannte Vorarbeit: `User.email` ist `String @unique` und nicht optional,
+der Auth.js-Adapter erwartet `String?` — eigene Migration. Der Parameter `now` an
+`getCurrentUserId` verschwindet dabei (siehe D-20, Abschnitt „Preis").
