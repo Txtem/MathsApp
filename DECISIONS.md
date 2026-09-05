@@ -713,3 +713,95 @@ abgeleiteten Parameter, also muss `n` als `const` daneben stehen" — trifft zu,
 zur falschen Antwort. Nicht das Template muss ableiten können, sondern die Funktion muss
 weniger verlangen.
 
+---
+
+## D-27 — Ein einparametriges Template weitet seinen Bereich, statt einen zweiten Parameter zu bekommen
+*2026-09-06, M2d*
+
+`aufg_00003` („Auf wie viele Arten können n Personen in einer Reihe angeordnet werden?")
+hat seinen Bereich von `n = 4…9` auf `n = 3…24` geweitet, um über die Schwelle von 20
+Parameterkombinationen zu kommen. `SPEC-M2d.md` C-2 hätte stattdessen einen zweiten
+Parameter vorgesehen.
+
+**Grund:** Eine reine Fakultät hat genau einen Freiheitsgrad. Jeder zweite Parameter wäre
+eines von beidem gewesen:
+
+- **kosmetisch** — Personen statt Bücher statt Autos. Das ändert die Rechnung nicht, macht
+  aber zwei mathematisch identische Aufgaben formal verschieden und entwertet damit
+  `questionText` als Dedup-Schlüssel. Genau der Fall, den D-25 als Bedingung mitschreibt.
+- **eine andere Aufgabe** — „k aus n auswählen und anordnen" ist `variation.ohne_wdh` und
+  gehört in ein anderes Thema.
+
+Es gab also nichts zu wählen. Die Abwägung ist hier festgehalten, weil sie beim nächsten
+einparametrigen Template wiederkommt: `teilmengen.anzahl` (2ⁿ) und
+`permutation.zyklisch` ((n−1)!) sind vom selben Zuschnitt.
+
+### Was das für die Ergebnisgrenzen bedeutet
+
+Bei `n = 24` ist die Antwort 23-stellig. Das trägt die Engine — gerechnet wird mit
+`BigInt` —, und der Formathinweis unter dem Eingabefeld nennt ausdrücklich `5!` als
+zulässige Eingabe. Die Aufgabe fragt nach dem Erkennen der Regel, nicht nach dem
+Ausschreiben der Ziffern.
+
+Daraus folgt eine Trennung, die sich durch `kombinatorik.permutation` zieht und sonst wie
+ein Fehler aussähe:
+
+| Antwortform | Beispiele | Ergebnisgrenze |
+|---|---|---|
+| **symbolisch** — ein einziger Ausdruck genügt | `aufg_00003` (`n!`), `aufg_00015` (`(n−1)!`) | praktisch keine |
+| **ausgerechnet** — die Zerlegung ist der Punkt | `aufg_00013`, `aufg_00014`, `aufg_00004` | 60 bzw. 100 000 |
+
+Ein Deckel auf `10²⁴` neben einem auf `60` im selben Thema ist also kein Versehen. Wo die
+Antwort ein Ausdruck sein darf, kostet ein großes `n` nichts; wo der Übende die Fakultäten
+tatsächlich gegeneinander kürzen soll, bleibt das Ergebnis in einer Größenordnung, die man
+noch hinschreiben mag.
+
+**Angeglichen wurde trotzdem eines:** `aufg_00004` (Schwierigkeit 3) stand auf `50000` und
+damit strenger als `aufg_00014` (Schwierigkeit 2) auf `100000`. Beide liegen jetzt bei
+`100000` — eine schwerere Aufgabe soll nicht die kleineren Zahlen haben.
+
+---
+
+## D-28 — Was M2d am Content geändert hat, gemessen
+*2026-09-06, M2d*
+
+Die Zahlen, gegen die M2d geplant wurde, und die Zahlen danach. Gemessen mit derselben
+Simulation wie in D-24: zwanzig Sitzungen à zwanzig Aufgaben je Thema, geseedet, über
+`drawQuestion` und damit inklusive der Sperre aus D-25.
+
+| Thema | Templates vorher → nachher | verschieden von 20, vorher | nachher |
+|---|---|---|---|
+| arithmetik.grundrechenarten | 2 → 2 | 20,0 | 20,0 |
+| kombinatorik.kombination | 3 → 3 | 20,0 | 20,0 |
+| kombinatorik.variation | 2 → 2 | 19,1 | 20,0 |
+| kombinatorik.verteilung | 1 → 1 | 19,6 | 19,5 |
+| wahrscheinlichkeit.hypergeometrisch | 2 → 2 | 20,0 | 20,0 |
+| **kombinatorik.permutation** | **2 → 5** | **7,0** | **20,0** |
+
+Abnahmekriterium B-1 (mindestens 18 von 20) ist überall erfüllt; das schwächste Thema ist
+`kombinatorik.verteilung` mit 19,5 aus einem einzigen Template.
+
+Die Parameterräume, aus denen das folgt — B-2 verlangt mindestens 20 je Template, und
+`npm run content:check` warnt seit M2d bei keinem mehr:
+
+| Template | vorher | nachher | wodurch |
+|---|---|---|---|
+| `aufg_00004` (Wörter, lang) | 1 | 27 | Wortliste statt fester Gruppen (D-26) |
+| `aufg_00003` (n Personen in einer Reihe) | 6 | 22 | Bereich geweitet (D-27) |
+| `aufg_00006` (Zahlenschloss) | 9 | 28 | beide Bereiche durchgehend |
+| `aufg_00009` (Teilmengen) | 10 | 23 | Bereich geweitet |
+| `aufg_00013` (Wörter, kurz) | — | 37 | neu |
+| `aufg_00014` (Kugeln) | — | 93 | neu, Schwierigkeit 2 |
+| `aufg_00015` (runder Tisch) | — | 21 | neu, Schwierigkeit 4 |
+
+`kombinatorik.permutation` deckt damit die Schwierigkeiten 1 bis 4 ab (B-3).
+
+**Was die Zahlen nicht sagen:** `kombinatorik.verteilung` liegt mit 19,5 knapp unter dem
+Rest, weil es aus einem einzigen Template besteht. Das ist der Fall „ein Thema, ein
+Template", für den `content/templates/_README.md` rund 25 Parameterraum verlangt — 33 sind
+vorhanden, das Kriterium ist erfüllt. Ein zweites Template dort wäre die nächste
+naheliegende Content-Arbeit, aber keine Reparatur.
+
+Reproduzieren: `readContent()` plus `drawQuestion` mit geseedetem Zufall über alle Themen;
+die Parameterräume gibt `npm run content:check` aus.
+

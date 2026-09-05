@@ -49,6 +49,21 @@ export function letterPermutations(word: string): bigint {
   return result;
 }
 
+/**
+ * Zyklische Anordnungen: `(n - 1)!`.
+ *
+ * Am runden Tisch gibt es keine erste Position. Jede Sitzordnung fällt mit ihren
+ * `n` Drehungen zusammen, also `n! / n`. Gleichwertig: eine Person festhalten und
+ * die übrigen `n - 1` frei anordnen.
+ *
+ * Für `n = 0` ist der Ausdruck nicht definiert — es gibt keine Anordnung von
+ * niemandem an einem Tisch, und `(-1)!` gibt es nicht.
+ */
+export function cyclicPermutations(n: bigint): bigint {
+  if (n < 1n) throw new ExpressionError("An einem runden Tisch sitzt mindestens einer.");
+  return factorial(n - 1n);
+}
+
 /** Kombinationen mit Wiederholung: `C(n + k - 1, k)`. */
 export function combinationsWithRepetition(n: bigint, k: bigint): bigint {
   // Nichts zu ziehen gibt genau eine Möglichkeit — auch aus der leeren Menge.

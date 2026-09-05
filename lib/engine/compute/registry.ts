@@ -6,6 +6,7 @@ import { type AnyComputeEntry, defineCompute } from "../types";
 import { add, subtract } from "./arithmetik";
 import {
   combinationsWithRepetition,
+  cyclicPermutations,
   distributions,
   letterPermutations,
   multisetPermutations,
@@ -129,6 +130,12 @@ export const registry = {
       const n = groups.reduce((sum, size) => sum + size, 0n);
       return Q.fromBigInt(multisetPermutations(n, groups));
     },
+  }),
+
+  /** Zyklische Anordnungen am runden Tisch: (n-1)! */
+  "kombinatorik.permutation.zyklisch": defineCompute({
+    input: z.strictObject({ n: z.number().int().min(1).max(N_MAX) }),
+    compute: ({ n }) => Q.fromBigInt(cyclicPermutations(big(n))),
   }),
 
   /** Permutationen der Buchstaben eines Wortes — die Häufigkeiten zählt die Funktion. */

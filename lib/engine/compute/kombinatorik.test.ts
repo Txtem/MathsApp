@@ -5,6 +5,7 @@ import { binomial, factorial, permutations } from "../expr/bigmath";
 import { toStorageString } from "../expr/rational";
 import {
   combinationsWithRepetition,
+  cyclicPermutations,
   distributions,
   letterPermutations,
   multisetPermutations,
@@ -18,6 +19,80 @@ const via = (
   const result = registry[ref].run(params);
   return result ? toStorageString(result) : undefined;
 };
+
+describe("cyclicPermutations", () => {
+  /**
+   * `(n-1)!`, unabhängig nachgerechnet: Bei n Personen am runden Tisch fällt
+   * jede der n! Anordnungen mit ihren n Drehungen zusammen, also n!/n.
+   */
+  const cases: ReadonlyArray<readonly [bigint, string]> = [
+    [1n, "1"], // einer sitzt, es gibt eine Sitzordnung
+    [2n, "1"], // zwei sitzen sich gegenüber — gedreht dasselbe Bild
+    [3n, "2"], // im Uhrzeigersinn ABC oder ACB
+    [4n, "6"],
+    [5n, "24"],
+    [6n, "120"],
+    [10n, "362880"],
+    [24n, "25852016738884976640000"], // 23!
+  ];
+
+  it.each(cases)("n=%s → %s", (n, expected) => {
+    expect(cyclicPermutations(n).toString()).toBe(expected);
+  });
+
+  it("ist n! geteilt durch n", () => {
+    // Die andere Herleitung derselben Zahl.
+    for (const n of [3n, 7n, 12n, 20n]) {
+      expect(cyclicPermutations(n)).toBe(factorial(n) / n);
+    }
+  });
+
+  it("zählt bei drei Personen die zwei Anordnungen wirklich ab", () => {
+    // Von Hand: A festhalten, B und C in zwei Reihenfolgen — ABC und ACB.
+    // Alles andere entsteht daraus durch Drehen.
+    const sitzordnungen = new Set<string>();
+    for (const [x, y, z] of [
+      ["A", "B", "C"],
+      ["A", "C", "B"],
+      ["B", "C", "A"],
+      ["B", "A", "C"],
+      ["C", "A", "B"],
+      ["C", "B", "A"],
+    ]) {
+      // Auf die Drehung normieren: immer bei A anfangen.
+      const reihe = [x, y, z];
+      const start = reihe.indexOf("A");
+      sitzordnungen.add([...reihe.slice(start), ...reihe.slice(0, start)].join(""));
+    }
+    expect(sitzordnungen.size).toBe(2);
+    expect(cyclicPermutations(3n).toString()).toBe("2");
+  });
+
+  it("weist n = 0 ab", () => {
+    // (-1)! gibt es nicht, und eine Sitzordnung von niemandem auch nicht.
+    expect(() => cyclicPermutations(0n)).toThrow(ExpressionError);
+    expect(() => cyclicPermutations(-3n)).toThrow(ExpressionError);
+  });
+
+  it("bleibt bei großem n exakt", () => {
+    expect(cyclicPermutations(30n)).toBe(factorial(29n));
+  });
+
+  describe("über die Registry", () => {
+    it("rechnet ein gültiges n", () => {
+      expect(via("kombinatorik.permutation.zyklisch", { n: 6 })).toBe("120");
+    });
+
+    it("lehnt n = 0 und negative Werte ab", () => {
+      expect(via("kombinatorik.permutation.zyklisch", { n: 0 })).toBeUndefined();
+      expect(via("kombinatorik.permutation.zyklisch", { n: -1 })).toBeUndefined();
+    });
+
+    it("lehnt einen überzähligen Parameter ab", () => {
+      expect(via("kombinatorik.permutation.zyklisch", { n: 6, k: 2 })).toBeUndefined();
+    });
+  });
+});
 
 describe("letterPermutations", () => {
   /**

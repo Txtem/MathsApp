@@ -63,7 +63,9 @@ param_spec:
 # `npm run content:check` sinkt sichtbar.
 constraints:
   - "result > 60" # darunter gehört das Wort in das leichte Template
-  - "result <= 50000"
+  # 100 000 wie bei aufg_00014: Eine schwerere Aufgabe soll nicht die kleineren
+  # Zahlen haben. Das längste Wort der Liste liegt bei 34 650. Siehe D-27.
+  - "result <= 100000"
 
 question_text: |
   Wie viele verschiedene Buchstabenfolgen lassen sich aus den Buchstaben des

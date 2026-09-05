@@ -1,0 +1,39 @@
+# Die schwerste Aufgabe des Themas — nicht wegen der Rechnung, sondern wegen des
+# Schritts davor: Man muss erkennen, dass durch n geteilt wird, obwohl sich in der
+# Aufgabe nichts wiederholt. Die Drehungen sind die Wiederholung.
+#
+# Wie aufg_00003 einparametrig, und aus demselben Grund mit weitem Bereich statt
+# eines zweiten Parameters (D-27). Die Antwort darf symbolisch bleiben, deshalb
+# stört ein großes Ergebnis nicht — 23! ist als `23!` hinschreibbar.
+id: aufg_00015
+version: 1
+topic: kombinatorik.permutation
+difficulty: 4
+target_time_seconds: 120
+
+compute_ref: kombinatorik.permutation.zyklisch
+answer_type: integer
+
+param_spec:
+  n:
+    type: int
+    min: 4
+    max: 24
+
+# Dieselbe Schranke wie aufg_00003: Wo die Antwort ein Ausdruck sein darf, kostet
+# ein großes n nichts. Siehe die Tabelle in D-27.
+constraints:
+  - "result <= 1000000000000000000000000"
+
+question_text: |
+  An einem runden Tisch sitzen {{n}} Personen. Wie viele verschiedene
+  Sitzordnungen gibt es, wenn zwei Anordnungen als gleich gelten, sobald die eine
+  durch Drehen des Tisches aus der anderen entsteht?
+
+solution_text: |
+  Eine Person wird als Bezugspunkt festgehalten, die übrigen {{n}} − 1 lassen sich
+  frei anordnen. Gleichwertig: Jede der {{n}}! Anordnungen fällt mit ihren {{n}}
+  Drehungen zusammen.
+  $$({{n}} - 1)! = {{result}}$$
+
+tags: [permutation, zyklisch, rundtisch]
