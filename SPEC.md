@@ -549,7 +549,9 @@ Wurf. Der Grund für diese Signatur steht in `DECISIONS.md`, D-14.
 | `arithmetik.add` | `a + b` | ganzzahlig |
 | `arithmetik.subtract` | `a - b` | ganzzahlig |
 | `kombinatorik.permutation.factorial` | `n!` | ganzzahlig |
-| `kombinatorik.permutation.multiset` | `n! / (k₁!·…·k₄!)`, zwei bis vier Gruppen | ganzzahlig |
+| `kombinatorik.permutation.multiset` | `n! / (k₁!·…·k₄!)`, zwei bis vier Gruppen, `n` = deren Summe | ganzzahlig |
+| `kombinatorik.permutation.wort` | dasselbe für ein Wort, Häufigkeiten selbst gezählt | ganzzahlig |
+| `kombinatorik.permutation.zyklisch` | `(n−1)!`, runder Tisch | ganzzahlig |
 | `kombinatorik.variation.ohne_wdh` | `n! / (n−k)!` | ganzzahlig |
 | `kombinatorik.variation.mit_wdh` | `n^k` | ganzzahlig |
 | `kombinatorik.kombination.ohne_wdh` | `C(n,k)` | ganzzahlig |
@@ -562,6 +564,16 @@ Wurf. Der Grund für diese Signatur steht in `DECISIONS.md`, D-14.
 Beziehungen zwischen Parametern (`k <= n`, `K <= N`, `n <= N`, `n − k <= N − K`) stehen als
 `refine` im Zod-Schema des Eintrags, nicht im Rechenteil. Jede Funktion braucht Tests mit
 `n = 0`, `k = 0`, `k = n`, `k > n` und einem großen `n`, bei dem `number` überliefe.
+
+**Was ableitbar ist, wird nicht verlangt.** `permutation.multiset` bekommt die
+Gruppengrößen und summiert `n` selbst; `permutation.wort` bekommt das Wort und zählt die
+Häufigkeiten selbst. Beides ginge auch anders — und beide Male entstünde eine Naht zwischen
+zwei Quellen, an der schon zweimal ein falsches Ergebnis stand (D-15, und beinahe erneut
+in M2d). Eine Signatur, die weniger verlangt, kann weniger widersprechen. Siehe D-26.
+
+Der praktische Nebeneffekt: Ein Template kann nur Skalare würfeln, und `constraints` kennen
+nur Zahlen. Eine Funktion, die eine Zerlegung selbst herstellt, braucht dafür keinen
+zweiten Parameter, der zum ersten passen müsste.
 
 ---
 
@@ -949,10 +961,14 @@ identische Aufgabe, weiche Abwertung auf zuletzt gestellte Templates, Faktoren g
 (D-24, D-25). Parameterraum je Template in `content:check`. Medianzeit neu definiert
 (D-21).
 
-**M2d — Content-Tiefe**
-`kombinatorik.permutation` liefert nur sieben verschiedene Aufgaben und wiederholt sich ab
-der achten. Ziel: jedes Thema liefert in einer Sitzung von zwanzig Aufgaben mindestens 18
-verschiedene. Content-Arbeit ohne Codeänderung.
+**M2d — Content-Tiefe** ✅
+`kombinatorik.permutation` lieferte nur sieben verschiedene Aufgaben je Sitzung und
+wiederholte sich ab der achten; jetzt sind es zwanzig, bei Abdeckung der Schwierigkeiten
+1 bis 4. Kein Template liegt mehr unter 20 Parameterkombinationen. Zahlen in D-28.
+
+**Danach: benutzen.** Kein Meilenstein — die App wird zum Üben verwendet, bevor
+weitergebaut wird. Die drei letzten guten Anforderungen kamen aus dem Gebrauch und nicht
+aus der Planung.
 
 **M2c — Auth.js**
 Ersetzt ausschließlich die Implementierung von `getCurrentUserId()`, dazu Login-Oberfläche

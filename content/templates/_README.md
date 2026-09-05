@@ -33,6 +33,29 @@ ganze Sitzung, nicht durch die Zahl allein — die beiden messen Verschiedenes:
 Ein Template unter der Schwelle ist also nicht automatisch falsch. Es ist ein Hinweis,
 nachzusehen, ob sein Thema die Wiederholung trägt.
 
+**Ein Thema, das allein von einem Template getragen wird, braucht rund 25.** Mit
+Geschwistern reicht weniger, weil sich deren Räume addieren. Heute ist
+`kombinatorik.verteilung` der einzige solche Fall: ein Template mit Raum 33, gemessen
+19,5 verschiedene Aufgaben je Sitzung.
+
+## Wenn ein Template mehr Varianz braucht
+
+Erst prüfen, ob sich der **Wertebereich** weiten lässt, dann erst über einen zweiten
+Parameter nachdenken — und dabei zwei Fallen kennen:
+
+- **Kein kosmetischer Parameter.** Ein gewürfelter Name, der die Rechnung nicht berührt,
+  macht zwei mathematisch identische Aufgaben formal verschieden und entwertet den
+  Dedup-Schlüssel aus D-25. Manche Aufgaben haben genau einen Freiheitsgrad; dort ist der
+  weite Bereich die richtige Antwort und nicht der Zusatzparameter (D-27).
+- **Keine zwei Parameter, die zueinander passen müssen.** Wer `n` würfelt und per
+  Constraint verlangt, dass die Gruppen es ergeben, verwirft die meisten Würfe und kippt
+  irgendwann über `MAX_TRIES`. Was sich ableiten lässt, gehört in die Compute-Funktion:
+  Sie bekommt das Wort und zählt selbst, oder die Gruppen und summiert selbst (D-26).
+
+Große Ergebnisse sind kein Hindernis, wo die Antwort ein Ausdruck sein darf — der
+Formathinweis unter dem Eingabefeld nennt `5!` ausdrücklich. Wo der Übende die Zerlegung
+tatsächlich ausrechnen soll, gehört eine Schranke auf `result` in die `constraints`.
+
 Vor dem Commit: `npm run content:check`.
 
 Dateien, deren Name mit `_` beginnt, werden vom Loader übersprungen.

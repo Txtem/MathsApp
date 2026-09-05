@@ -103,7 +103,7 @@ Practice-Loop im Browser.
 
 **M1 — Content-Pipeline & Kombinatorik** ✅ Platzhalter `{{name}}`, exakte Brüche,
 Themenbaum, YAML-Loader mit neun statischen Prüfungen und `npm run content:check`,
-zwölf Compute-Funktionen, zwölf Templates, Grading für `integer`, `numeric`, `fraction`
+Compute-Funktionen und Templates als YAML, Grading für `integer`, `numeric`, `fraction`
 und `choice`, KaTeX-Rendering.
 
 **M2a — Fortschritt und Auswahl** ✅ Die App passt sich an. Sie merkt sich pro Thema,
@@ -120,16 +120,33 @@ werden abgewertet statt ausgeschlossen (D-24, D-25). Dazu misst `content:check` 
 Parameterraum jedes Templates, und die Medianzeit zählt nur richtige Antworten (D-21).
 955 Tests grün.
 
-**Offen:** Keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-zurückgestellt). Es gibt keinen Login; alles läuft hinter `getCurrentUserId()` auf einem
-Dummy-User.
+**M2d — Content-Tiefe** ✅ Fünfzehn Templates statt zwölf, vierzehn Compute-Funktionen.
+`kombinatorik.permutation` lieferte in einer Sitzung von zwanzig Aufgaben nur sieben
+verschiedene und wiederholte sich ab der achten; jetzt sind es zwanzig, und das Thema deckt
+die Schwierigkeiten 1 bis 4 ab. Kein Template warnt mehr wegen zu kleinem Parameterraum.
+Die Zahlen vorher und nachher stehen in D-28. 1104 Tests grün.
 
-**Als Nächstes:** M2d — Content-Tiefe. `kombinatorik.permutation` hat nur sieben
-verschiedene Aufgaben; ab der achten wiederholt sich dort etwas. Der Plan steht in
-`SPEC-M2d.md`.
+**Damit ist die App für ihren Zweck fertig.**
 
-Danach M2c — Auth.js. Ersetzt nur den Rumpf von `getCurrentUserId()`, dazu
-Login-Oberfläche und Routenschutz. Bewusst nach hinten gestellt: Auth macht die App
+## 5a. Was jetzt ansteht: benutzen
+
+Der nächste Schritt ist kein Meilenstein. Die App kann, was sie können sollte — Aufgaben
+erzeugen, richtig bewerten, sich an die Schwächen des Übenden anpassen und ehrlich sagen,
+wo er steht. Sie wird jetzt ein paar Wochen zum Üben verwendet, bevor weitergebaut wird.
+
+Der Grund ist Erfahrung: Die letzten drei guten Anforderungen kamen aus dem Üben und nicht
+aus der Planung — die Datumsanzeige, die Definition der Medianzeit und der Befund, dass ein
+Thema sich wiederholt. Keine davon stand vorher in einem Dokument.
+
+**Wer neu in einen Chat kommt: bitte keinen nächsten Meilenstein vorschlagen**, solange
+nicht ausdrücklich danach gefragt wird. Was gemeldet wird, kommt aus dem Gebrauch.
+
+**Weiterhin offen, aber nicht dringend:** Keine Tests für React-Komponenten (bräuchte
+jsdom + Testing Library, bewusst zurückgestellt). Es gibt keinen Login; alles läuft hinter
+`getCurrentUserId()` auf einem Dummy-User — für einen einzelnen Übenden genau richtig.
+
+**Wenn es weitergeht:** M2c — Auth.js. Ersetzt nur den Rumpf von `getCurrentUserId()`,
+dazu Login-Oberfläche und Routenschutz. Bewusst nach hinten gestellt: Auth macht die App
 teilbar, Content macht sie gut — und es gibt einen Nutzer.
 
 Dann M3 (LLM-Einkleidung der Aufgabentexte hinter einem Validierungs-Gate) und
@@ -177,23 +194,10 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
 - **Tests, die aus dem Template abgeleitet sind, prüfen nichts.** D-15 ist der Lehrfall:
   Template und Test teilten dieselbe falsche Annahme, die Suite blieb grün, das Ergebnis
   war falsch. Erwartungswerte gehören unabhängig nachgerechnet.
-- **`kombinatorik.permutation` wiederholt sich ab der achten Aufgabe.** Das Thema hat
-  zwei Templates mit zusammen sieben verschiedenen Aufgaben — sechs aus `aufg_00003`,
-  eine aus `aufg_00004`, das wegen D-13 auf feste Gruppen verdrahtet ist. Gemessen über
-  zwanzig Sitzungen à zwanzig Aufgaben:
-
-  | Thema | Templates | verschiedene Aufgaben von 20 |
-  |---|---|---|
-  | arithmetik.grundrechenarten | 2 | 20,0 |
-  | kombinatorik.kombination | 3 | 20,0 |
-  | kombinatorik.variation | 2 | 19,1 |
-  | kombinatorik.verteilung | 1 | 19,6 |
-  | wahrscheinlichkeit.hypergeometrisch | 2 | 20,0 |
-  | **kombinatorik.permutation** | 2 | **7,0** |
-
-  Fünf von sechs Themen sind in Ordnung; eines ist kaputt, und zwar das meistgeübte.
-  Keine Wahl der Auswahlparameter ändert daran etwas — es fehlen Aufgaben, nicht
-  Gewichtung. Das ist der Inhalt von M2d, siehe `SPEC-M2d.md`.
+- **`kombinatorik.verteilung` hat nur ein Template.** Damit trägt `aufg_00010` das Thema
+  allein und kommt gemessen auf 19,5 verschiedene Aufgaben von 20 — das Kriterium ist
+  erfüllt, aber es ist das schwächste Thema. Ein zweites Template dort wäre die nächste
+  naheliegende Content-Arbeit. Keine Reparatur, nur eine Lücke.
 - **Veraltete Zahlen nach „Zurück" sind nicht ausgeschlossen.** Beobachtet wurde, dass
   `/stats` gelegentlich alte Werte zeigt. Serverseitig ist das erledigt und belegt: Die
   Seite ist dynamisch, antwortet mit `no-store`, und eine Änderung an der Datenbank ist
@@ -211,6 +215,13 @@ Erledigt in M2a: Die Namenskollision mit dem `Session`-Modell des Auth.js-Adapte
 (D-17), das fehlende Topic auf dem `Attempt` (D-18), die veralteten Codebeispiele in
 `SPEC.md` Abschnitt 4 und 6 — und Invariante 2, die seit M0 nur durch Lesen gesichert
 war und jetzt in `lib/db/answer-attempt.test.ts` geprüft wird.
+
+Erledigt in M2d: `kombinatorik.permutation` lieferte sieben verschiedene Aufgaben je
+Sitzung und wiederholte sich ab der achten; jetzt sind es zwanzig. Der Weg dorthin ist
+lehrreicher als die Zahl: Zwei Compute-Funktionen bekommen jetzt das Ganze und zerlegen
+selbst, statt sich die Zerlegung danebenschreiben zu lassen (D-26). Genau an dieser Naht
+zwischen zwei Quellen entstand D-15 — und beim Aufbau der neuen Wortliste wäre sie beinahe
+wieder entstanden.
 
 Erledigt in M2b: Der Konflikt zwischen Schwierigkeitsgewichtung und
 Wiederholungsvermeidung. Der harte Ausschluss der letzten drei Templates kostete bei vier

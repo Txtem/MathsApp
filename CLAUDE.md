@@ -18,11 +18,11 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M2b (Auswahl, Zeit und Termine)** abgeschlossen
+- Meilenstein: **M2d (Content-Tiefe)** abgeschlossen — die App ist für ihren Zweck fertig
 - M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
 - M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
-  `npm run content:check`; zwölf Compute-Funktionen; zwölf Templates als YAML;
+  `npm run content:check`; Compute-Funktionen und Templates als YAML;
   Grading für `integer`, `numeric`, `fraction`, `choice` inkl. `round_to`;
   KaTeX über `components/MathText.tsx`
 - M2a: Übungsrunde heißt `PracticeSession` (D-17); `Attempt` trägt `userId`, `topic` und
@@ -36,14 +36,20 @@ die naheliegende Variante nicht gewählt wurde.
   Termine relativ statt als Datum (D-22); harte Sperre auf die identische Aufgabe,
   weiche Abwertung auf zuletzt gestellte Templates mit gemessenen Faktoren
   (D-24, D-25); Parameterraum je Template in `content:check` mit Warnung unter 20;
-  Medianzeit nur über richtige Antworten und relativ zur Zielzeit (D-21) —
-  955 Tests grün
+  Medianzeit nur über richtige Antworten und relativ zur Zielzeit (D-21)
+- M2d: fünfzehn Templates, vierzehn Compute-Funktionen. `kombinatorik.permutation` ging
+  von sieben verschiedenen Aufgaben je Sitzung auf zwanzig und deckt jetzt die
+  Schwierigkeiten 1 bis 4 ab; kein Template warnt mehr wegen zu kleinem Parameterraum.
+  Zwei Compute-Funktionen zerlegen selbst, statt sich die Zerlegung danebenschreiben zu
+  lassen (D-26); ein einparametriges Template weitet lieber seinen Bereich, als einen
+  kosmetischen zweiten Parameter zu bekommen (D-27). Zahlen in D-28 —
+  1104 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-  zurückgestellt); `kombinatorik.permutation` liefert nur sieben verschiedene Aufgaben
-  und wiederholt sich ab der achten — das ist M2d
-- Als Nächstes: M2d — Content-Tiefe, siehe `SPEC-M2d.md`. Danach M2c (Auth.js):
-  ersetzt den Rumpf von `getCurrentUserId()`, dazu Login-Oberfläche und Routenschutz.
-  `User.email` muss dafür optional werden.
+  zurückgestellt); `kombinatorik.verteilung` hat nur ein Template
+- Als Nächstes: **erst einmal benutzen.** Die App kann, was sie können sollte. Bevor M2c
+  (Auth.js) beginnt, wird sie ein paar Wochen zum Üben verwendet — die letzten drei guten
+  Anforderungen kamen aus dem Üben und nicht aus der Planung. **Keinen neuen Meilenstein
+  vorschlagen, solange das nicht gesagt wird.**
 
 ### Lokale Einrichtung
 

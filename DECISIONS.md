@@ -720,8 +720,8 @@ weniger verlangen.
 
 `aufg_00003` („Auf wie viele Arten können n Personen in einer Reihe angeordnet werden?")
 hat seinen Bereich von `n = 4…9` auf `n = 3…24` geweitet, um über die Schwelle von 20
-Parameterkombinationen zu kommen. `SPEC-M2d.md` C-2 hätte stattdessen einen zweiten
-Parameter vorgesehen.
+Parameterkombinationen zu kommen. Der Arbeitsplan zu M2d (`SPEC-M2d.md`, inzwischen
+eingearbeitet und gelöscht) hätte stattdessen einen zweiten Parameter vorgesehen.
 
 **Grund:** Eine reine Fakultät hat genau einen Freiheitsgrad. Jeder zweite Parameter wäre
 eines von beidem gewesen:
