@@ -24,6 +24,31 @@ export function multisetPermutations(n: bigint, groups: readonly bigint[]): bigi
   return groups.reduce((total, size) => total / factorial(size), factorial(n));
 }
 
+/**
+ * Permutationen der Buchstaben eines Wortes: `n! / (k₁! · k₂! · …)`, wobei die
+ * `kᵢ` die Häufigkeiten der Buchstaben sind.
+ *
+ * Rechnet dasselbe wie `multisetPermutations`, bekommt die Gruppen aber nicht
+ * gesagt, sondern zählt sie selbst. Genau das ist der Punkt: Ein Template kann
+ * nur einen Skalar würfeln, und `constraints` kennen nur Zahlen — „die
+ * Häufigkeiten in MISSISSIPPI sind 4, 4, 2, 1" lässt sich dort nicht ausdrücken.
+ * Wort und Gruppengrößen wären als getrennte Parameter in fast jedem Wurf
+ * inkonsistent. Kommt das Wort allein herein, ist die Kopplung geschenkt.
+ *
+ * Nebenwirkung: Die Grenze von zwei bis vier Gruppen aus D-15 gilt hier nicht.
+ * Sie stammt aus der Signatur von `multisetPermutations`, nicht aus der Mathematik.
+ */
+export function letterPermutations(word: string): bigint {
+  if (word.length === 0) throw new ExpressionError("Das Wort ist leer.");
+
+  const counts = new Map<string, number>();
+  for (const letter of word) counts.set(letter, (counts.get(letter) ?? 0) + 1);
+
+  let result = factorial(BigInt(word.length));
+  for (const count of counts.values()) result /= factorial(BigInt(count));
+  return result;
+}
+
 /** Kombinationen mit Wiederholung: `C(n + k - 1, k)`. */
 export function combinationsWithRepetition(n: bigint, k: bigint): bigint {
   // Nichts zu ziehen gibt genau eine Möglichkeit — auch aus der leeren Menge.

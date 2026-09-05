@@ -1,0 +1,80 @@
+# Die leichte Hälfte der Buchstaben-Permutation: kurze Wörter, Ergebnis bis 60.
+# Die längeren stehen in permutation_multiset.yaml (aufg_00004) auf
+# Schwierigkeit 3.
+#
+# Getrennt, weil ein einziges Template weder eine konsistente `difficulty` noch
+# eine sinnvolle `target_time_seconds` hätte: Die Ergebnisse reichten sonst von
+# 6 (OTTO) bis 34650 (MISSISSIPPI).
+#
+# Die Erwartungswerte sind unabhängig nachgerechnet, nicht aus dieser Datei
+# abgeleitet — siehe DECISIONS.md, D-15.
+id: aufg_00013
+version: 1
+topic: kombinatorik.permutation
+difficulty: 1
+target_time_seconds: 45
+
+compute_ref: kombinatorik.permutation.wort
+answer_type: integer
+
+param_spec:
+  wort:
+    type: choice
+    values:
+      # vier Buchstaben
+      - OTTO # 6
+      - ANNA # 6
+      - EBBE # 6
+      - MAMA # 6
+      - ELLE # 6
+      - EGGE # 6
+      - BOOT # 12
+      - KAMM # 12
+      - BALL # 12
+      - OBOE # 12
+      - LEER # 12
+      - BEET # 12
+      - MOOS # 12
+      # fünf
+      - NENNE # 10
+      - SEELE # 20
+      - LEERE # 20
+      - ESSEN # 30
+      - KOKOS # 30
+      - LILIE # 30
+      - KAKAO # 30
+      - WELLE # 30
+      - KETTE # 30
+      - TASSE # 60
+      - HALLE # 60
+      - ROLLE # 60
+      - PIZZA # 60
+      - SALAT # 60
+      - TITEL # 60
+      - REGEN # 60
+      - MASSE # 60
+      - KASSE # 60
+      - OTTER # 60
+      - BOOTE # 60
+      # sechs, aber nur wenige verschiedene Buchstaben
+      - SESSEL # 60
+      - ANANAS # 60
+      - ARARAT # 60
+      - RENNEN # 60
+
+# Siehe aufg_00004: Die Schranke gehört in die Constraints, nicht nur in die
+# Wortliste, damit ein nachgetragenes Wort nicht durch alle Prüfungen fällt.
+constraints:
+  - "result <= 60"
+
+question_text: |
+  Wie viele verschiedene Buchstabenfolgen lassen sich aus den Buchstaben des
+  Wortes {{wort}} bilden? Gleiche Buchstaben sind untereinander nicht
+  unterscheidbar.
+
+solution_text: |
+  Permutation mit Wiederholung: die Fakultät der Wortlänge, geteilt durch die
+  Fakultät jeder Buchstabenhäufigkeit. Für {{wort}}:
+  $$\frac{n!}{k_1! \cdot k_2! \cdot \ldots} = {{result}}$$
+
+tags: [permutation, mit_wiederholung]

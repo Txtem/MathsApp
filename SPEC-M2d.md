@@ -58,20 +58,52 @@ Wegen D-13 auf feste Gruppen verdrahtet; jede Instanz ist wörtlich dieselbe Auf
 Template wird nach D-25 nach der ersten Verwendung gesperrt und fällt faktisch aus dem
 Pool — es trägt nichts bei.
 
-**Weg:** ein `choice`-Parameter über eine Liste von Wörtern mit Buchstabenwiederholungen,
-jedes mit seinen Gruppengrößen.
+**Weg:** ein `choice`-Parameter über eine Liste von Wörtern mit Buchstabenwiederholungen.
 
-**Zwei Fallen, ausdrücklich benannt:**
+#### Die Kopplung ist der eigentliche Blocker
 
-- Die Compute-Funktion nimmt seit D-15 zwei bis vier Gruppen. Ein Wort hat so viele
-  Gruppen, wie es verschiedene Buchstaben hat — MISSISSIPPI hat vier (M, I, S, P), viele
-  gängige Wörter haben mehr. Die Liste muss das einhalten. Reicht die Auswahl an Wörtern
-  mit höchstens vier verschiedenen Buchstaben nicht für Raum ≥ 20, wäre die
-  Compute-Funktion zu erweitern — und das ist eine **Rückfrage**, keine stille Zutat, weil
-  M2d ausdrücklich keine Compute-Änderungen vorsieht.
-- Die erwarteten Ergebnisse werden **unabhängig nachgerechnet**, nicht aus dem Template
-  abgeleitet. D-15 entstand genau so: Template und Test teilten dieselbe falsche Annahme,
-  die Suite blieb grün.
+Wort und Gruppengrößen müssen zusammenpassen. Ein `choice`-Parameter liefert aber einen
+Skalar, und `constraints` kennen nur Zahlen — „die Häufigkeiten in {{wort}} sind 4, 4, 2, 1"
+lässt sich im Template-Format nicht ausdrücken. Getrennte Parameter für Wort und Gruppen
+wären in fast jedem Wurf inkonsistent, und nichts würde das bemerken.
+
+**Vorab genehmigt, abweichend von C-4:** eine Compute-Funktion, die das Wort entgegennimmt
+und die Buchstabenhäufigkeiten selbst zählt. **Nur diese eine.** Eine Lösung ohne
+Compute-Änderung hätte Vorrang, wenn es sie gäbe.
+
+Damit entfällt zugleich die Vier-Gruppen-Grenze aus D-15: Sie gilt für
+`kombinatorik.permutation.multiset`, das die Gruppen einzeln entgegennimmt. Eine Funktion,
+die selbst zählt, hat keine solche Grenze, und die Wortliste ist nicht mehr auf höchstens
+vier verschiedene Buchstaben beschränkt.
+
+#### Zwei Templates, nicht eines
+
+Die Ergebnisse streuen von 6 (OTTO) bis 34650 (MISSISSIPPI). Als ein einziges Template
+wäre weder die `difficulty` konsistent noch `target_time_seconds` sinnvoll — beides gälte
+für beide Enden.
+
+- **Kurze Wörter, Ergebnis bis rund 60** → Schwierigkeit 1.
+- **Längere darüber** → Schwierigkeit 2 oder 3. `aufg_00004` behält seine 3.
+
+Das ist zugleich ein Teil von C-3.
+
+#### Ergebnisgrenzen gehören in die `constraints`
+
+Nicht nur in die Wortauswahl. Ein später nachgetragenes Wort fiele sonst durch keine
+Prüfung — mit einer Schranke auf `result` verwirft `instantiate` es, und die gezählte
+Raumgröße aus `content:check` sinkt sichtbar.
+
+#### Die Wortliste
+
+Startpunkt, keine Vorgabe: TASSE, HALLE, ROLLE, PIZZA, SALAT, TITEL, REGEN, KAFFEE,
+BANANE, NESSEL, TEETASSE, ESSEN, KOKOS, LILIE, KAKAO, WELLE, SESSEL, ANANAS, SEELE,
+ARARAT, BOOT, KAMM, BALL, OBOE, OTTO, ANNA, EBBE, MAMA.
+
+#### D-15 gilt unverändert
+
+Die erwarteten Ergebnisse werden **unabhängig nachgerechnet**, nicht aus dem Template
+abgeleitet. D-15 entstand genau so: Template und Test teilten dieselbe falsche Annahme,
+die Suite blieb grün.
 
 `version` erhöhen — die Bedeutung ändert sich.
 
@@ -82,7 +114,13 @@ größerer Bereich das Ergebnis unrealistisch groß werden lässt: einen zweiten
 einführen statt den ersten zu strecken.
 
 Nach jeder Änderung `content:check` — die gezählte Raumgröße ist die Kontrolle.
-`version` erhöhen.
+`version` erhöhen. Auch hier gilt: Ergebnisgrenzen in die `constraints`, nicht nur in die
+gewählten Bereiche.
+
+**`aufg_00010` (`kombinatorik.verteilung`) wurde geprüft und braucht nichts.** Es ist das
+einzige Template seines Themas, also der Fall „ein Thema, ein Template", für den die
+Messung rund 25 Parameterraum verlangt. Es hat 33 und kommt gemessen auf 19,6 verschiedene
+Aufgaben von 20. Steht hier, damit es später niemand für vergessen hält.
 
 ### C-3 Neue Templates in `kombinatorik.permutation`
 

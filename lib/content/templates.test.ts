@@ -95,9 +95,27 @@ describe.each(templates.map((template) => [template.id, template] as const))(
 );
 
 describe("Der Content als Ganzes", () => {
+  /**
+   * Eine Compute-Funktion ohne Template ist totes Gewicht — dieselbe Regel wie
+   * „Kein Normalizer ohne Template, das ihn benutzt".
+   *
+   * `kombinatorik.permutation.multiset` ist seit M2d Schritt 1 die eine
+   * Ausnahme: `aufg_00004` hat sie gegen `…​.wort` getauscht, weil ein
+   * `choice`-Parameter Wort und Gruppengrößen nicht koppeln kann. Die Funktion
+   * bleibt vorerst stehen — sie ist getestet und die natürliche Grundlage für
+   * ein Template mit gezählten Gruppen („n Kugeln, davon k₁ rote, k₂ blaue"),
+   * das in Schritt 3 ohnehin ansteht und die fehlende Schwierigkeit 2 füllen
+   * würde. Kommt sie dort nicht zum Einsatz, gehört sie gelöscht.
+   *
+   * Die Ausnahme steht namentlich hier und nicht als gelockerte Schranke:
+   * So fällt auf, wenn sie sich erledigt hat — oder wenn eine zweite dazukommt.
+   */
+  const OHNE_TEMPLATE: readonly string[] = ["kombinatorik.permutation.multiset"];
+
   it("deckt jede Compute-Funktion mit mindestens einem Template ab", () => {
     const used = new Set(templates.map((template) => template.compute_ref));
-    expect([...Object.keys(registry)].filter((ref) => !used.has(ref))).toEqual([]);
+    const offen = [...Object.keys(registry)].filter((ref) => !used.has(ref));
+    expect(offen).toEqual(OHNE_TEMPLATE);
   });
 
   it("verteilt sich über den Themenbaum", () => {

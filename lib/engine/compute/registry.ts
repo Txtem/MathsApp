@@ -4,7 +4,12 @@ import { binomial, factorial, permutations } from "../expr/bigmath";
 import * as Q from "../expr/rational";
 import { type AnyComputeEntry, defineCompute } from "../types";
 import { add, subtract } from "./arithmetik";
-import { combinationsWithRepetition, distributions, multisetPermutations } from "./kombinatorik";
+import {
+  combinationsWithRepetition,
+  distributions,
+  letterPermutations,
+  multisetPermutations,
+} from "./kombinatorik";
 import { hypergeometricAtLeastOne, hypergeometricExactly } from "./wahrscheinlichkeit";
 
 /**
@@ -54,6 +59,20 @@ const Multiset = z
   .refine((v) => v.k1 + v.k2 + (v.k3 ?? 0) + (v.k4 ?? 0) === v.n, {
     message: "Die Gruppengrößen müssen zusammen n ergeben",
   });
+
+/**
+ * Ein Wort für die Buchstaben-Permutation: Großbuchstaben ohne Umlaute, damit
+ * die Wortliste im Template und der gerenderte Fragetext dieselbe Schreibweise
+ * haben. Mindestens zwei Buchstaben, sonst gibt es nichts zu vertauschen; die
+ * Obergrenze hält die Fakultät klein.
+ */
+const Wort = z.strictObject({
+  wort: z
+    .string()
+    .min(2)
+    .max(20)
+    .regex(/^[A-Z]+$/, "Nur Großbuchstaben A-Z, keine Umlaute und kein ß"),
+});
 
 const Hypergeometric = z
   .strictObject({
@@ -107,6 +126,12 @@ export const registry = {
           [k1, k2, k3, k4].flatMap((size) => (size === undefined ? [] : [big(size)])),
         ),
       ),
+  }),
+
+  /** Permutationen der Buchstaben eines Wortes — die Häufigkeiten zählt die Funktion. */
+  "kombinatorik.permutation.wort": defineCompute({
+    input: Wort,
+    compute: ({ wort }) => Q.fromBigInt(letterPermutations(wort)),
   }),
 
   /** Variationen ohne Wiederholung: n! / (n-k)! */

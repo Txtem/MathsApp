@@ -3,13 +3,111 @@ import { describe, expect, it } from "vitest";
 import { ExpressionError } from "../errors";
 import { binomial, factorial, permutations } from "../expr/bigmath";
 import { toStorageString } from "../expr/rational";
-import { combinationsWithRepetition, distributions, multisetPermutations } from "./kombinatorik";
+import {
+  combinationsWithRepetition,
+  distributions,
+  letterPermutations,
+  multisetPermutations,
+} from "./kombinatorik";
 import { registry } from "./registry";
 
-const via = (ref: keyof typeof registry, params: Record<string, number>): string | undefined => {
+const via = (
+  ref: keyof typeof registry,
+  params: Record<string, number | string>,
+): string | undefined => {
   const result = registry[ref].run(params);
   return result ? toStorageString(result) : undefined;
 };
+
+describe("letterPermutations", () => {
+  /**
+   * Die Erwartungswerte sind **unabhängig nachgerechnet** und nicht aus dem
+   * Template abgeleitet (D-15). Drei Wege, die alle dasselbe ergeben haben:
+   * die Multiset-Formel über die tatsächlichen Buchstabenhäufigkeiten, das
+   * Abzählen aller verschiedenen Permutationen bis neun Buchstaben, und das
+   * Platzieren jeder Buchstabengruppe über Binomialkoeffizienten.
+   */
+  const cases: ReadonlyArray<readonly [string, string]> = [
+    ["OTTO", "6"], // O2 T2 → 4!/(2!·2!)
+    ["ANNA", "6"],
+    ["EGGE", "6"],
+    ["BOOT", "12"], // B1 O2 T1 → 4!/2!
+    ["NENNE", "10"], // N3 E2 → 5!/(3!·2!)
+    ["SEELE", "20"], // S1 E3 L1 → 5!/3!
+    ["ESSEN", "30"], // E2 S2 N1 → 5!/(2!·2!)
+    ["TASSE", "60"], // T1 A1 S2 E1 → 5!/2!
+    ["ANANAS", "60"], // A3 N2 S1 → 6!/(3!·2!)
+    ["KAFFEE", "180"], // K1 A1 F2 E2 → 6!/(2!·2!)
+    ["BANANE", "180"], // B1 A2 N2 E1
+    ["TOMATE", "360"], // T2 O1 M1 A1 E1 → 6!/2!
+    ["BANANEN", "420"], // B1 A2 N3 E1 → 7!/(2!·3!)
+    ["ERDBEERE", "840"], // E4 R2 D1 B1 → 8!/(4!·2!)
+    ["TEETASSE", "1680"], // T2 E3 A1 S2 → 8!/(2!·3!·2!)
+    ["KAROTTE", "2520"], // sechs verschiedene Buchstaben, T2
+    ["PARALLEL", "3360"], // P1 A2 R1 L3 E1
+    ["RENNTIER", "5040"], // R2 E2 N2 T1 I1
+    ["HIMBEERE", "6720"], // E3, sonst einfach
+    ["BROMBEERE", "15120"], // B2 R2 O1 M1 E3
+    ["MISSISSIPPI", "34650"], // der Fall aus D-15
+  ];
+
+  it.each(cases)("%s → %s", (word, expected) => {
+    expect(letterPermutations(word).toString()).toBe(expected);
+  });
+
+  it("gibt für lauter verschiedene Buchstaben die Fakultät", () => {
+    expect(letterPermutations("HAUS").toString()).toBe("24");
+    expect(letterPermutations("ZEBRA").toString()).toBe("120");
+  });
+
+  it("gibt für lauter gleiche Buchstaben genau eine Anordnung", () => {
+    expect(letterPermutations("AAAA").toString()).toBe("1");
+  });
+
+  it("kennt keine Grenze bei vier Gruppen", () => {
+    // `multisetPermutations` nimmt zwei bis vier Gruppen (D-15). Diese Funktion
+    // zählt selbst und ist deshalb nicht beschränkt.
+    expect(letterPermutations("KAROTTE").toString()).toBe("2520"); // sechs Gruppen
+    expect(letterPermutations("SCHIFFE").toString()).toBe("2520");
+  });
+
+  it("stimmt mit multisetPermutations überein, wo beide anwendbar sind", () => {
+    // Dieselbe Mathematik, andere Signatur.
+    expect(letterPermutations("MISSISSIPPI")).toBe(multisetPermutations(11n, [4n, 4n, 2n, 1n]));
+    expect(letterPermutations("ANANAS")).toBe(multisetPermutations(6n, [3n, 2n, 1n]));
+  });
+
+  it("weist ein leeres Wort ab", () => {
+    expect(() => letterPermutations("")).toThrow(ExpressionError);
+  });
+
+  it("bleibt bei langen Wörtern exakt", () => {
+    // 20 Buchstaben, zehnmal A und zehnmal B — der mittlere Binomialkoeffizient.
+    expect(letterPermutations("AAAAAAAAAABBBBBBBBBB").toString()).toBe(binomial(20n, 10n).toString());
+  });
+
+  describe("über die Registry", () => {
+    it("rechnet ein gültiges Wort", () => {
+      expect(via("kombinatorik.permutation.wort", { wort: "MISSISSIPPI" })).toBe("34650");
+    });
+
+    it("lehnt Kleinbuchstaben, Umlaute und Ziffern ab", () => {
+      for (const wort of ["tasse", "TASSEÄ", "TA5SE", "TA SE", "STRASSE-1"]) {
+        expect(via("kombinatorik.permutation.wort", { wort })).toBeUndefined();
+      }
+    });
+
+    it("lehnt zu kurze und zu lange Wörter ab", () => {
+      expect(via("kombinatorik.permutation.wort", { wort: "A" })).toBeUndefined();
+      expect(via("kombinatorik.permutation.wort", { wort: "A".repeat(21) })).toBeUndefined();
+    });
+
+    it("lehnt einen überzähligen Parameter ab", () => {
+      // `strictObject`: Ein Template mit einem Parameter zu viel fällt auf.
+      expect(via("kombinatorik.permutation.wort", { wort: "TASSE", n: 5 })).toBeUndefined();
+    });
+  });
+});
 
 describe("multisetPermutations", () => {
   const cases: ReadonlyArray<readonly [bigint, readonly bigint[], string]> = [

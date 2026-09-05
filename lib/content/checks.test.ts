@@ -104,14 +104,15 @@ describe("Parameterraum — Warnung, kein Fehler", () => {
     }
   });
 
-  it("warnt heute genau bei diesen vier", () => {
-    // Bewusst festgenagelt: Die vier sind bekannt und in DECISIONS.md die
-    // Zielvorgabe für M2d. Verschwindet eine, ist das eine gute Nachricht und
-    // gehört gesehen — kommt eine dazu, ebenfalls.
+  it("warnt heute genau bei diesen dreien", () => {
+    // Bewusst festgenagelt: Die Liste ist die Zielvorgabe für M2d.
+    // Verschwindet eine Warnung, ist das eine gute Nachricht und gehört gesehen —
+    // kommt eine dazu, ebenfalls. `aufg_00004` stand hier bis M2d Schritt 1 mit
+    // Raum 1; seit der Wortliste sind es 27.
     const ids = readContent()
       .warnings.map((issue) => issue.templateId)
       .sort();
-    expect(ids).toEqual(["aufg_00003", "aufg_00004", "aufg_00006", "aufg_00009"]);
+    expect(ids).toEqual(["aufg_00003", "aufg_00006", "aufg_00009"]);
   });
 });
 

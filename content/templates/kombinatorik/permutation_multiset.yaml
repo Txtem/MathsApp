@@ -1,44 +1,78 @@
-# Bewusst ohne Zufallsparameter: n muss die Summe der Gruppengrößen sein, und
-# das Template-Format kennt keine abgeleiteten Parameter. Ein gewürfeltes n
-# würde in fast jedem Wurf am Constraint scheitern. Siehe DECISIONS.md, D-13.
+# Version 3: Vorher stand hier genau eine Aufgabe — MISSISSIPPI, mit festen
+# Gruppengrößen als `const` (D-13). Jede Instanz war wörtlich dieselbe, und seit
+# D-25 fiel das Template nach der ersten Verwendung aus dem Pool.
 #
-# Version 2: Die Gruppen waren 5/4/2 und damit falsch — MISSISSIPPI hat vier
-# Gruppen (4×I, 4×S, 2×P, 1×M). Die Aufgabe rechnete 6930 statt 34650, während
-# der angezeigte Lösungsweg die richtige Formel zeigte. Siehe DECISIONS.md, D-15.
+# Jetzt würfelt es ein Wort aus einer Liste. Die Buchstabenhäufigkeiten zählt die
+# Compute-Funktion selbst — anders geht es nicht: Ein `choice`-Parameter liefert
+# einen Skalar, und `constraints` kennen nur Zahlen, also lässt sich „die
+# Häufigkeiten in {{wort}} sind 4, 4, 2, 1" im Template nicht ausdrücken.
+#
+# Version 2 hatte die Gruppen 5/4/2 und damit falsch gerechnet (D-15). Deshalb
+# sind die Erwartungswerte in den Tests unabhängig nachgerechnet, nicht aus
+# dieser Datei abgeleitet.
+#
+# Hier stehen die längeren Wörter. Die kurzen (Ergebnis bis 60) liegen in
+# permutation_wort_kurz.yaml auf Schwierigkeit 1.
 id: aufg_00004
-version: 2
+version: 3
 topic: kombinatorik.permutation
 difficulty: 3
 target_time_seconds: 120
 
-compute_ref: kombinatorik.permutation.multiset
+compute_ref: kombinatorik.permutation.wort
 answer_type: integer
 
 param_spec:
-  n:
-    type: const
-    value: 11
-  k1: # I
-    type: const
-    value: 4
-  k2: # S
-    type: const
-    value: 4
-  k3: # P
-    type: const
-    value: 2
-  k4: # M
-    type: const
-    value: 1
+  wort:
+    type: choice
+    values:
+      # sechs Buchstaben
+      - KAFFEE # 180
+      - BANANE # 180
+      - NESSEL # 180
+      - TELLER # 180
+      - TREPPE # 180
+      - KETTEN # 180
+      - TOMATE # 360
+      - SALATE # 360
+      - TASSEN # 360
+      - MASSEN # 360
+      - KASSEN # 360
+      - KOFFER # 360
+      - SOMMER # 360
+      - BUTTER # 360
+      - KLASSE # 360
+      # sieben
+      - BANANEN # 420
+      - SESSELN # 420
+      - PFEFFER # 420
+      - KAROTTE # 2520
+      - SCHIFFE # 2520
+      # acht und mehr
+      - ERDBEERE # 840
+      - TEETASSE # 1680
+      - PARALLEL # 3360
+      - RENNTIER # 5040
+      - HIMBEERE # 6720
+      - BROMBEERE # 15120
+      - MISSISSIPPI # 34650
 
-constraints: []
+# Die Grenzen stehen hier und nicht nur in der Wortliste: Ein später
+# nachgetragenes Wort fiele sonst durch keine Prüfung. Verletzt es eine Schranke,
+# verwirft `instantiate` den Wurf und die gezählte Raumgröße aus
+# `npm run content:check` sinkt sichtbar.
+constraints:
+  - "result > 60" # darunter gehört das Wort in das leichte Template
+  - "result <= 50000"
 
 question_text: |
-  Wie viele verschiedene Buchstabenfolgen lassen sich aus den elf Buchstaben
-  des Wortes MISSISSIPPI bilden? (viermal I, viermal S, zweimal P, einmal M)
+  Wie viele verschiedene Buchstabenfolgen lassen sich aus den Buchstaben des
+  Wortes {{wort}} bilden? Gleiche Buchstaben sind untereinander nicht
+  unterscheidbar.
 
 solution_text: |
-  Permutation mit Wiederholung:
-  $$\frac{11!}{4! \cdot 4! \cdot 2! \cdot 1!} = {{result}}$$
+  Permutation mit Wiederholung: die Fakultät der Wortlänge, geteilt durch die
+  Fakultät jeder Buchstabenhäufigkeit. Für {{wort}}:
+  $$\frac{n!}{k_1! \cdot k_2! \cdot \ldots} = {{result}}$$
 
 tags: [permutation, mit_wiederholung]
