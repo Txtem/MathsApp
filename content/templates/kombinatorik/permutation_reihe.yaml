@@ -1,5 +1,14 @@
+# Version 2: n lief von 4 bis 9, also gab es sechs verschiedene Aufgaben. Für
+# eine Sitzung von zwanzig zu wenig.
+#
+# Eine reine Fakultät hat genau einen Freiheitsgrad — ein zweiter Parameter wäre
+# entweder kosmetisch (und würde den Dedup-Schlüssel aus D-25 entwerten) oder
+# eine andere Aufgabe. Also wurde der Bereich geweitet. Dass die Ergebnisse
+# dabei groß werden, ist tragbar: Der Formathinweis unter dem Eingabefeld nennt
+# ausdrücklich `5!` als zulässige Antwort, es geht um das Erkennen der Regel und
+# nicht um das Ausrechnen der Ziffern.
 id: aufg_00003
-version: 1
+version: 2
 topic: kombinatorik.permutation
 difficulty: 1
 target_time_seconds: 60
@@ -10,11 +19,14 @@ answer_type: integer
 param_spec:
   n:
     type: int
-    min: 4
-    max: 9
+    min: 3
+    max: 24
 
+# Die Schranke gehört in die Constraints und nicht nur in den Bereich, damit ein
+# später geweiterter Bereich nicht unbemerkt durchrutscht. 24! liegt knapp
+# darunter, 25! darüber.
 constraints:
-  - "result <= 400000"
+  - "result <= 1000000000000000000000000"
 
 question_text: |
   Auf wie viele Arten können {{n}} Personen in einer Reihe angeordnet werden?

@@ -1,5 +1,9 @@
+# Version 2: n war eine Auswahl aus [6, 8, 10] und k lief von 3 bis 5 — neun
+# verschiedene Aufgaben. Jetzt sind beide Bereiche durchgehend.
+#
+# n bleibt bei höchstens 10: Ein Ring trägt Ziffern, und davon gibt es zehn.
 id: aufg_00006
-version: 1
+version: 2
 topic: kombinatorik.variation
 difficulty: 2
 target_time_seconds: 60
@@ -9,15 +13,16 @@ answer_type: integer
 
 param_spec:
   n:
-    type: choice
-    values: [6, 8, 10]
+    type: int
+    min: 4
+    max: 10
   k:
     type: int
     min: 3
-    max: 5
+    max: 6
 
 constraints:
-  - "result <= 100000"
+  - "result <= 1000000"
 
 question_text: |
   Ein Zahlenschloss hat {{k}} Ringe mit je {{n}} verschiedenen Ziffern.

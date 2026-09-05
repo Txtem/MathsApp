@@ -85,11 +85,12 @@ describe("Parameterraum — Warnung, kein Fehler", () => {
   });
 
   it("hält den Ladevorgang nicht an", () => {
-    // Der echte Content warnt heute viermal und lädt trotzdem.
-    const { templates, warnings } = readContent();
-    expect(templates.length).toBeGreaterThan(0);
-    expect(warnings.length).toBeGreaterThan(0);
-    expect(warnings.every((issue) => issue.severity === "warning")).toBe(true);
+    // Am Fixture, weil der echte Content seit M2d nicht mehr warnt: Ein Befund
+    // dieser Art wird gemeldet, aber `checkTemplate` wirft nicht, und `errorsOf`
+    // bleibt leer — genau daran hängt, dass `readContent` weiterläuft.
+    const issues = checkTemplate(entry, topics);
+    expect(errorsOf(issues)).toEqual([]);
+    expect(warningsOf(issues).every((issue) => issue.severity === "warning")).toBe(true);
   });
 
   it("warnt genau bei den Templates unter der Schwelle", () => {
@@ -104,15 +105,25 @@ describe("Parameterraum — Warnung, kein Fehler", () => {
     }
   });
 
-  it("warnt heute genau bei diesen dreien", () => {
-    // Bewusst festgenagelt: Die Liste ist die Zielvorgabe für M2d.
-    // Verschwindet eine Warnung, ist das eine gute Nachricht und gehört gesehen —
-    // kommt eine dazu, ebenfalls. `aufg_00004` stand hier bis M2d Schritt 1 mit
-    // Raum 1; seit der Wortliste sind es 27.
-    const ids = readContent()
-      .warnings.map((issue) => issue.templateId)
-      .sort();
-    expect(ids).toEqual(["aufg_00003", "aufg_00006", "aufg_00009"]);
+  it("warnt beim echten Content gar nicht mehr", () => {
+    // Abnahmekriterium B-2 von M2d. Vor dem Meilenstein warnten vier Templates:
+    // aufg_00004 mit Raum 1, aufg_00003 mit 6, aufg_00006 mit 9, aufg_00009 mit
+    // 10. Kommt eine Warnung zurück, ist ein Template unter die Schwelle
+    // gerutscht — das gehört gesehen, nicht weggeräumt.
+    const { templates, warnings } = readContent();
+    expect(templates.length).toBeGreaterThan(0);
+    expect(warnings).toEqual([]);
+  });
+
+  it("liegt bei jedem Template über der Schwelle", () => {
+    // Dieselbe Aussage direkt an der Zahl, damit im Fehlerfall dasteht, welches
+    // Template wie knapp liegt.
+    for (const template of readContent().templates) {
+      expect([template.id, parameterSpace(template).size >= MIN_PARAMETER_SPACE]).toEqual([
+        template.id,
+        true,
+      ]);
+    }
   });
 });
 

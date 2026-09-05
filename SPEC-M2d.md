@@ -119,15 +119,45 @@ gewählten Bereiche.
 
 **`aufg_00010` (`kombinatorik.verteilung`) wurde geprüft und braucht nichts.** Es ist das
 einzige Template seines Themas, also der Fall „ein Thema, ein Template", für den die
-Messung rund 25 Parameterraum verlangt. Es hat 33 und kommt gemessen auf 19,6 verschiedene
-Aufgaben von 20. Steht hier, damit es später niemand für vergessen hält.
+Messung rund 25 Parameterraum verlangt. Es hat 33 und kommt gemessen auf 19,5 verschiedene
+Aufgaben von 20 — Abnahmekriterium B-1 ist damit erfüllt. Steht hier, damit es später
+niemand für vergessen hält.
 
 ### C-3 Neue Templates in `kombinatorik.permutation`
 
-Bis das Thema die Schwierigkeiten 1 bis 4 abdeckt. Heute liegen dort zwei.
+Bis das Thema die Schwierigkeiten 1 bis 4 abdeckt.
 
 Nach Konvention gehört zu jedem neuen Template ein Property-Test mit 200 Seeds: keine
 Exception, alle Constraints erfüllt, kein Platzhalterrest im gerenderten Text.
+
+#### Schwierigkeit 2: das Kugel-Template, genehmigt
+
+„n Kugeln, davon k₁ rote, k₂ blaue, k₃ grüne — wie viele Anordnungen?" über
+`kombinatorik.permutation.multiset`. Das deckt zugleich die Compute-Funktion wieder ab,
+die seit Schritt 1 kein Template mehr hat.
+
+**Entwurfshinweis, wichtig:** `n` wird **nicht** gewürfelt. Ein unabhängig gezogenes `n`
+plus ein Constraint `k1 + k2 + k3 == n` verwirft den größten Teil der Würfe, und irgendwann
+kippt ein Lauf über `MAX_TRIES` — ein Fehler, den danach niemand reproduziert. Das ist
+genau die Falle aus D-13.
+
+Stattdessen: nur die drei Gruppengrößen würfeln, `n` gar nicht als Parameter führen, die
+Compute-Funktion summiert selbst. Prüfung 4 ist erfüllt, weil dann alle gewürfelten
+Parameter im Fragetext vorkommen. Dasselbe Prinzip wie beim Wort — ableiten statt
+abschreiben, siehe D-26.
+
+#### Schwierigkeit 4: vermutlich eine Rückfrage
+
+Für eine Aufgabe auf Schwierigkeit 4 in diesem Thema fehlt wahrscheinlich eine
+Compute-Funktion — zyklische Anordnung `(n-1)!`, Anordnung mit Nebenbedingung, etwas in
+der Richtung. Das widerspricht C-4.
+
+**Der Widerspruch ist der des Dokuments, nicht des Umsetzenden:** B-3 verlangt eine
+Abdeckung von 1 bis 4, die die Umfangsgrenze in C-4 ausschließt. B-3 bleibt trotzdem
+stehen.
+
+Wenn es so kommt: **fragen, mit Vorschlag und Formel.** Zustimmung ist wahrscheinlich, für
+genau **eine** Funktion, nicht für mehrere.
 
 ### C-4 Nicht Teil von M2d
 

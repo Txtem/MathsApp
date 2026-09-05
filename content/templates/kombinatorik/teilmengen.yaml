@@ -1,5 +1,7 @@
+# Version 2: n lief von 3 bis 12, also zehn verschiedene Aufgaben. Der Bereich
+# ist geweitet; 2^n bleibt auch bei n = 25 eine Zahl, die man hinschreiben kann.
 id: aufg_00009
-version: 1
+version: 2
 topic: kombinatorik.kombination
 difficulty: 1
 target_time_seconds: 45
@@ -11,9 +13,12 @@ param_spec:
   n:
     type: int
     min: 3
-    max: 12
+    max: 25
 
-constraints: []
+# Die Schranke steht hier und nicht nur im Bereich: Ein später geweiterter
+# Bereich soll an ihr auffallen, nicht still große Zahlen erzeugen.
+constraints:
+  - "result <= 50000000"
 
 question_text: |
   Wie viele Teilmengen hat eine Menge mit {{n}} Elementen?

@@ -208,6 +208,10 @@ als ein flackernder Generator.
 **Wenn mehr Varianz nötig wird:** abgeleitete Parameter ins Template-Format aufnehmen
 (`k3: {type: derived, expr: "n - k1 - k2"}`) — das ist dann eine eigene Entscheidung.
 
+**Überholt durch D-26.** Die Varianz kam anders: Nicht das Template lernt abzuleiten,
+sondern die Compute-Funktion verlangt weniger. Sie bekommt die Gruppengrößen und summiert
+`n` selbst, statt es sich danebenschreiben zu lassen.
+
 ---
 
 ## D-14 — Registry-Einträge validieren selbst (`entry.run`)
@@ -662,3 +666,50 @@ gesetzt und nicht gemessen. Anders als bei D-24 gibt es hier nichts zu optimiere
 gibt keine Zielgröße, gegen die man sie prüfen könnte, nur Plausibilität. Sie stehen als
 benannte Konstanten in `components/stats-rows.ts`, damit sie sich ändern lassen, ohne den
 Code zu lesen.
+
+---
+
+## D-26 — Die Zerlegung wird abgeleitet, nicht abgeschrieben
+*2026-08-31, M2d*
+
+`kombinatorik.permutation.wort` nimmt ein Wort entgegen und zählt die
+Buchstabenhäufigkeiten selbst. `aufg_00004` und `aufg_00013` würfeln nur noch das Wort.
+
+**Der äußere Anlass** war die Kopplung: Ein `choice`-Parameter liefert einen Skalar, und
+`constraints` kennen nur Zahlen — „die Häufigkeiten in MISSISSIPPI sind 4, 4, 2, 1" lässt
+sich im Template-Format nicht ausdrücken. Wort und Gruppengrößen als getrennte Parameter
+wären in fast jedem Wurf inkonsistent gewesen, und nichts hätte das bemerkt.
+
+**Der eigentliche Gewinn ist ein anderer, und er ist übertragbar.** Solange die Zerlegung
+von Hand danebengeschrieben wird, gibt es eine Naht zwischen zwei Quellen: die Wortlänge
+aus dem Wort, die Gruppen aus der Handzählung. An genau dieser Naht entstand D-15 — im
+Template standen 5/4/2 für MISSISSIPPI, die Summe stimmte, die Zerlegung nicht.
+
+Beim Aufbau der Wortliste ist derselbe Fehler prompt wieder passiert: Für ERDBEERE hatte
+ich E3 R2 D1 B1 notiert und 3360 erwartet. Das sind sieben Buchstaben, das Wort hat acht —
+die Zerlegung widersprach sich selbst, und die 3360 entstand, weil `n` aus der Wortlänge
+und die Gruppen aus der Handzählung kamen. Richtig ist E4 R2 D1 B1 und damit 840.
+Aufgefallen ist es nur, weil die Erwartungswerte vor dem Template unabhängig nachgerechnet
+wurden.
+
+**Die Regel, die daraus folgt:** Wo eine Compute-Funktion eine Zerlegung braucht, bekommt
+sie das Ganze und zerlegt selbst — nicht die Teile, die jemand daneben aufgeschrieben hat.
+Dann gibt es keine zweite Quelle, die widersprechen könnte. Das gilt beim nächsten Template
+genauso: Beim Kugel-Template werden die Gruppengrößen gewürfelt und `n` **nicht** als
+Parameter geführt, sondern von der Funktion summiert.
+
+**Nebenwirkung:** Die Grenze von zwei bis vier Gruppen aus D-15 fällt weg. Sie stammt aus
+der Signatur von `multisetPermutations`, das die Gruppen einzeln entgegennimmt, nicht aus
+der Mathematik. Eine Funktion, die selbst zählt, ist unbeschränkt — die Wortliste enthält
+deshalb auch KAROTTE und SCHIFFE mit sechs verschiedenen Buchstaben.
+
+**Preis:** Der Lösungsweg kann die konkreten Fakultäten nicht mehr zeigen, weil die
+Häufigkeiten keine Parameter sind und `solution_text` nur Parameter und `result` kennt.
+Er nennt die Regel statt der Zahlen. Das ist der bewusste Tausch: ein etwas blasserer
+Lösungsweg gegen eine Aufgabe, die nicht falsch sein kann.
+
+**Damit erledigt sich D-13.** Dessen Prämisse — „das Template-Format kennt keine
+abgeleiteten Parameter, also muss `n` als `const` daneben stehen" — trifft zu, führt aber
+zur falschen Antwort. Nicht das Template muss ableiten können, sondern die Funktion muss
+weniger verlangen.
+
