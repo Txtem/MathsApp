@@ -1,0 +1,50 @@
+# Permutation mit Wiederholung, aber mit gezählten Gruppen statt eines Wortes —
+# die Zwischenstufe zwischen aufg_00013 (kurze Wörter) und aufg_00004 (lange).
+#
+# `n` ist **kein** Parameter. Ein unabhängig gewürfeltes n müsste über ein
+# Constraint zur Summe der Gruppen passen; fünf von sechs Würfen fielen durch und
+# `MAX_TRIES` würde gelegentlich kippen — genau die Falle aus D-13. Die
+# Compute-Funktion summiert deshalb selbst. Siehe D-26.
+#
+# Damit kommt der Fragetext ohne die Gesamtzahl aus, und Prüfung 4 ist erfüllt:
+# k1, k2 und k3 stehen alle drin.
+id: aufg_00014
+version: 1
+topic: kombinatorik.permutation
+difficulty: 2
+target_time_seconds: 90
+
+compute_ref: kombinatorik.permutation.multiset
+answer_type: integer
+
+param_spec:
+  k1:
+    type: int
+    min: 2
+    max: 6
+  k2:
+    type: int
+    min: 2
+    max: 6
+  k3:
+    type: int
+    min: 2
+    max: 6
+
+# Die Schranke gehört in die Constraints, nicht nur in die Bereiche. Mit 2 bis 6
+# je Farbe reicht das Ergebnis von 90 (2/2/2) bis 90090; alles darüber wäre für
+# diese Stufe zu groß.
+constraints:
+  - "result <= 100000"
+
+question_text: |
+  In einer Schale liegen {{k1}} rote, {{k2}} blaue und {{k3}} grüne Kugeln.
+  Sie werden in einer Reihe nebeneinander aufgelegt. Wie viele verschiedene
+  Farbfolgen sind möglich? Kugeln gleicher Farbe sind nicht unterscheidbar.
+
+solution_text: |
+  Permutation mit Wiederholung: alle Kugeln zusammen, geteilt durch die
+  Fakultäten der Farbgruppen.
+  $$\frac{({{k1}} + {{k2}} + {{k3}})!}{ {{k1}}! \cdot {{k2}}! \cdot {{k3}}! } = {{result}}$$
+
+tags: [permutation, mit_wiederholung]

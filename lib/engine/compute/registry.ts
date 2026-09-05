@@ -47,17 +47,22 @@ const PairOrdered = Pair.refine((v) => v.k <= v.n, {
  * Bis zu vier Gruppen. `k3` und `k4` sind optional, damit ein Template genau so
  * viele Gruppen angeben kann, wie die Aufgabe hat — MISSISSIPPI braucht vier
  * (4×I, 4×S, 2×P, 1×M). Siehe DECISIONS.md, D-15.
+ *
+ * **Kein `n`.** Die Gesamtzahl ist die Summe der Gruppen und wird hier gebildet,
+ * statt daneben verlangt zu werden. Ein Template, das `n` unabhängig würfelt und
+ * über ein Constraint zur Summe passen lässt, verwirft fünf von sechs Würfen und
+ * kippt irgendwann über `MAX_TRIES` — das war der Grund für das statische
+ * `aufg_00004` in D-13. Ableiten statt abschreiben, siehe D-26.
  */
 const Multiset = z
   .strictObject({
-    n: z.number().int().min(1).max(N_MAX),
     k1: z.number().int().min(1).max(N_MAX),
     k2: z.number().int().min(1).max(N_MAX),
     k3: z.number().int().min(1).max(N_MAX).optional(),
     k4: z.number().int().min(1).max(N_MAX).optional(),
   })
-  .refine((v) => v.k1 + v.k2 + (v.k3 ?? 0) + (v.k4 ?? 0) === v.n, {
-    message: "Die Gruppengrößen müssen zusammen n ergeben",
+  .refine((v) => v.k1 + v.k2 + (v.k3 ?? 0) + (v.k4 ?? 0) <= N_MAX, {
+    message: `Die Gruppen ergeben zusammen mehr als ${N_MAX}`,
   });
 
 /**
@@ -116,16 +121,14 @@ export const registry = {
     compute: ({ n }) => Q.fromBigInt(factorial(big(n))),
   }),
 
-  /** Permutationen mit Wiederholung: n! / (k1! · k2! · k3! · k4!) */
+  /** Permutationen mit Wiederholung: n! / (k1! · k2! · k3! · k4!), n = Summe der Gruppen. */
   "kombinatorik.permutation.multiset": defineCompute({
     input: Multiset,
-    compute: ({ n, k1, k2, k3, k4 }) =>
-      Q.fromBigInt(
-        multisetPermutations(
-          big(n),
-          [k1, k2, k3, k4].flatMap((size) => (size === undefined ? [] : [big(size)])),
-        ),
-      ),
+    compute: ({ k1, k2, k3, k4 }) => {
+      const groups = [k1, k2, k3, k4].flatMap((size) => (size === undefined ? [] : [big(size)]));
+      const n = groups.reduce((sum, size) => sum + size, 0n);
+      return Q.fromBigInt(multisetPermutations(n, groups));
+    },
   }),
 
   /** Permutationen der Buchstaben eines Wortes — die Häufigkeiten zählt die Funktion. */

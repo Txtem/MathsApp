@@ -137,19 +137,25 @@ describe("multisetPermutations", () => {
     );
   });
 
-  it("lehnt über die Registry Gruppen ab, die nicht aufgehen", () => {
-    expect(via("kombinatorik.permutation.multiset", { n: 10, k1: 5, k2: 4, k3: 2 })).toBeUndefined();
-    expect(via("kombinatorik.permutation.multiset", { n: 11, k1: 5, k2: 4, k3: 2 })).toBe("6930");
+  it("summiert n über die Registry selbst", () => {
+    // Vorher musste ein Template `n` danebenschreiben und ein Constraint die
+    // Summe prüfen. Jetzt gibt es nichts mehr, was widersprechen könnte (D-26).
+    expect(via("kombinatorik.permutation.multiset", { k1: 5, k2: 4, k3: 2 })).toBe("6930");
+    expect(via("kombinatorik.permutation.multiset", { k1: 4, k2: 4, k3: 2, k4: 1 })).toBe("34650");
+  });
+
+  it("nimmt kein n mehr entgegen", () => {
+    // `strictObject`: Ein Template, das `n` aus alter Gewohnheit mitgibt, fällt
+    // beim content:check auf, statt still etwas anderes zu rechnen.
+    expect(via("kombinatorik.permutation.multiset", { n: 11, k1: 4, k2: 4, k3: 2, k4: 1 })).toBeUndefined();
   });
 
   it("nimmt zwei bis vier Gruppen entgegen", () => {
     // Der Fall, an dem aufg_00004 gescheitert ist: MISSISSIPPI hat vier
     // Buchstabengruppen, nicht drei.
-    expect(via("kombinatorik.permutation.multiset", { n: 11, k1: 4, k2: 4, k3: 2, k4: 1 })).toBe(
-      "34650",
-    );
-    expect(via("kombinatorik.permutation.multiset", { n: 5, k1: 3, k2: 2 })).toBe("10");
-    expect(via("kombinatorik.permutation.multiset", { n: 9, k1: 3, k2: 3, k3: 3 })).toBe("1680");
+    expect(via("kombinatorik.permutation.multiset", { k1: 4, k2: 4, k3: 2, k4: 1 })).toBe("34650");
+    expect(via("kombinatorik.permutation.multiset", { k1: 3, k2: 2 })).toBe("10");
+    expect(via("kombinatorik.permutation.multiset", { k1: 3, k2: 3, k3: 3 })).toBe("1680");
     // Eine Gruppe der Größe 0 gibt es nicht — sie wird weggelassen.
     expect(via("kombinatorik.permutation.multiset", { n: 5, k1: 3, k2: 2, k3: 0 })).toBeUndefined();
     // Fünf Gruppen kennt das Schema nicht.

@@ -8,7 +8,7 @@ const EXAMPLES: ReadonlyArray<readonly [ComputeRef, Record<string, number | stri
   ["arithmetik.add", { a: 12, b: 30 }, "42"],
   ["arithmetik.subtract", { a: 12, b: 30 }, "-18"],
   ["kombinatorik.permutation.factorial", { n: 5 }, "120"],
-  ["kombinatorik.permutation.multiset", { n: 11, k1: 4, k2: 4, k3: 2, k4: 1 }, "34650"], // MISSISSIPPI
+  ["kombinatorik.permutation.multiset", { k1: 4, k2: 4, k3: 2, k4: 1 }, "34650"], // MISSISSIPPI, n = 11 wird summiert
   ["kombinatorik.permutation.wort", { wort: "MISSISSIPPI" }, "34650"], // dasselbe, aus dem Wort gezählt
   ["kombinatorik.variation.ohne_wdh", { n: 10, k: 3 }, "720"],
   ["kombinatorik.variation.mit_wdh", { n: 10, k: 3 }, "1000"],
