@@ -49,6 +49,7 @@ Rückmeldung eingeholt — nicht durchgezogen.
 | `DECISIONS.md` | warum die naheliegende Variante *nicht* gewählt wurde | bevor man etwas Bestehendes umbaut |
 | `.claude/rules/*.md` | pfadgebundene Regeln, laden nur bei passenden Dateien | automatisch |
 | `SPEC-M<n>.md` | Arbeitsplan für einen laufenden Meilenstein, wird danach eingearbeitet und gelöscht | während des Meilensteins |
+| `BEOBACHTUNGEN.md` | was beim Üben aufgefallen ist, unbewertet gesammelt | bevor etwas Neues geplant wird |
 
 Regel bei Konflikt zwischen einer Chat-Anweisung und `SPEC.md`: nachfragen, nicht still
 abweichen. Eine bewusste Abweichung wird als neuer Eintrag in `DECISIONS.md` festgehalten.
@@ -138,8 +139,13 @@ Der Grund ist Erfahrung: Die letzten drei guten Anforderungen kamen aus dem Übe
 aus der Planung — die Datumsanzeige, die Definition der Medianzeit und der Befund, dass ein
 Thema sich wiederholt. Keine davon stand vorher in einem Dokument.
 
+Was beim Üben auffällt, sammelt sich in **[`BEOBACHTUNGEN.md`](BEOBACHTUNGEN.md)** —
+festgehalten, nicht sofort repariert. Aus diesen Notizen entsteht die nächste Planung.
+Wer wissen will, woran zuletzt etwas hakte, liest zuerst dort.
+
 **Wer neu in einen Chat kommt: bitte keinen nächsten Meilenstein vorschlagen**, solange
-nicht ausdrücklich danach gefragt wird. Was gemeldet wird, kommt aus dem Gebrauch.
+nicht ausdrücklich danach gefragt wird. Was gemeldet wird, kommt aus dem Gebrauch und
+steht in `BEOBACHTUNGEN.md`.
 
 **Weiterhin offen, aber nicht dringend:** Keine Tests für React-Komponenten (bräuchte
 jsdom + Testing Library, bewusst zurückgestellt). Es gibt keinen Login; alles läuft hinter

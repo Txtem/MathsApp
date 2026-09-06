@@ -71,6 +71,7 @@ npm run dev
 npm run build
 npm run lint
 npm run content:check   # validiert alle Templates (läuft als pretest mit)
+npm run db:reset        # Übungsdaten leeren, mit Sicherung; Schema und User bleiben
 npx prisma migrate dev --name <name>
 npx prisma studio
 npx vitest run          # CI-Lauf

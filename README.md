@@ -29,6 +29,7 @@ npm run dev
 npm run build
 npm run lint
 npm run content:check   # validiert alle Templates (läuft als pretest mit)
+npm run db:reset        # Übungsdaten leeren, mit Sicherung; Schema und User bleiben
 npx vitest run          # CI-Lauf
 npx vitest              # Watch
 npx prisma migrate dev --name <name>
@@ -43,5 +44,6 @@ npx prisma studio
 | [`SPEC.md`](SPEC.md) | **Normativ.** Architektur, Datenmodell, Template-Format, API-Verträge, Meilensteine. |
 | [`DECISIONS.md`](DECISIONS.md) | Warum die naheliegende Variante *nicht* gewählt wurde. Vor jedem Umbau lesen. |
 | [`CLAUDE.md`](CLAUDE.md) | Arbeitsregeln für Claude Code, aktueller Stand, Stack-Fallen. |
+| [`BEOBACHTUNGEN.md`](BEOBACHTUNGEN.md) | Was beim Üben aufgefallen ist — die Quelle für die nächste Planung. |
 
 Bei einem Widerspruch zwischen den Dokumenten gilt `SPEC.md`.

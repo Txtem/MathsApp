@@ -21,11 +21,20 @@ import { productionSources, readSource } from "@/lib/__testing__/sources";
 const EINSTIEGSPUNKT = /^app\/(.*\/)?(route\.ts|page\.tsx)$/;
 
 /**
- * Die eine Ausnahme: Die Stoppuhr des Aufgaben-Loops läuft im Browser und misst
- * eine Dauer, keinen Zeitpunkt. Sie entscheidet nichts — die gemessene Zeit geht
- * als `durationMs` an den Server und wird dort bewertet.
+ * Zwei Ausnahmen, beide namentlich, damit sie sichtbar bleiben.
+ *
+ * Die **Stoppuhr** des Aufgaben-Loops läuft im Browser und misst eine Dauer,
+ * keinen Zeitpunkt. Sie entscheidet nichts — die gemessene Zeit geht als
+ * `durationMs` an den Server und wird dort bewertet.
+ *
+ * Das **Reset-Skript** ist kein Anfragepfad, sondern ein Kommandozeilenwerkzeug.
+ * Sein `new Date()` erzeugt den Zeitstempel im Namen der Sicherungsdatei und
+ * geht in keine Berechnung ein.
  */
-const STOPPUHR = "app/(app)/practice/[sessionId]/practice-loop.tsx";
+const AUSNAHMEN: readonly string[] = [
+  "app/(app)/practice/[sessionId]/practice-loop.tsx",
+  "scripts/reset-practice-data.ts",
+];
 
 /** `new Date()` und `Date.now()` ohne Argument — `new Date(now.getTime() + x)` bleibt erlaubt. */
 const UHR = /new Date\(\s*\)|Date\.now\(\s*\)/;
@@ -39,15 +48,15 @@ describe("eine Uhr pro Anfrage", () => {
 
   it("liest die Uhr nur an den Einstiegspunkten", () => {
     const verstoesse = dateien
-      .filter((datei) => !EINSTIEGSPUNKT.test(datei) && datei !== STOPPUHR)
+      .filter((datei) => !EINSTIEGSPUNKT.test(datei) && !AUSNAHMEN.includes(datei))
       .filter((datei) => UHR.test(readSource(datei)));
 
     expect(verstoesse).toEqual([]);
   });
 
-  it("hält die Ausnahme aktuell", () => {
+  it.each(AUSNAHMEN)("hält die Ausnahme %s aktuell", (datei) => {
     // Eine Ausnahme, die nichts mehr trifft, ist eine Ausnahme ohne Grund.
-    expect(dateien).toContain(STOPPUHR);
-    expect(UHR.test(readSource(STOPPUHR))).toBe(true);
+    expect(dateien).toContain(datei);
+    expect(UHR.test(readSource(datei))).toBe(true);
   });
 });
