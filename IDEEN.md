@@ -18,6 +18,8 @@
 Der größte Posten. Drei Funktionen, die zusammengehören, weil alle drei dieselbe Frage
 aufwerfen: Was zählt als „gekonnt"?
 
+Kommentar: Als gekonnt zählt nur "Richtig" (egal ob beim 1. oder 2. Versuch), es geht beim 2. Versuch nicht nur darum, zum Denken anzuregen, sondern auch um petty Mistakes zu vermeiden, also z.b. wenn man einfach eine Zahl falsch eintippt aber offensichtlich den richtigen Gedanken hatte. Eine zweite Möglichkeit regt zum Denken an und vermeidet petty Mistakes. Es wird jedoch in der Statistik erfasst bzw. angezeigt, falls man später noch Änderungen vornehmen will
+
 ### Die Darstellung, wie sie gewünscht ist
 
 Ein Kreisdiagramm mit vier Kategorien:
