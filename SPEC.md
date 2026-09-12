@@ -977,9 +977,15 @@ identische Aufgabe, weiche Abwertung auf zuletzt gestellte Templates, Faktoren g
 wiederholte sich ab der achten; jetzt sind es zwanzig, bei Abdeckung der Schwierigkeiten
 1 bis 4. Kein Template liegt mehr unter 20 Parameterkombinationen. Zahlen in D-28.
 
-**Danach: benutzen.** Kein Meilenstein — die App wird zum Üben verwendet, bevor
-weitergebaut wird. Die drei letzten guten Anforderungen kamen aus dem Gebrauch und nicht
-aus der Planung.
+**M2e — Korrekturen aus der Übungsphase** ✅
+Neun Beobachtungen aus den ersten Übungssitzungen, keine davon eine falsch bewertete
+Antwort. Behoben: Funktionsnamen buchstabenunabhängig, geschärfte Formathinweise, gerundete
+Musterlösung neben dem exakten Wert, Aufgabe bleibt nach dem Beantworten sichtbar,
+Anzeigewerte im Lösungsweg (D-29).
+
+**Dazwischen und danach: benutzen.** Kein Meilenstein — die App wird zum Üben verwendet,
+bevor weitergebaut wird. Die letzten guten Anforderungen kamen aus dem Gebrauch und nicht
+aus der Planung; M2e ist der Beleg dafür.
 
 **M2c — Auth.js**
 Ersetzt ausschließlich die Implementierung von `getCurrentUserId()`, dazu Login-Oberfläche

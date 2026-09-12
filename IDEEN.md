@@ -1,7 +1,8 @@
 # Ideen
 
-> Bewertete Vorhaben, die noch keinem Meilenstein zugeordnet sind. Übernimmt Abschnitt E
-> aus `SPEC-M2e.md`, damit die Entwürfe nicht mit jener Datei verschwinden.
+> Bewertete Vorhaben, die noch keinem Meilenstein zugeordnet sind. Entstanden aus dem
+> Sammelabschnitt des M2e-Arbeitsplans, damit die Entwürfe nicht mit jener Datei
+> verschwanden.
 >
 > Abgrenzung: In `BEOBACHTUNGEN.md` steht, was beim Üben aufgefallen ist — roh, ohne
 > Deutung. Hier steht, was daraus geworden ist, sobald jemand darüber nachgedacht hat.

@@ -109,7 +109,12 @@ describe("Registry-Verträge", () => {
     it("nennt die Zerlegung, die die Funktion selbst abgeleitet hat", () => {
       // Der Fall aus D-26: Das Template kennt nur das Wort.
       expect(registry["kombinatorik.permutation.wort"].run({ wort: "MISSISSIPPI" })?.display).toEqual(
-        { n: "11", nenner: "1! \\cdot 4! \\cdot 4! \\cdot 2!" },
+        {
+          n: "11",
+          nenner: "1! \\cdot 4! \\cdot 4! \\cdot 2!",
+          kuerzung: "= \\frac{ 11! }{ 4! \\cdot 4! \\cdot 2! } ",
+          wiederholungen: "I viermal, S viermal, P zweimal",
+        },
       );
       expect(registry["kombinatorik.permutation.multiset"].run({ k1: 3, k2: 5, k3: 2 })?.display).toEqual(
         { n: "10", nenner: "3! \\cdot 5! \\cdot 2!" },

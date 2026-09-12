@@ -50,6 +50,7 @@ Rückmeldung eingeholt — nicht durchgezogen.
 | `.claude/rules/*.md` | pfadgebundene Regeln, laden nur bei passenden Dateien | automatisch |
 | `SPEC-M<n>.md` | Arbeitsplan für einen laufenden Meilenstein, wird danach eingearbeitet und gelöscht | während des Meilensteins |
 | `BEOBACHTUNGEN.md` | was beim Üben aufgefallen ist, unbewertet gesammelt | bevor etwas Neues geplant wird |
+| `IDEEN.md` | was daraus geworden ist: bewertete Vorhaben ohne Meilenstein, mit ihren offenen Fragen | wenn ein Vorhaben ansteht |
 
 Regel bei Konflikt zwischen einer Chat-Anweisung und `SPEC.md`: nachfragen, nicht still
 abweichen. Eine bewusste Abweichung wird als neuer Eintrag in `DECISIONS.md` festgehalten.
@@ -127,21 +128,36 @@ verschiedene und wiederholte sich ab der achten; jetzt sind es zwanzig, und das 
 die Schwierigkeiten 1 bis 4 ab. Kein Template warnt mehr wegen zu kleinem Parameterraum.
 Die Zahlen vorher und nachher stehen in D-28. 1104 Tests grün.
 
+**M2e — Korrekturen aus der Übungsphase** ✅ Neun Beobachtungen aus den ersten Sitzungen,
+davon vier behoben. Funktionsnamen werden kleingeschrieben nachgeschlagen, die
+Formathinweise sagen „kein LaTeX", bei `round_to` stehen gerundeter und exakter Wert
+nebeneinander, Frage und eigene Antwort bleiben nach dem Beantworten sichtbar, und die
+Lösungswege zeigen eingesetzte Zahlen statt Formelbuchstaben (D-29). 1192 Tests grün.
+
+**Bemerkenswert daran:** Keine der neun war eine falsch bewertete Antwort. Bei den zwei
+Lesefehlern blieb der Versuch nach D-04 offen und zählte nicht als falsch.
+
 **Damit ist die App für ihren Zweck fertig.**
 
 ## 5a. Was jetzt ansteht: benutzen
 
 Der nächste Schritt ist kein Meilenstein. Die App kann, was sie können sollte — Aufgaben
 erzeugen, richtig bewerten, sich an die Schwächen des Übenden anpassen und ehrlich sagen,
-wo er steht. Sie wird jetzt ein paar Wochen zum Üben verwendet, bevor weitergebaut wird.
+wo er steht. Sie wird ein paar Wochen zum Üben verwendet, bevor weitergebaut wird; M2e war
+eine Pause darin und keine Ablösung.
 
 Der Grund ist Erfahrung: Die letzten drei guten Anforderungen kamen aus dem Üben und nicht
 aus der Planung — die Datumsanzeige, die Definition der Medianzeit und der Befund, dass ein
 Thema sich wiederholt. Keine davon stand vorher in einem Dokument.
 
 Was beim Üben auffällt, sammelt sich in **[`BEOBACHTUNGEN.md`](BEOBACHTUNGEN.md)** —
-festgehalten, nicht sofort repariert. Aus diesen Notizen entsteht die nächste Planung.
-Wer wissen will, woran zuletzt etwas hakte, liest zuerst dort.
+festgehalten, nicht sofort repariert. Wer wissen will, woran zuletzt etwas hakte, liest
+zuerst dort.
+
+Was daraus geworden ist, sobald jemand darüber nachgedacht hat, steht in
+**[`IDEEN.md`](IDEEN.md)**: bewertete Vorhaben, die noch keinem Meilenstein zugeordnet
+sind, jeweils mit den Fragen, die sie noch offen lassen. Ein Eintrag dort ist keine
+Zusage.
 
 **Wer neu in einen Chat kommt: bitte keinen nächsten Meilenstein vorschlagen**, solange
 nicht ausdrücklich danach gefragt wird. Was gemeldet wird, kommt aus dem Gebrauch und

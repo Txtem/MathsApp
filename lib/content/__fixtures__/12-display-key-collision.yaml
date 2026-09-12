@@ -1,0 +1,21 @@
+# Prüfung 10: `kombinatorik.permutation.multiset` liefert den Anzeigewert `n`
+# (die Summe der Gruppen). Dieses Template führt zugleich einen Parameter `n` —
+# im Lösungsweg wäre dann nicht mehr zu sehen, welcher der beiden Werte gerendert
+# wurde.
+#
+# Dieses Fixture meldet **zwei** Codes, nicht einen: Das Eingabeschema der
+# Compute-Funktion ist ein `strictObject` über k1..k4 und lehnt das überzählige
+# `n` ebenfalls ab (Prüfung 5). Anders ist der Fall gegen die heutige Registry
+# nicht zu bauen — der Test prüft deshalb auf Enthaltensein statt auf Gleichheit.
+id: aufg_90012
+version: 1
+topic: kombinatorik.permutation
+difficulty: 1
+target_time_seconds: 30
+compute_ref: kombinatorik.permutation.multiset
+answer_type: integer
+param_spec:
+  k1: { type: int, min: 2, max: 4 }
+  k2: { type: int, min: 2, max: 4 }
+  n: { type: int, min: 4, max: 8 }
+question_text: "{{k1}} rote und {{k2}} blaue Kugeln, zusammen {{n}} Stück."

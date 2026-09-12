@@ -45,5 +45,6 @@ npx prisma studio
 | [`DECISIONS.md`](DECISIONS.md) | Warum die naheliegende Variante *nicht* gewählt wurde. Vor jedem Umbau lesen. |
 | [`CLAUDE.md`](CLAUDE.md) | Arbeitsregeln für Claude Code, aktueller Stand, Stack-Fallen. |
 | [`BEOBACHTUNGEN.md`](BEOBACHTUNGEN.md) | Was beim Üben aufgefallen ist — die Quelle für die nächste Planung. |
+| [`IDEEN.md`](IDEEN.md) | Bewertete Vorhaben ohne Meilenstein, mit ihren offenen Fragen. |
 
 Bei einem Widerspruch zwischen den Dokumenten gilt `SPEC.md`.

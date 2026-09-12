@@ -4,11 +4,13 @@ import { binomial, factorial, permutations } from "../expr/bigmath";
 import * as Q from "../expr/rational";
 import { type AnyComputeEntry, defineCompute } from "../types";
 import { add, subtract } from "./arithmetik";
+import { factorialProduct, reductionStep, repeatedLetters } from "./display";
 import {
   combinationsWithRepetition,
   cyclicPermutations,
   distributions,
   letterCounts,
+  letterGroups,
   letterPermutations,
   multisetPermutations,
 } from "./kombinatorik";
@@ -106,10 +108,6 @@ const HypergeometricAtLeastOne = z
 
 const big = (value: number): bigint => BigInt(value);
 
-/** `4! \cdot 4! \cdot 2! \cdot 1!` — der Nenner einer Permutation mit Wiederholung. */
-const factorialProduct = (counts: readonly number[]): string =>
-  counts.map((count) => `${count}!`).join(" \\cdot ");
-
 /** Die angegebenen Gruppen, ohne die weggelassenen. */
 const groupsOf = (...sizes: readonly (number | undefined)[]): number[] =>
   sizes.filter((size): size is number => size !== undefined);
@@ -167,10 +165,12 @@ export const registry = {
     compute: ({ wort }) => Q.fromBigInt(letterPermutations(wort)),
     // Der Fall, an dem C-1 hing: Seit D-26 kennt das Template nur das Wort, und
     // der Lösungsweg konnte die Zerlegung nicht mehr zeigen.
-    displayKeys: ["n", "nenner"],
+    displayKeys: ["n", "nenner", "kuerzung", "wiederholungen"],
     display: ({ wort }) => ({
       n: String(wort.length),
       nenner: factorialProduct(letterCounts(wort)),
+      kuerzung: reductionStep(wort.length, letterCounts(wort)),
+      wiederholungen: repeatedLetters(letterGroups(wort)),
     }),
   }),
 

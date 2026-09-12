@@ -97,12 +97,29 @@ describe("Anzeigewerte im Lösungsweg", () => {
 
   describe("collidingDisplayKeys", () => {
     /**
-     * Direkt getestet und ohne YAML-Fixture: Gegen die heutige Registry lässt
-     * sich der Fall nicht bauen. Jeder Eintrag mit Anzeigewerten hat ein
-     * `strictObject` als Eingabeschema, ein Template mit dem kollidierenden
-     * Parameter fiele also schon über Prüfung 5 und das Fixture meldete zwei
-     * Codes statt einem. Die Prüfung sichert einen künftigen Eintrag ab.
+     * Zwei Ebenen, und beide werden gebraucht: die reine Funktion für die Regel
+     * selbst, und das Fixture dafür, dass der Loader sie überhaupt aufruft.
+     * Ohne das zweite liefe der Funktionstest an totem Code vorbei — dieselbe
+     * Lücke wie bei der Parametersuche in M2b R-3.
      */
+    it("wird vom Loader tatsächlich aufgerufen", () => {
+      // Das Fixture meldet zwei Codes: `n` kollidiert mit dem Anzeigewert und
+      // ist zugleich ein überzähliger Parameter für das `strictObject`. Deshalb
+      // wird auf Enthaltensein geprüft, nicht auf Gleichheit.
+      const codes = codesOf("12-display-key-collision.yaml");
+      expect(codes).toContain("display_key_collision");
+      expect(codes).toContain("compute_input_mismatch");
+    });
+
+    it("nennt den kollidierenden Namen in der Meldung", () => {
+      const entry = readTemplateFile(join(FIXTURES, "12-display-key-collision.yaml"));
+      const kollision = checkTemplate(entry, topics).find(
+        (issue) => issue.code === "display_key_collision",
+      );
+      expect(kollision?.message).toContain('"n"');
+      expect(kollision?.severity).toBe("error");
+    });
+
     it("findet einen Namen, der beides ist", () => {
       expect(collidingDisplayKeys(new Set(["n", "k"]), new Set(["n", "nenner"]))).toEqual(["n"]);
     });

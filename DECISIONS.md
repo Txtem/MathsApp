@@ -842,9 +842,12 @@ Heißt ein Anzeigewert wie ein Parameter, überdeckt still das eine das andere, 
 gerenderten Text ist nicht zu sehen, welcher Wert gewonnen hat. Das ist keine
 Geschmacksfrage, sondern eine stille falsche Anzeige — also Ladefehler.
 
-Ein Negativ-Fixture gibt es dafür ausnahmsweise nicht; die Begründung steht in
-`lib/content/__fixtures__/_README.md`, und die Regel ist als reine Funktion
-`collidingDisplayKeys` direkt getestet.
+Geprüft wird das auf zwei Ebenen, und beide werden gebraucht: die reine Funktion
+`collidingDisplayKeys` für die Regel, und ein Negativ-Fixture dafür, dass der Loader sie
+überhaupt aufruft. Das Fixture meldet zwei Codes — gegen die heutige Registry ist der Fall
+nur zusammen mit einem überzähligen Parameter zu bauen —, also prüft der Test auf
+Enthaltensein statt auf Gleichheit. Ein Funktionstest allein wäre die Lücke aus M2b R-3:
+Er liefe auch dann durch, wenn niemand die Funktion aufruft.
 
 ### Warum `question_text` sie nicht bekommt
 

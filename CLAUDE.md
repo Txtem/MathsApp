@@ -18,7 +18,7 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M2d (Content-Tiefe)** abgeschlossen — die App ist für ihren Zweck fertig
+- Meilenstein: **M2e (Korrekturen aus der Übungsphase)** abgeschlossen
 - M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
 - M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
@@ -44,12 +44,19 @@ die naheliegende Variante nicht gewählt wurde.
   lassen (D-26); ein einparametriges Template weitet lieber seinen Bereich, als einen
   kosmetischen zweiten Parameter zu bekommen (D-27). Zahlen in D-28 —
   1104 Tests grün
+- M2e: ein kurzer Meilenstein zwischen zwei Übungsabschnitten, aus neun Beobachtungen.
+  Funktionsnamen werden kleingeschrieben nachgeschlagen (`COMBINATIONS(10,3)`); jeder
+  Formathinweis sagt „kein LaTeX"; bei `round_to` stehen die gerundete Zahl und der exakte
+  Wert nebeneinander; Frage und eigene Antwort bleiben nach dem Beantworten sichtbar;
+  Compute-Funktionen liefern Anzeigewerte, damit Lösungswege eingesetzte Zahlen zeigen
+  (D-29) — 1192 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-  zurückgestellt); `kombinatorik.verteilung` hat nur ein Template
-- Als Nächstes: **erst einmal benutzen.** Die App kann, was sie können sollte. Bevor M2c
-  (Auth.js) beginnt, wird sie ein paar Wochen zum Üben verwendet — die letzten drei guten
-  Anforderungen kamen aus dem Üben und nicht aus der Planung. **Keinen neuen Meilenstein
-  vorschlagen, solange das nicht gesagt wird.**
+  zurückgestellt); `kombinatorik.verteilung` hat nur ein Template; „Reihenfolge" in den
+  Aufgabentexten wartet auf eine Formulierung aus dem Unterricht
+- Als Nächstes: **weiter üben.** Die Übungsphase läuft; M2e hat nur Reibung beseitigt, die
+  dabei gestört hat. Was auffällt, kommt nach `BEOBACHTUNGEN.md`; was daraus geworden ist,
+  steht in `IDEEN.md`. **Keinen neuen Meilenstein vorschlagen, solange das nicht gesagt
+  wird.**
 
 ### Lokale Einrichtung
 

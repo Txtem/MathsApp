@@ -70,9 +70,19 @@ export function cyclicPermutations(n: bigint): bigint {
  * Template weggenommen).
  */
 export function letterCounts(word: string): readonly number[] {
+  return letterGroups(word).map(([, count]) => count);
+}
+
+/**
+ * Buchstabe und Häufigkeit, in der Reihenfolge des ersten Auftretens.
+ *
+ * Für die Anzeige gebraucht: Der Lösungsweg nennt die Wiederholungen im
+ * Klartext („davon T zweimal"), und dafür reicht die Zahl allein nicht.
+ */
+export function letterGroups(word: string): readonly (readonly [string, number])[] {
   const counts = new Map<string, number>();
   for (const letter of word) counts.set(letter, (counts.get(letter) ?? 0) + 1);
-  return [...counts.values()];
+  return [...counts.entries()];
 }
 
 /** Kombinationen mit Wiederholung: `C(n + k - 1, k)`. */

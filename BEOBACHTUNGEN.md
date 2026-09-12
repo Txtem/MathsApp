@@ -101,3 +101,29 @@ Auch grobe Wünsche gehören hierher; sie müssen nicht ausformuliert sein.
 Alles, was in keine Kategorie passt. Lieber hier als gar nicht.
 
 -
+
+---
+
+# Erledigt
+
+Nicht gelöscht, sondern abgehakt — die Liste ist auch eine Historie. Wer wissen will,
+warum etwas so ist, wie es ist, findet hier den Anlass und den Eintrag dazu.
+
+## Erste Übungssitzungen, aufgearbeitet in M2e
+
+Neun Beobachtungen. **Keine davon war eine falsch bewertete Antwort.** Bei den beiden
+Lesefehlern blieb der Versuch nach D-04 offen und zählte nicht als falsch — die
+Entscheidung hat gehalten.
+
+| # | Beobachtung | Was daraus wurde |
+|---|---|---|
+| 1 | Lösungsformel ohne eingesetzte Werte | **erledigt**, M2e C-1. Compute-Funktionen liefern jetzt Anzeigewerte für den Lösungsweg (D-29). |
+| 2 | „Reihenfolge" bei Variation und Permutation irreführend | **offen.** Braucht ein Fachurteil, keine Codeänderung — die Formulierung kommt aus dem Unterricht. |
+| 3 | Hypergeometrisch: Werte immer ähnlich groß | **kein Befund.** Zufall innerhalb der Wertebereiche. |
+| 4 | Zweiter Versuch | **vertagt**, steht in `IDEEN.md`. Braucht eine Entscheidung am Datenmodell: Zählt ein im zweiten Anlauf richtiger Versuch als richtig? |
+| 5 | Tipps | **vertagt**, steht in `IDEEN.md`. Dieselbe offene Frage wie beim zweiten Versuch. |
+| 6 | Aufgabe nach dem Lösen nicht mehr sichtbar | **erledigt**, M2e C-3. Frage und eigene Antwort bleiben über dem Urteil stehen. |
+| 7 | `\frac{69}{420}` wird nicht gelesen | **entschieden und geschlossen**, M2e C-4. Der Formathinweis nennt die akzeptierte Schreibweise; der Parser bleibt, wie er ist. LaTeX kommt nicht in die Grammatik — danach kämen `\binom`, `\cdot`, `^{}`, und sie franst aus. |
+| 8 | Rundung verlangt, Bruch angezeigt | **erledigt**, M2e C-2. Bei `round_to` stehen die gerundete Zahl und der exakte Wert nebeneinander. |
+| 9 | `COMBINATIONS` wird nicht erkannt | **erledigt**, M2e C-6. Funktionsnamen werden kleingeschrieben nachgeschlagen. |
+

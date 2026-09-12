@@ -57,8 +57,10 @@ Parameter heißt. Sonst überdeckt still das eine das andere, und niemand sieht,
 Wert im Lösungsweg landet.
 
 Jede dieser Prüfungen hat ein Negativ-Fixture unter `lib/content/__fixtures__/`. Neue
-Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt. Die eine Ausnahme mit
-ihrer Begründung steht in `lib/content/__fixtures__/_README.md`.
+Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt — und zwar auch dann,
+wenn der Fall nur zusammen mit einem zweiten Befund zu bauen ist: Dann prüft der Test auf
+Enthaltensein statt auf Gleichheit. Ein Test der reinen Prüffunktion allein reicht nicht,
+er belegt nicht, dass der Loader sie aufruft.
 
 ## Anzeigewerte für den Lösungsweg
 
