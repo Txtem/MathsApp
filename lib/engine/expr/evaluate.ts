@@ -22,7 +22,10 @@ import type { Comparison, Node } from "./parse";
  * Nutzereingaben ist er leer, dann ist jeder Bezeichner ein Fehler.
  *
  * Funktionen kommen ausschließlich aus dieser Whitelist. Es gibt keinen Weg,
- * aus einem Ausdruck heraus etwas anderes aufzurufen.
+ * aus einem Ausdruck heraus etwas anderes aufzurufen. Nachgeschlagen wird
+ * kleingeschrieben — `COMBINATIONS(10,3)` ist dasselbe wie `combinations(10,3)`.
+ * Bezeichner aus dem Scope bleiben dagegen buchstabengetreu: Sie kommen aus
+ * Constraints, wo `n` und `N` verschiedene Parameter sein dürfen.
  */
 
 type Scope = Readonly<Record<string, Num>>;
@@ -100,8 +103,12 @@ export function evaluate(node: Node, scope: Scope = {}): Num {
     }
 
     case "call": {
-      const entry = Object.prototype.hasOwnProperty.call(FUNCTIONS, node.name)
-        ? FUNCTIONS[node.name]
+      // Kleingeschrieben wird die Eingabe, nicht die Whitelist: `COMBINATIONS`
+      // und `Combinations` sind dieselbe Funktion. Für die Fehlermeldung bleibt
+      // die Schreibweise des Nutzers stehen — er soll sich wiedererkennen.
+      const name = node.name.toLowerCase();
+      const entry = Object.prototype.hasOwnProperty.call(FUNCTIONS, name)
+        ? FUNCTIONS[name]
         : undefined;
       if (!entry) throw new ExpressionError(`Funktion "${node.name}" ist nicht erlaubt.`);
       if (node.args.length !== entry.arity) {

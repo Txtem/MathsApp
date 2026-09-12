@@ -35,6 +35,9 @@ describe("grade numeric — exakt, ohne round_to", () => {
     "0.375e0",
     "3.75e-1",
     "combinations(3,1)/8",
+    // Grossgeschrieben: Das Komma bleibt Argumenttrenner, weil der Normalizer
+    // auf Buchstaben prüft und nicht auf die Whitelist. Siehe M2e C-6.
+    "COMBINATIONS(3,1)/8",
     "abs(-0.375)",
     "sqrt(9)/8",
     " 0.375 ",

@@ -91,6 +91,48 @@ describe("evaluate — Funktions-Whitelist", () => {
     expect(() => run("combinations(5)")).toThrow(ExpressionError);
     expect(() => run("sqrt(1,2)")).toThrow(ExpressionError);
   });
+
+  describe("Groß- und Kleinschreibung", () => {
+    /**
+     * Beim Üben getippt und nicht gelesen worden: `COMBINATIONS(10,3)`. Für den
+     * buchstabengetreuen Vergleich gab es keinen Grund. Nachgeschlagen wird
+     * jetzt kleingeschrieben; die Whitelist selbst bleibt, wie sie ist.
+     */
+    const schreibweisen = [
+      "combinations(10,3)",
+      "COMBINATIONS(10,3)",
+      "Combinations(10,3)",
+      "cOmBiNaTiOnS(10,3)",
+    ];
+
+    it.each(schreibweisen)("%s wird gelesen", (input) => {
+      expect(run(input)).toBe("120");
+    });
+
+    it("gilt für jede Funktion der Whitelist", () => {
+      expect(run("FACTORIAL(5)")).toBe("120");
+      expect(run("Sqrt(49)")).toBe("7");
+      expect(run("ABS(-7)")).toBe("7");
+      expect(run("Permutations(5,5)")).toBe("120");
+    });
+
+    it("macht nichts erlaubt, was es vorher nicht war", () => {
+      // Die Gegenprobe: Kleinschreiben ist kein Schlupfloch in die Whitelist.
+      for (const bad of ["SIN(1)", "Eval(1)", "REQUIRE(1)", "Constructor(1)", "TOSTRING(1)"]) {
+        expect(() => run(bad), bad).toThrow(ExpressionError);
+      }
+    });
+
+    it("nennt in der Fehlermeldung die Schreibweise des Nutzers", () => {
+      expect(() => run("SIN(1)")).toThrow(/"SIN"/);
+    });
+
+    it("lässt Namen aus dem Scope buchstabengetreu", () => {
+      // Constraints dürfen `n` und `N` als verschiedene Parameter führen.
+      expect(run("n", { n: intNum(1n) })).toBe("1");
+      expect(() => run("N", { n: intNum(1n) })).toThrow(ExpressionError);
+    });
+  });
 });
 
 describe("evaluate — Scope", () => {

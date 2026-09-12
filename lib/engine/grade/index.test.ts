@@ -18,8 +18,12 @@ describe("grade — answer_type integer, richtige Antworten", () => {
     ["5\u00B74\u00B73\u00B72\u00B71", "120"],
     ["(2+3)!", "120"],
     ["combinations(10,3)", "120"],
+    ["COMBINATIONS(10,3)", "120"], // beim Üben getippt, siehe M2e C-6
+    ["Combinations(10,3)", "120"],
     ["permutations(5,5)", "120"],
+    ["PERMUTATIONS(5,5)", "120"],
     ["sqrt(14400)", "120"],
+    ["SQRT(14400)", "120"],
     ["240/2", "120"],
     ["119+1", "120"],
     ["12e1", "120"],
