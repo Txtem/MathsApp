@@ -6,6 +6,7 @@ import {
   type CheckCode,
   checkAll,
   checkTemplate,
+  collidingDisplayKeys,
   errorsOf,
   MIN_PARAMETER_SPACE,
   warningsOf,
@@ -64,6 +65,66 @@ describe("Negativ-Fixtures — jede Prüfung schlägt an", () => {
     expect(issue?.source).toContain("01-unknown-compute-ref.yaml");
     expect(issue?.templateId).toBe("aufg_90001");
     expect(issue?.message).toContain("arithmetik.multiply");
+  });
+});
+
+describe("Anzeigewerte im Lösungsweg", () => {
+  /**
+   * Seit M2e C-1 darf `solution_text` außer Parametern und `result` auch die
+   * statisch deklarierten Anzeigewerte der Compute-Funktion nennen.
+   */
+  it("nimmt einen deklarierten Anzeigewert an", () => {
+    // aufg_00004 benutzt {{n}} und {{nenner}} aus `permutation.wort`.
+    const { templates } = readContent();
+    const wort = templates.find((template) => template.id === "aufg_00004");
+    expect(wort?.solution_text).toContain("{{nenner}}");
+    expect(errorsOf(checkTemplate({ template: wort!, source: "test" }, topics))).toEqual([]);
+  });
+
+  it("lehnt einen Namen ab, den weder param_spec noch die Funktion liefert", () => {
+    const { templates } = readContent();
+    const wort = templates.find((template) => template.id === "aufg_00004");
+    const kaputt = {
+      ...wort!,
+      solution_text: "$${{gibtesnicht}} = {{result}}$$",
+    };
+
+    const codes = errorsOf(checkTemplate({ template: kaputt, source: "test" }, topics)).map(
+      (issue) => issue.code,
+    );
+    expect(codes).toEqual(["unknown_solution_placeholder"]);
+  });
+
+  describe("collidingDisplayKeys", () => {
+    /**
+     * Direkt getestet und ohne YAML-Fixture: Gegen die heutige Registry lässt
+     * sich der Fall nicht bauen. Jeder Eintrag mit Anzeigewerten hat ein
+     * `strictObject` als Eingabeschema, ein Template mit dem kollidierenden
+     * Parameter fiele also schon über Prüfung 5 und das Fixture meldete zwei
+     * Codes statt einem. Die Prüfung sichert einen künftigen Eintrag ab.
+     */
+    it("findet einen Namen, der beides ist", () => {
+      expect(collidingDisplayKeys(new Set(["n", "k"]), new Set(["n", "nenner"]))).toEqual(["n"]);
+    });
+
+    it("meldet mehrere, sortiert", () => {
+      expect(collidingDisplayKeys(new Set(["b", "a"]), new Set(["a", "b"]))).toEqual(["a", "b"]);
+    });
+
+    it("meldet nichts, wenn sich nichts überschneidet", () => {
+      expect(collidingDisplayKeys(new Set(["wort"]), new Set(["n", "nenner"]))).toEqual([]);
+      expect(collidingDisplayKeys(new Set(["n"]), new Set())).toEqual([]);
+      expect(collidingDisplayKeys(new Set(), new Set(["n"]))).toEqual([]);
+    });
+
+    it("ist heute bei keinem echten Template verletzt", () => {
+      // Die Gegenprobe: Was der Content hergibt, kollidiert nicht.
+      const { templates } = readContent();
+      for (const template of templates) {
+        const codes = checkTemplate({ template, source: template.id }, topics).map((i) => i.code);
+        expect(codes, template.id).not.toContain("display_key_collision");
+      }
+    });
   });
 });
 

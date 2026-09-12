@@ -16,8 +16,8 @@ const via = (
   ref: keyof typeof registry,
   params: Record<string, number | string>,
 ): string | undefined => {
-  const result = registry[ref].run(params);
-  return result ? toStorageString(result) : undefined;
+  const computed = registry[ref].run(params);
+  return computed ? toStorageString(computed.result) : undefined;
 };
 
 describe("cyclicPermutations", () => {

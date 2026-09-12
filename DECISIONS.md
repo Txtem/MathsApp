@@ -805,3 +805,58 @@ naheliegende Content-Arbeit, aber keine Reparatur.
 Reproduzieren: `readContent()` plus `drawQuestion` mit geseedetem Zufall über alle Themen;
 die Parameterräume gibt `npm run content:check` aus.
 
+---
+
+## D-29 — Compute-Funktionen liefern Anzeigewerte für den Lösungsweg
+*2026-09-12, M2e*
+
+Ein Registry-Eintrag darf neben dem Ergebnis benannte Zwischenwerte zurückgeben.
+`solution_text` darf sie wie Parameter benutzen:
+
+```yaml
+$$\frac{ {{n}}! }{ {{nenner}} } = {{result}}$$
+```
+
+**Anlass, aus der Übungsphase.** Bei den Wort-Templates stand die Formel ohne Zahlen da:
+„die Fakultät der Wortlänge, geteilt durch die Fakultät jeder Buchstabenhäufigkeit —
+$\frac{n!}{k_1!\cdot k_2!\cdot\ldots}$". Eine Formel ohne eingesetzte Werte lehrt nichts.
+
+Das ist die Kehrseite von D-26. Dort bekam die Funktion das Wort und zählte selbst, damit
+niemand die Zerlegung danebenschreiben und sich verzählen kann. Richtig — aber damit kannte
+das Template die Zwischengrößen nicht mehr. **Wer etwas ableitet, muss es auch für die
+Anzeige hergeben.**
+
+### Warum statisch deklariert
+
+`displayKeys` steht am Eintrag, nicht im Rückgabewert allein. Sonst müsste die
+Content-Prüfung die Funktion ausführen, um zu wissen, ob `{{nenner}}` erlaubt ist — mit
+welchen Parametern? Statisch deklariert weiß Prüfung 3 es ohne einen einzigen Aufruf.
+
+Der Preis ist eine Liste, die von der Funktion abweichen kann. Dagegen steht ein Test in
+`registry.test.ts`: Für jeden Eintrag muss `display` genau die deklarierten Schlüssel
+liefern.
+
+### Warum eine Namenskollision ein harter Fehler ist
+
+Heißt ein Anzeigewert wie ein Parameter, überdeckt still das eine das andere, und im
+gerenderten Text ist nicht zu sehen, welcher Wert gewonnen hat. Das ist keine
+Geschmacksfrage, sondern eine stille falsche Anzeige — also Ladefehler.
+
+Ein Negativ-Fixture gibt es dafür ausnahmsweise nicht; die Begründung steht in
+`lib/content/__fixtures__/_README.md`, und die Regel ist als reine Funktion
+`collidingDisplayKeys` direkt getestet.
+
+### Warum `question_text` sie nicht bekommt
+
+Der Fragetext trägt den Dedup-Schlüssel aus D-25: Gleicher Text heißt gleiche Parameter,
+weil Prüfung 4 jeden gewürfelten Parameter im Fragetext erzwingt. Ein abgeleiteter Wert
+dort machte den Schlüssel von der Compute-Funktion abhängig — zwei Templates mit
+verschiedenen Parametern könnten denselben Fragetext erzeugen, und die Sperre gegen
+doppelte Aufgaben griffe daneben. Der Lösungsweg trägt keinen Schlüssel und darf.
+
+### Nicht gespeichert
+
+Die Anzeigewerte stehen in keiner Spalte. `renderSolution` bildet sie aus den
+persistierten Parametern neu — sie sind eine reine Funktion davon, und ein Feld mehr am
+`Attempt` wäre eine Datenmodelländerung für etwas Ableitbares.
+

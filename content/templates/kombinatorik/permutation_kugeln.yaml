@@ -43,8 +43,8 @@ question_text: |
   Farbfolgen sind möglich? Kugeln gleicher Farbe sind nicht unterscheidbar.
 
 solution_text: |
-  Permutation mit Wiederholung: alle Kugeln zusammen, geteilt durch die
+  Permutation mit Wiederholung: alle {{n}} Kugeln zusammen, geteilt durch die
   Fakultäten der Farbgruppen.
-  $$\frac{({{k1}} + {{k2}} + {{k3}})!}{ {{k1}}! \cdot {{k2}}! \cdot {{k3}}! } = {{result}}$$
+  $$\frac{({{k1}} + {{k2}} + {{k3}})!}{ {{nenner}} } = \frac{ {{n}}! }{ {{nenner}} } = {{result}}$$
 
 tags: [permutation, mit_wiederholung]

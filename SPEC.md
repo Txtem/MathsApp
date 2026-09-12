@@ -338,13 +338,14 @@ einen Zeilenumbruch an, der in der Aufgabe landet.
 
 ### Statische Prüfungen beim Laden
 
-Prüfung 1 bis 9 sind harte Fehler: Der Ladevorgang bricht ab, `npm run content:check`
-schlägt fehl. Prüfung 10 ist eine **Warnung** — sie hält nichts an.
+Prüfung 1 bis 10 sind harte Fehler: Der Ladevorgang bricht ab, `npm run content:check`
+schlägt fehl. Prüfung 11 ist eine **Warnung** — sie hält nichts an.
 Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 
 1. `compute_ref` existiert in der Registry.
 2. Jeder `{{x}}`-Platzhalter in `question_text` ist ein Key aus `param_spec`.
-3. Jeder `{{x}}` in `solution_text` ist ein Key aus `param_spec` **oder** `result`.
+3. Jeder `{{x}}` in `solution_text` ist ein Key aus `param_spec`, `result` **oder** ein
+   deklarierter Anzeigewert der Compute-Funktion (D-29).
 4. Jeder Key aus `param_spec` kommt im `question_text` vor **oder** hat `type: const`.
    Ungenutzte Zufallsparameter sind ein Template-Bug.
 5. Das Zod-Input-Schema der Compute-Funktion akzeptiert genau die `param_spec`-Keys.
@@ -355,7 +356,8 @@ Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 8. `round_to` ist nur bei `answer_type: numeric` gesetzt.
 9. In `constraints` kommen nur Namen aus `param_spec` plus `result` vor. Ein Constraint,
    das gar kein Vergleich ist, wird als eigener Befund (`invalid_constraint`) gemeldet.
-10. **Warnung:** Der Parameterraum umfasst mindestens 20 gültige Kombinationen.
+10. Kein Anzeigewert der Compute-Funktion heißt wie ein Parameter des Templates.
+11. **Warnung:** Der Parameterraum umfasst mindestens 20 gültige Kombinationen.
 
 ### Der Parameterraum
 
@@ -564,6 +566,15 @@ Wurf. Der Grund für diese Signatur steht in `DECISIONS.md`, D-14.
 Beziehungen zwischen Parametern (`k <= n`, `K <= N`, `n <= N`, `n − k <= N − K`) stehen als
 `refine` im Zod-Schema des Eintrags, nicht im Rechenteil. Jede Funktion braucht Tests mit
 `n = 0`, `k = 0`, `k = n`, `k > n` und einem großen `n`, bei dem `number` überliefe.
+
+### Anzeigewerte
+
+Ein Eintrag darf neben dem Ergebnis benannte Zwischenwerte liefern und deklariert deren
+Schlüssel **statisch** in `displayKeys` — damit Prüfung 3 sie kennt, ohne die Funktion
+auszuführen. `solution_text` darf sie wie Parameter benutzen, `question_text` nicht: Der
+Fragetext trägt den Dedup-Schlüssel aus D-25 und darf nicht von der Compute-Funktion
+abhängen. Gespeichert werden sie nicht; `renderSolution` bildet sie aus den persistierten
+Parametern neu. Siehe D-29.
 
 **Was ableitbar ist, wird nicht verlangt.** `permutation.multiset` bekommt die
 Gruppengrößen und summiert `n` selbst; `permutation.wort` bekommt das Wort und zählt die

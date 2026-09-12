@@ -8,6 +8,7 @@ import {
   combinationsWithRepetition,
   cyclicPermutations,
   distributions,
+  letterCounts,
   letterPermutations,
   multisetPermutations,
 } from "./kombinatorik";
@@ -105,6 +106,14 @@ const HypergeometricAtLeastOne = z
 
 const big = (value: number): bigint => BigInt(value);
 
+/** `4! \cdot 4! \cdot 2! \cdot 1!` — der Nenner einer Permutation mit Wiederholung. */
+const factorialProduct = (counts: readonly number[]): string =>
+  counts.map((count) => `${count}!`).join(" \\cdot ");
+
+/** Die angegebenen Gruppen, ohne die weggelassenen. */
+const groupsOf = (...sizes: readonly (number | undefined)[]): number[] =>
+  sizes.filter((size): size is number => size !== undefined);
+
 export const registry = {
   "arithmetik.add": defineCompute({
     input: Operands,
@@ -126,9 +135,19 @@ export const registry = {
   "kombinatorik.permutation.multiset": defineCompute({
     input: Multiset,
     compute: ({ k1, k2, k3, k4 }) => {
-      const groups = [k1, k2, k3, k4].flatMap((size) => (size === undefined ? [] : [big(size)]));
-      const n = groups.reduce((sum, size) => sum + size, 0n);
-      return Q.fromBigInt(multisetPermutations(n, groups));
+      const groups = groupsOf(k1, k2, k3, k4);
+      const n = groups.reduce((sum, size) => sum + size, 0);
+      return Q.fromBigInt(multisetPermutations(big(n), groups.map(big)));
+    },
+    // `n` ist die Summe und steht in keinem Parameter — ohne diesen Anzeigewert
+    // müsste der Lösungsweg `(3 + 5 + 2)!` schreiben statt `10!`.
+    displayKeys: ["n", "nenner"],
+    display: ({ k1, k2, k3, k4 }) => {
+      const groups = groupsOf(k1, k2, k3, k4);
+      return {
+        n: String(groups.reduce((sum, size) => sum + size, 0)),
+        nenner: factorialProduct(groups),
+      };
     },
   }),
 
@@ -136,12 +155,23 @@ export const registry = {
   "kombinatorik.permutation.zyklisch": defineCompute({
     input: z.strictObject({ n: z.number().int().min(1).max(N_MAX) }),
     compute: ({ n }) => Q.fromBigInt(cyclicPermutations(big(n))),
+    // Damit der Lösungsweg `(10 - 1)! = 9!` schreiben kann und nicht bei der
+    // unausgerechneten Klammer stehen bleibt.
+    displayKeys: ["n_minus_1"],
+    display: ({ n }) => ({ n_minus_1: String(n - 1) }),
   }),
 
   /** Permutationen der Buchstaben eines Wortes — die Häufigkeiten zählt die Funktion. */
   "kombinatorik.permutation.wort": defineCompute({
     input: Wort,
     compute: ({ wort }) => Q.fromBigInt(letterPermutations(wort)),
+    // Der Fall, an dem C-1 hing: Seit D-26 kennt das Template nur das Wort, und
+    // der Lösungsweg konnte die Zerlegung nicht mehr zeigen.
+    displayKeys: ["n", "nenner"],
+    display: ({ wort }) => ({
+      n: String(wort.length),
+      nenner: factorialProduct(letterCounts(wort)),
+    }),
   }),
 
   /** Variationen ohne Wiederholung: n! / (n-k)! */

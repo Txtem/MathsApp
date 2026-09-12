@@ -34,6 +34,6 @@ solution_text: |
   Eine Person wird als Bezugspunkt festgehalten, die übrigen {{n}} − 1 lassen sich
   frei anordnen. Gleichwertig: Jede der {{n}}! Anordnungen fällt mit ihren {{n}}
   Drehungen zusammen.
-  $$({{n}} - 1)! = {{result}}$$
+  $$({{n}} - 1)! = {{n_minus_1}}! = {{result}}$$
 
 tags: [permutation, zyklisch, rundtisch]

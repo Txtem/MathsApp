@@ -52,8 +52,21 @@ Kombinationen. Ein zu enges Template ist langweilig, nicht ungültig — `readCo
 solche Befunde im Bundle zurück, statt zu werfen. Wer eine neue Prüfung schreibt, wählt
 also zusätzlich ihre `severity`.
 
+Ebenfalls hart: Ein Anzeigewert der Compute-Funktion (`displayKeys`), der wie ein
+Parameter heißt. Sonst überdeckt still das eine das andere, und niemand sieht, welcher
+Wert im Lösungsweg landet.
+
 Jede dieser Prüfungen hat ein Negativ-Fixture unter `lib/content/__fixtures__/`. Neue
-Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt.
+Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt. Die eine Ausnahme mit
+ihrer Begründung steht in `lib/content/__fixtures__/_README.md`.
+
+## Anzeigewerte für den Lösungsweg
+
+Ein Registry-Eintrag darf neben dem Ergebnis benannte Zwischenwerte liefern —
+`displayKeys` deklariert sie **statisch**, damit die Content-Prüfung sie ohne Ausführung
+kennt. `solution_text` darf sie wie Parameter benutzen, `question_text` **nicht**: Der
+Fragetext trägt den Dedup-Schlüssel aus D-25 und darf nicht von der Compute-Funktion
+abhängen. Siehe D-29.
 
 Platzhalter sind `{{name}}` (D-05). Einfache Klammern gehören LaTeX und werden nie
 angefasst.

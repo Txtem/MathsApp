@@ -113,6 +113,6 @@ describe("Über die Registry", () => {
       draws: 2,
       hits: 1,
     });
-    expect(result && toStorageString(result)).toBe("7/15");
+    expect(result && toStorageString(result.result)).toBe("7/15");
   });
 });

@@ -31,6 +31,7 @@ export type CheckCode =
   | "round_to_without_numeric"
   | "unknown_constraint_name"
   | "invalid_constraint"
+  | "display_key_collision"
   | "small_parameter_space";
 
 export type Severity = "error" | "warning";
@@ -63,6 +64,22 @@ export interface LoadedTemplate {
 /** So viele Seeds werden probiert, um das Compute-Schema zu prüfen. */
 const SCHEMA_PROBE_SEEDS = 20;
 
+/**
+ * Namen, die zugleich Parameter und Anzeigewert sind.
+ *
+ * Als eigene Funktion, weil sich der Fall gegen die echte Registry nicht als
+ * Fixture bauen lässt: Jeder Eintrag mit Anzeigewerten hat ein `strictObject`
+ * als Eingabeschema, ein Template mit dem kollidierenden Parameter fiele also
+ * schon über Prüfung 5. Die Prüfung sichert einen künftigen Eintrag ab, nicht
+ * einen heutigen — und wird deshalb hier direkt getestet.
+ */
+export function collidingDisplayKeys(
+  paramKeys: ReadonlySet<string>,
+  displayKeys: ReadonlySet<string>,
+): readonly string[] {
+  return [...displayKeys].filter((name) => paramKeys.has(name)).sort();
+}
+
 export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly ContentIssue[] {
   const { template, source } = entry;
   const issues: ContentIssue[] = [];
@@ -85,13 +102,32 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
     }
   }
 
-  // 3. Im Lösungstext ist zusätzlich `result` erlaubt.
+  // Anzeigewerte der Compute-Funktion: statisch deklariert, damit sie hier ohne
+  // Ausführung bekannt sind (M2e C-1).
+  const displayKeys = isComputeRef(template.compute_ref)
+    ? new Set(registry[template.compute_ref].displayKeys)
+    : new Set<string>();
+
+  // 3. Im Lösungstext sind zusätzlich `result` und die Anzeigewerte erlaubt.
   if (template.solution_text !== undefined) {
     for (const name of placeholders(template.solution_text)) {
-      if (!paramKeys.has(name) && name !== RESULT_KEY) {
-        report("unknown_solution_placeholder", `solution_text nennt {{${name}}}, param_spec kennt es nicht.`);
+      if (!paramKeys.has(name) && name !== RESULT_KEY && !displayKeys.has(name)) {
+        report(
+          "unknown_solution_placeholder",
+          `solution_text nennt {{${name}}}, param_spec kennt es nicht und die Compute-Funktion liefert es auch nicht.`,
+        );
       }
     }
+  }
+
+  // 3a. Ein Anzeigewert darf nicht heißen wie ein Parameter — sonst überdeckt
+  //     still das eine das andere, und niemand sieht, welcher Wert gerendert
+  //     wurde. Harter Fehler, kein Hinweis.
+  for (const name of collidingDisplayKeys(paramKeys, displayKeys)) {
+    report(
+      "display_key_collision",
+      `Der Anzeigewert "${name}" von "${template.compute_ref}" heißt wie ein Parameter. Einer von beiden muss umbenannt werden.`,
+    );
   }
 
   // 4. Jeder gewürfelte Parameter wird im Aufgabentext verwendet. Ein

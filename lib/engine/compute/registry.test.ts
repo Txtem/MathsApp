@@ -62,7 +62,69 @@ describe("Registry-Verträge", () => {
   });
 
   it.each(EXAMPLES)("%s rechnet %j zu %s", (ref, params, expected) => {
-    expect(toStorageString(registry[ref].run(params) ?? { num: 0n, den: 1n })).toBe(expected);
+    expect(toStorageString(registry[ref].run(params)?.result ?? { num: 0n, den: 1n })).toBe(
+      expected,
+    );
+  });
+
+  describe("Anzeigewerte", () => {
+    /**
+     * `displayKeys` wird statisch deklariert, damit die Content-Prüfung sie
+     * kennt, ohne die Funktion auszuführen. Genau deshalb kann die Liste von
+     * dem abweichen, was `display` tatsächlich liefert — das prüft dieser Test.
+     */
+    it.each(EXAMPLES)("%s liefert genau die deklarierten Schlüssel", (ref, params) => {
+      const computed = registry[ref].run(params);
+      expect(computed).toBeDefined();
+      if (!computed) return;
+
+      expect(Object.keys(computed.display).sort()).toEqual([...registry[ref].displayKeys].sort());
+    });
+
+    it("liefert bei jedem Eintrag Text, nicht Zahlen", () => {
+      // `interpolate` setzt Strings ein; eine Zahl käme über `String()` zwar
+      // durch, aber LaTeX wie `4! \cdot 2!` ist ohnehin nur als Text möglich.
+      for (const [ref, params] of EXAMPLES) {
+        for (const value of Object.values(registry[ref].run(params)?.display ?? {})) {
+          expect(typeof value, ref).toBe("string");
+        }
+      }
+    });
+
+    it("hat heute genau bei diesen Einträgen welche", () => {
+      // Festgenagelt, damit ein neuer Anzeigewert auffällt und jemand prüft,
+      // ob ein Lösungsweg ihn benutzen sollte.
+      const mitAnzeige = Object.entries(registry)
+        .filter(([, entry]) => entry.displayKeys.length > 0)
+        .map(([ref]) => ref)
+        .sort();
+
+      expect(mitAnzeige).toEqual([
+        "kombinatorik.permutation.multiset",
+        "kombinatorik.permutation.wort",
+        "kombinatorik.permutation.zyklisch",
+      ]);
+    });
+
+    it("nennt die Zerlegung, die die Funktion selbst abgeleitet hat", () => {
+      // Der Fall aus D-26: Das Template kennt nur das Wort.
+      expect(registry["kombinatorik.permutation.wort"].run({ wort: "MISSISSIPPI" })?.display).toEqual(
+        { n: "11", nenner: "1! \\cdot 4! \\cdot 4! \\cdot 2!" },
+      );
+      expect(registry["kombinatorik.permutation.multiset"].run({ k1: 3, k2: 5, k3: 2 })?.display).toEqual(
+        { n: "10", nenner: "3! \\cdot 5! \\cdot 2!" },
+      );
+      expect(registry["kombinatorik.permutation.zyklisch"].run({ n: 10 })?.display).toEqual({
+        n_minus_1: "9",
+      });
+    });
+
+    it("benutzt nur Namen, die als Platzhalter zulässig sind", () => {
+      // `interpolate` erkennt `{{name}}` nur mit `[a-z][a-z0-9_]*`.
+      for (const entry of Object.values(registry)) {
+        for (const key of entry.displayKeys) expect(key).toMatch(/^[a-z][a-z0-9_]*$/);
+      }
+    });
   });
 
   it("verwirft Parameter, die nicht zum Schema passen, statt zu werfen", () => {
@@ -80,32 +142,32 @@ describe("Registry-Verträge", () => {
   it("liefert bei den Kombinatorikfunktionen ganze Zahlen", () => {
     for (const [ref, params] of EXAMPLES) {
       if (!ref.startsWith("kombinatorik") && !ref.startsWith("arithmetik")) continue;
-      const result = registry[ref].run(params);
-      expect(result).toBeDefined();
-      expect(result && isInteger(result), ref).toBe(true);
+      const computed = registry[ref].run(params);
+      expect(computed).toBeDefined();
+      expect(computed && isInteger(computed.result), ref).toBe(true);
     }
   });
 
   it("liefert bei den Wahrscheinlichkeiten Werte zwischen 0 und 1", () => {
     for (const [ref, params] of EXAMPLES) {
       if (!ref.startsWith("wahrscheinlichkeit")) continue;
-      const result = registry[ref].run(params);
-      expect(result).toBeDefined();
-      if (!result) continue;
-      expect(result.num >= 0n, ref).toBe(true);
-      expect(result.num <= result.den, ref).toBe(true);
+      const computed = registry[ref].run(params);
+      expect(computed).toBeDefined();
+      if (!computed) continue;
+      expect(computed.result.num >= 0n, ref).toBe(true);
+      expect(computed.result.num <= computed.result.den, ref).toBe(true);
     }
   });
 });
 
 describe("arithmetik über die Registry", () => {
   it("verliert bei großen Zahlen keine Präzision", () => {
-    const result = registry["arithmetik.add"].run({ a: 9007199254740991, b: 2 });
-    expect(result && toStorageString(result)).toBe("9007199254740993");
+    const computed = registry["arithmetik.add"].run({ a: 9007199254740991, b: 2 });
+    expect(computed && toStorageString(computed.result)).toBe("9007199254740993");
   });
 
   it("erlaubt ein negatives Ergebnis", () => {
-    const result = registry["arithmetik.subtract"].run({ a: 12, b: 30 });
-    expect(result && toStorageString(result)).toBe("-18");
+    const computed = registry["arithmetik.subtract"].run({ a: 12, b: 30 });
+    expect(computed && toStorageString(computed.result)).toBe("-18");
   });
 });

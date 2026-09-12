@@ -3,10 +3,9 @@ import { TemplateUnsatisfiableError, UnknownComputeRefError } from "./errors";
 import { checkConstraints, constraintVariables, RESULT_KEY } from "./generate/constraints";
 import { makeRng } from "./generate/rng";
 import { sampleParams } from "./generate/sample";
-import type { Rational } from "./expr/rational";
 import { toStorageString } from "./expr/rational";
 import { interpolate } from "./render/interpolate";
-import type { Instance, ParamValue, Template } from "./types";
+import type { ComputeOutput, Instance, ParamValue, Template } from "./types";
 
 /** Nach so vielen verworfenen Würfen gilt das Template als falsch konfiguriert. */
 export const MAX_TRIES = 50;
@@ -25,7 +24,7 @@ export const MAX_TRIES = 50;
  */
 export function makeDrawValidator(
   tpl: Template,
-): (params: Readonly<Record<string, ParamValue>>) => Rational | undefined {
+): (params: Readonly<Record<string, ParamValue>>) => ComputeOutput | undefined {
   if (!isComputeRef(tpl.compute_ref)) {
     throw new UnknownComputeRefError(tpl.id, tpl.compute_ref);
   }
@@ -40,12 +39,14 @@ export function makeDrawValidator(
   return (params) => {
     if (!checkConstraints(beforeCompute, params)) return undefined;
 
-    const result = entry.run(params);
-    if (result === undefined) return undefined;
+    const computed = entry.run(params);
+    if (computed === undefined) return undefined;
 
-    if (!checkConstraints(tpl.constraints, { ...params, [RESULT_KEY]: result })) return undefined;
+    if (!checkConstraints(tpl.constraints, { ...params, [RESULT_KEY]: computed.result })) {
+      return undefined;
+    }
 
-    return result;
+    return computed;
   };
 }
 
@@ -65,8 +66,8 @@ export function instantiate(tpl: Template, seed: string): Instance {
 
   for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
     const params = sampleParams(tpl.param_spec, rng);
-    const result = validate(params);
-    if (result === undefined) continue;
+    const computed = validate(params);
+    if (computed === undefined) continue;
 
     return {
       templateId: tpl.id,
@@ -74,7 +75,7 @@ export function instantiate(tpl: Template, seed: string): Instance {
       seed,
       params,
       questionText: interpolate(tpl.question_text, params),
-      expectedAnswer: toStorageString(result),
+      expectedAnswer: toStorageString(computed.result),
       answerType: tpl.answer_type,
     };
   }
@@ -93,5 +94,19 @@ export function renderSolution(
   expectedAnswer: string,
 ): string | undefined {
   if (tpl.solution_text === undefined) return undefined;
-  return interpolate(tpl.solution_text, { ...params, [RESULT_KEY]: expectedAnswer });
+
+  // Die Anzeigewerte werden aus den persistierten Parametern neu gebildet, nicht
+  // mitgespeichert: Sie sind eine reine Funktion der Parameter, und ein Feld
+  // mehr am `Attempt` wäre eine Datenmodelländerung für etwas Ableitbares.
+  const display = isComputeRef(tpl.compute_ref)
+    ? (registry[tpl.compute_ref].run(params)?.display ?? {})
+    : {};
+
+  // Parameter gewinnen bei Namensgleichheit. Vorkommen darf sie ohnehin nicht —
+  // ein `displayKey`, der wie ein Parameter heißt, ist ein harter Ladefehler.
+  return interpolate(tpl.solution_text, {
+    ...display,
+    ...params,
+    [RESULT_KEY]: expectedAnswer,
+  });
 }

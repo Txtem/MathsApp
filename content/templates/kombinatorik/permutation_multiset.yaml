@@ -74,7 +74,8 @@ question_text: |
 
 solution_text: |
   Permutation mit Wiederholung: die Fakultät der Wortlänge, geteilt durch die
-  Fakultät jeder Buchstabenhäufigkeit. Für {{wort}}:
-  $$\frac{n!}{k_1! \cdot k_2! \cdot \ldots} = {{result}}$$
+  Fakultät jeder Buchstabenhäufigkeit. {{wort}} hat {{n}} Buchstaben, gezählt von
+  links ergeben sich diese Häufigkeiten:
+  $$\frac{ {{n}}! }{ {{nenner}} } = {{result}}$$
 
 tags: [permutation, mit_wiederholung]

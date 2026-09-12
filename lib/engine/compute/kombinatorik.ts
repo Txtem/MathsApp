@@ -41,11 +41,8 @@ export function multisetPermutations(n: bigint, groups: readonly bigint[]): bigi
 export function letterPermutations(word: string): bigint {
   if (word.length === 0) throw new ExpressionError("Das Wort ist leer.");
 
-  const counts = new Map<string, number>();
-  for (const letter of word) counts.set(letter, (counts.get(letter) ?? 0) + 1);
-
   let result = factorial(BigInt(word.length));
-  for (const count of counts.values()) result /= factorial(BigInt(count));
+  for (const count of letterCounts(word)) result /= factorial(BigInt(count));
   return result;
 }
 
@@ -62,6 +59,20 @@ export function letterPermutations(word: string): bigint {
 export function cyclicPermutations(n: bigint): bigint {
   if (n < 1n) throw new ExpressionError("An einem runden Tisch sitzt mindestens einer.");
   return factorial(n - 1n);
+}
+
+/**
+ * Die Buchstabenhäufigkeiten eines Wortes, in der Reihenfolge des ersten
+ * Auftretens — so, wie man sie beim Lesen von links zählt.
+ *
+ * Exportiert für die Anzeige: `letterPermutations` teilt durch genau diese
+ * Fakultäten, und der Lösungsweg soll sie zeigen können (D-26 hatte sie dem
+ * Template weggenommen).
+ */
+export function letterCounts(word: string): readonly number[] {
+  const counts = new Map<string, number>();
+  for (const letter of word) counts.set(letter, (counts.get(letter) ?? 0) + 1);
+  return [...counts.values()];
 }
 
 /** Kombinationen mit Wiederholung: `C(n + k - 1, k)`. */
