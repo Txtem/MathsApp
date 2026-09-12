@@ -58,7 +58,15 @@ export type AnswerResponse =
     }
   | {
       readonly isCorrect: boolean;
+      /** Der exakte Wert in Speicherform: `"41"` oder `"46/91"`. */
       readonly expectedAnswer: string;
+      /**
+       * Nur bei `round_to`: derselbe Wert als gerundete Dezimalzahl — also das,
+       * wonach die Aufgabe tatsächlich gefragt hat. Ohne dieses Feld zeigte die
+       * Lösung einen Bruch, obwohl eine Dezimalzahl verlangt war, und wer
+       * richtig geantwortet hatte, zweifelte an sich selbst.
+       */
+      readonly expectedRounded?: string;
       readonly solutionText?: string;
     };
 
@@ -116,6 +124,7 @@ export const AnswerResponseSchema = z.union([
   z.strictObject({
     isCorrect: z.boolean(),
     expectedAnswer: z.string().min(1),
+    expectedRounded: z.string().min(1).optional(),
     solutionText: z.string().optional(),
   }),
 ]);

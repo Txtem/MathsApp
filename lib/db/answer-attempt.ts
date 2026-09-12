@@ -6,7 +6,8 @@ import {
   ParamsSchema,
 } from "@/lib/api/contracts";
 import type { ValidatedTemplate } from "@/lib/content/schema";
-import { grade } from "@/lib/engine/grade";
+import { toDecimalString } from "@/lib/engine/expr/rational";
+import { grade, toExpectedRational } from "@/lib/engine/grade";
 import { renderSolution } from "@/lib/engine/instantiate";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
@@ -115,6 +116,7 @@ export async function answerAttempt(
     response: {
       isCorrect: verdict.isCorrect,
       expectedAnswer,
+      ...roundedForm(current, expectedAnswer),
       ...buildSolution(current, attempt.params, expectedAnswer),
     },
   };
@@ -125,6 +127,23 @@ export async function answerAttempt(
  * Template seit dem Stellen der Aufgabe geändert, bleibt er weg — ein Text zu
  * einer anderen Version wäre schlechter als gar keiner.
  */
+/**
+ * Bei `round_to` zusätzlich die gerundete Dezimalzahl — das, wonach die Aufgabe
+ * gefragt hat. Der exakte Wert bleibt daneben stehen; beide zusammen sind die
+ * Antwort auf die Beobachtung, dass die Lösung einen Bruch zeigte, während der
+ * Aufgabentext eine gerundete Dezimalzahl verlangte.
+ *
+ * Gerundet wird hier und nicht im Browser, damit es dieselbe Funktion tut, die
+ * auch die Bewertung rundet — zwei Rundungen könnten auseinanderlaufen.
+ */
+function roundedForm(
+  template: ValidatedTemplate | undefined,
+  expectedAnswer: string,
+): { expectedRounded?: string } {
+  if (template?.round_to === undefined) return {};
+  return { expectedRounded: toDecimalString(toExpectedRational(expectedAnswer), template.round_to) };
+}
+
 function buildSolution(
   template: ValidatedTemplate | undefined,
   params: unknown,

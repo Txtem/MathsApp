@@ -161,6 +161,27 @@ describe("Response-Schemas passen zu dem, was der Server baut", () => {
     ).toBe(true);
   });
 
+  it("nimmt die gerundete Form dazu, wenn round_to gesetzt war", () => {
+    expect(
+      AnswerResponseSchema.safeParse({
+        isCorrect: true,
+        expectedAnswer: "46/91",
+        expectedRounded: "0.5055",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("lässt die gerundete Form bei einer unlesbaren Eingabe nicht durch", () => {
+    // Dieselbe Regel wie für expectedAnswer: Eine offene Aufgabe gibt nichts preis.
+    expect(
+      AnswerResponseSchema.safeParse({
+        isCorrect: false,
+        parseError: "unparseable",
+        expectedRounded: "0.5055",
+      }).success,
+    ).toBe(false);
+  });
+
   it("lehnt eine Antwort ab, die beides mischt oder nichts sagt", () => {
     expect(AnswerResponseSchema.safeParse({ isCorrect: true }).success).toBe(false);
     expect(AnswerResponseSchema.safeParse({ parseError: "unparseable" }).success).toBe(false);

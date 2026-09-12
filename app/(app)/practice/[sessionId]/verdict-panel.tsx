@@ -1,18 +1,40 @@
+import { expectedDisplay } from "@/components/expected-answer";
 import { MathText } from "@/components/MathText";
-import type { AnswerResponse } from "@/lib/api/contracts";
+import type { AnswerResponse, NextQuestionResponse } from "@/lib/api/contracts";
 
-/** Die geschlossene Aufgabe: Urteil, Musterlösung, Lösungsweg. */
+/**
+ * Die geschlossene Aufgabe: Frage, eigene Antwort, Urteil, Musterlösung,
+ * Lösungsweg.
+ *
+ * Frage und eigene Antwort bleiben stehen (M2e C-3). Vorher verschwand die
+ * Aufgabe in dem Moment, in dem der Lösungsweg erschien — und ein Lösungsweg
+ * ohne die Aufgabe daneben ist schwer nachzuvollziehen.
+ */
 export function VerdictPanel({
+  question,
+  givenAnswer,
   verdict,
   onNext,
 }: {
+  question: NextQuestionResponse;
+  givenAnswer: string;
   verdict: Extract<AnswerResponse, { expectedAnswer: string }>;
   onNext: () => void;
 }) {
   const correct = verdict.isCorrect;
+  const expected = expectedDisplay(verdict.expectedAnswer, verdict.expectedRounded);
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="text-2xl leading-relaxed text-zinc-900 dark:text-zinc-50">
+        <MathText text={question.questionText} />
+      </div>
+
+      <p className="text-sm text-zinc-500">
+        Deine Antwort:{" "}
+        <span className="font-mono text-zinc-900 dark:text-zinc-50">{givenAnswer}</span>
+      </p>
+
       <div
         role="status"
         className={
@@ -28,8 +50,23 @@ export function VerdictPanel({
               : "font-medium text-red-900 dark:text-red-100"
           }
         >
-          {correct ? "Richtig." : `Falsch. Richtig wäre ${verdict.expectedAnswer} gewesen.`}
+          {correct ? "Richtig." : `Falsch. Richtig wäre ${expected.primary} gewesen.`}
         </p>
+
+        {/*
+          Die gefragte und die exakte Form nebeneinander, sobald sie sich
+          unterscheiden — auch bei richtiger Antwort. Genau dort entstand der
+          Zweifel: gefragt war eine gerundete Dezimalzahl, angezeigt wurde ein
+          Bruch. Siehe M2e C-2.
+        */}
+        {expected.exact !== null ? (
+          <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+            {correct ? "Erwartet war " : "Gefragt war "}
+            <span className="font-mono">{expected.primary}</span>, exakt{" "}
+            <span className="font-mono">{expected.exact}</span>.
+          </p>
+        ) : null}
+
         {verdict.solutionText ? (
           <div className="mt-3 text-sm text-zinc-700 dark:text-zinc-300">
             <MathText text={verdict.solutionText} />

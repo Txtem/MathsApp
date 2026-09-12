@@ -55,6 +55,7 @@ async function seedAttempt(
     readonly templateVersion?: number;
     readonly userId?: string;
     readonly expectedAnswer?: string;
+    readonly answerType?: string;
   } = {},
 ): Promise<string> {
   const attempt = await prisma.attempt.create({
@@ -69,7 +70,7 @@ async function seedAttempt(
       topic: TOPIC,
       difficulty: 1,
       expectedAnswer: overrides.expectedAnswer ?? "720",
-      answerType: "integer",
+      answerType: overrides.answerType ?? "integer",
       status: overrides.status ?? "OPEN",
       createdAt: NOW,
     },
@@ -242,6 +243,89 @@ describe("answerAttempt — beantworten", () => {
     if (outcome.kind !== "answered") return;
     // `strictObject`: ein unbekanntes Feld in der Antwort fällt hier auf.
     expect(AnswerResponseSchema.safeParse(outcome.response).success).toBe(true);
+  });
+});
+
+describe("answerAttempt — gerundete Musterlösung", () => {
+  /**
+   * Beim Üben aufgefallen: Die Aufgabe verlangt eine auf vier Stellen gerundete
+   * Dezimalzahl, die Lösung zeigte danach `46/91`. Wer richtig geantwortet
+   * hatte, zweifelte an sich selbst. Siehe M2e C-2.
+   */
+  const MIT_RUNDUNG = {
+    ...TEMPLATE,
+    compute_ref: "wahrscheinlichkeit.hypergeometrisch.genau",
+    answer_type: "numeric",
+    round_to: 4,
+  } as unknown as ValidatedTemplate;
+
+  const mitRundung = (): AnswerDeps => ({
+    prisma,
+    findTemplate: (id) => (MIT_RUNDUNG.id === id ? MIT_RUNDUNG : undefined),
+  });
+
+  it("liefert die gerundete Form neben dem exakten Wert", async () => {
+    const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+
+    const outcome = await answerAttempt(mitRundung(), antwort(id, "0,5055"));
+
+    expect(outcome.kind).toBe("answered");
+    if (outcome.kind !== "answered") return;
+    // 46/91 = 0,50549… — auf vier Stellen 0,5055.
+    expect(outcome.response).toMatchObject({
+      isCorrect: true,
+      expectedAnswer: "46/91",
+      expectedRounded: "0.5055",
+    });
+  });
+
+  it("liefert sie auch bei falscher Antwort", async () => {
+    const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+
+    const outcome = await answerAttempt(mitRundung(), antwort(id, "0,4000"));
+
+    expect(outcome.kind).toBe("answered");
+    if (outcome.kind !== "answered") return;
+    expect(outcome.response).toMatchObject({ isCorrect: false, expectedRounded: "0.5055" });
+  });
+
+  it("rundet mit derselben Stellenzahl, nach der auch bewertet wird", async () => {
+    // Gegenprobe: Was der Grader als richtig durchgehen lässt, muss auch das
+    // sein, was die Lösung anzeigt.
+    const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+    const outcome = await answerAttempt(mitRundung(), antwort(id, "0.5055"));
+
+    expect(outcome.kind).toBe("answered");
+    if (outcome.kind !== "answered") return;
+    if (!("expectedRounded" in outcome.response)) throw new Error("expectedRounded fehlt");
+
+    const zweiter = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+    const nachgetippt = await answerAttempt(
+      mitRundung(),
+      antwort(zweiter, outcome.response.expectedRounded as string),
+    );
+    expect(nachgetippt.kind === "answered" && nachgetippt.response.isCorrect).toBe(true);
+  });
+
+  it("lässt das Feld weg, wenn das Template kein round_to hat", async () => {
+    const id = await seedAttempt();
+
+    const outcome = await answerAttempt(deps(), antwort(id, "720"));
+
+    expect(outcome.kind).toBe("answered");
+    if (outcome.kind !== "answered") return;
+    expect(outcome.response).not.toHaveProperty("expectedRounded");
+  });
+
+  it("lässt es auch weg, wenn das Template verschwunden ist", async () => {
+    // Ohne Template ist unbekannt, auf wie viele Stellen gerundet wurde.
+    const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+
+    const outcome = await answerAttempt(deps(null), antwort(id, "0,5055"));
+
+    expect(outcome.kind).toBe("answered");
+    if (outcome.kind !== "answered") return;
+    expect(outcome.response).not.toHaveProperty("expectedRounded");
   });
 });
 

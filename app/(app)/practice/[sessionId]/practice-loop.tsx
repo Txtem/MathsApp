@@ -30,6 +30,9 @@ type Phase =
     }
   | {
       readonly kind: "verdict";
+      /** Frage und eigene Antwort bleiben sichtbar, siehe M2e C-3. */
+      readonly question: NextQuestionResponse;
+      readonly givenAnswer: string;
       readonly verdict: Extract<AnswerResponse, { expectedAnswer: string }>;
     }
   | { readonly kind: "empty" }
@@ -115,7 +118,7 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
         answered: current.answered + 1,
         correct: current.correct + (verdict.isCorrect ? 1 : 0),
       }));
-      setPhase({ kind: "verdict", verdict });
+      setPhase({ kind: "verdict", question: phase.question, givenAnswer: answer, verdict });
     } catch (cause) {
       setPhase({ kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" });
     } finally {
@@ -191,7 +194,12 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       ) : null}
 
       {phase.kind === "verdict" ? (
-        <VerdictPanel verdict={phase.verdict} onNext={restart} />
+        <VerdictPanel
+          question={phase.question}
+          givenAnswer={phase.givenAnswer}
+          verdict={phase.verdict}
+          onNext={restart}
+        />
       ) : null}
     </div>
   );
