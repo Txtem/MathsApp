@@ -25,7 +25,7 @@ question_text: |
   vergeben. Wie viele verschiedene Reihenfolgen sind für das Treppchen möglich?
 
 solution_text: |
-  Variation ohne Wiederholung, die Reihenfolge zählt:
+  Variation ohne Wiederholung, die Reihenfolge bzw. Anordnung zählt:
   $$\frac{ {{n}}! }{ ({{n}}-{{k}})! } = {{result}}$$
 
 tags: [variation, ohne_wiederholung, geordnet]

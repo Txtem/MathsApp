@@ -171,10 +171,25 @@ Diese weichen von den Defaults ab, die du sonst annehmen würdest:
   Stelle von Invariante 2. Siehe D-12 und D-19.
 - Dateien unter 300 Zeilen. Vorher aufteilen.
 - Kleine, thematische Commits. Ein Meilenstein ist kein Commit.
-- Am Ende eines Meilensteins stoppen und Rückmeldung einholen, nicht durchziehen.
 - Bei Konflikt zwischen einer Chat-Anweisung und `SPEC.md`: nachfragen, nicht still
   vom Dokument abweichen. Eine bewusste Abweichung gehört als neuer Eintrag nach
   `DECISIONS.md`.
+
+## Abschluss eines Meilensteins
+
+- Stoppen und Rückmeldung einholen, nicht durchziehen.
+- `npx vitest run`, `npm run lint`, `npm run content:check` und `npm run build` laufen
+  durch, bevor der Meilenstein als abgeschlossen gilt.
+- Das Arbeitsdokument (`SPEC-M<n>.md`) wird in die bleibenden Dokumente eingearbeitet und
+  **erst danach** gelöscht.
+- **Vor dem Löschen prüfen, was ausschließlich dort steht** — Abschnitt für Abschnitt, und
+  für jeden Inhalt ohne Zuhause zuerst den Zielort bestimmen: `SPEC.md` (normativ),
+  `DECISIONS.md` (Begründung), `OVERVIEW.md` (Stand), `BEOBACHTUNGEN.md` (Rohmaterial),
+  `IDEEN.md` (bewertetes Vorhaben).
+  Das ist dreimal schiefgegangen: Abschnitt M der M2b-Restarbeiten, Abschnitt E aus
+  `SPEC-M2e.md` und zuletzt die neun Beobachtungen der ersten Übungssitzungen, die nur in
+  der Tabelle des Arbeitsplans standen. Jedes Mal wäre die Historie mit der Datei
+  verschwunden — der Arbeitsplan ist vergänglich, was darin entschieden wurde, nicht.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

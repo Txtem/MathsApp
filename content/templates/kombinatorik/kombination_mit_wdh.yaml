@@ -1,5 +1,5 @@
 id: aufg_00008
-version: 1
+version: 2
 topic: kombinatorik.kombination
 difficulty: 3
 target_time_seconds: 120
@@ -21,7 +21,7 @@ constraints: []
 
 question_text: |
   Eine Eisdiele bietet {{n}} Sorten an. Du bestellst {{k}} Kugeln und darfst
-  Sorten mehrfach wählen. Auf die Reihenfolge kommt es nicht an.
+  Sorten mehrfach wählen. Auf die Reihenfolge bzw. Anordnung kommt es nicht an.
   Wie viele verschiedene Bestellungen gibt es?
 
 solution_text: |

@@ -13,6 +13,13 @@ Kurz das Wichtigste:
 - `round_to` gibt es nur bei `answer_type: numeric`.
 - Änderung an `param_spec`, `compute_ref`, `constraints` oder an der Bedeutung
   des `question_text` ⇒ `version` erhöhen. Reine Tippfehler nicht.
+  **Eine Änderung am `solution_text` allein zieht keine neue Version nach sich.**
+  `templateVersion` steht für die Reproduzierbarkeit der *Aufgabe*: Aus Seed, `id` und
+  Version muss dieselbe Instanz wieder entstehen. Der Lösungsweg wird nicht je Versuch
+  gespeichert, sondern beim Anzeigen aus den persistierten Parametern neu gerendert —
+  ein besser erklärter Lösungsweg soll deshalb **rückwirkend** gelten, auch für Aufgaben
+  von gestern. Eine neue Version würde ihn den alten Attempts vorenthalten: Passt die
+  Version nicht mehr, zeigt `answer-attempt.ts` gar keinen Lösungsweg.
 
 ## Wie viele Aufgaben ein Template hergeben muss
 

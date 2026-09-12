@@ -118,7 +118,7 @@ Entscheidung hat gehalten.
 | # | Beobachtung | Was daraus wurde |
 |---|---|---|
 | 1 | Lösungsformel ohne eingesetzte Werte | **erledigt**, M2e C-1. Compute-Funktionen liefern jetzt Anzeigewerte für den Lösungsweg (D-29). |
-| 2 | „Reihenfolge" bei Variation und Permutation irreführend | **offen.** Braucht ein Fachurteil, keine Codeänderung — die Formulierung kommt aus dem Unterricht. |
+| 2 | „Reihenfolge" bei Variation und Permutation irreführend | **Fachurteil getroffen:** „Reihenfolge bzw. Anordnung", an vier Stellen. Drei sind geändert (`kombination_mit_wdh` Frage, `kombination_ohne_wdh` Lösung, `variation_ohne_wdh` Lösung); der Fragetext von `variation_ohne_wdh` liegt zur Entscheidung, weil er mit zwei Pluralen schwer liest. |
 | 3 | Hypergeometrisch: Werte immer ähnlich groß | **kein Befund.** Zufall innerhalb der Wertebereiche. |
 | 4 | Zweiter Versuch | **vertagt**, steht in `IDEEN.md`. Braucht eine Entscheidung am Datenmodell: Zählt ein im zweiten Anlauf richtiger Versuch als richtig? |
 | 5 | Tipps | **vertagt**, steht in `IDEEN.md`. Dieselbe offene Frage wie beim zweiten Versuch. |

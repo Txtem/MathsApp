@@ -25,7 +25,7 @@ question_text: |
   Wie viele verschiedene Ausschüsse sind möglich?
 
 solution_text: |
-  Kombination ohne Wiederholung, die Reihenfolge zählt nicht:
+  Kombination ohne Wiederholung, die Reihenfolge bzw. Anordnung zählt nicht:
   $$\binom{ {{n}} }{ {{k}} } = {{result}}$$
 
 tags: [kombination, ohne_wiederholung, ungeordnet]

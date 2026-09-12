@@ -18,7 +18,18 @@
 Der größte Posten. Drei Funktionen, die zusammengehören, weil alle drei dieselbe Frage
 aufwerfen: Was zählt als „gekonnt"?
 
-Kommentar: Als gekonnt zählt nur "Richtig" (egal ob beim 1. oder 2. Versuch), es geht beim 2. Versuch nicht nur darum, zum Denken anzuregen, sondern auch um petty Mistakes zu vermeiden, also z.b. wenn man einfach eine Zahl falsch eintippt aber offensichtlich den richtigen Gedanken hatte. Eine zweite Möglichkeit regt zum Denken an und vermeidet petty Mistakes. Es wird jedoch in der Statistik erfasst bzw. angezeigt, falls man später noch Änderungen vornehmen will
+### Festgelegt: richtig ist richtig, im ersten wie im zweiten Anlauf
+
+Als gekonnt zählt „richtig" — gleich ob im ersten oder im zweiten Versuch. Der zweite
+Anlauf ist nicht nur ein Denkanstoß: Er fängt auch Flüchtigkeitsfehler ab, eine vertippte
+Zahl bei sichtbar richtigem Gedanken. Beides zusammen ist der Grund, warum es ihn geben
+soll.
+
+**Diese Festlegung gilt für die Anzeige.** Dort stehen vier Kategorien, und die beiden
+Richtig-Varianten sind **grün und getrennt** — zusammengefasst wäre die Unterscheidung
+verloren, und sie wird erfasst, damit später noch etwas daran hängen kann.
+
+Für die **Steuerung** ist damit nichts entschieden. Die Frage weiter unten bleibt offen.
 
 ### Die Darstellung, wie sie gewünscht ist
 
@@ -26,8 +37,8 @@ Ein Kreisdiagramm mit vier Kategorien:
 
 - **Aufgegeben**
 - **Falsch**
-- **Richtig (1. Versuch)**
-- **Richtig (2. Versuch)**
+- **Richtig (1. Versuch)** — grün
+- **Richtig (2. Versuch)** — ebenfalls grün, in einer zweiten Abstufung
 
 Die Zahl der genutzten Tipps steht **außerhalb** des Diagramms, je Kategorie. Sie ist eine
 zweite Dimension, keine fünfte Kategorie — ein Tipp kann in jeder der vier Lagen benutzt
@@ -47,12 +58,19 @@ nur die erste Verwendung eines vorhandenen.
 
 ### Die offene Frage, die vor jeder Zeile Code geklärt sein muss
 
-Die vier Kategorien regeln die **Anzeige**. Sie regeln nicht die **Steuerung**: Welche
-davon zählt für die Erfolgsquote, die nach Abschnitt 10 die Themenauswahl steuert?
+Die Festlegung oben regelt die **Anzeige**. Sie regelt nicht die **Steuerung**: Welche
+Kategorie zählt für die Erfolgsquote, die nach Abschnitt 10 die Themenauswahl steuert?
 
 Zählt „richtig im zweiten Anlauf" dort als richtig, hält die App das Thema für gekonnt
 und stellt es seltener — obwohl der erste Anlauf danebenging. Zählt es als falsch, fühlt
 sich der zweite Versuch wertlos an.
+
+**Die Folge ist schärfer, als sie zuerst klingt.** Die Quote steuert zwei Dinge auf
+einmal. Wer fast jede Aufgabe im zweiten Anlauf trifft, bekommt eine Quote nahe 1,0 —
+und damit erstens einen niedrigen Score, das Thema kommt also seltener, und zweitens nach
+der Tabelle in Abschnitt 10 die Zielschwierigkeit 4. **Das schwächste Thema würde am
+seltensten und zugleich am schwersten gestellt.** Genau das Gegenteil dessen, wofür die
+Auswahl gebaut ist.
 
 Naheliegend, aber nicht entschieden: Für die Anzeige vier Kategorien, für die Steuerung
 nur der erste Anlauf. Dann misst die Auswahl weiterhin das, was sie immer gemessen hat,
