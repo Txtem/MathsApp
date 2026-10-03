@@ -46,7 +46,7 @@ export async function POST(
 
   const resumed = await resumeOpenAttempt(
     { prisma, findTemplate: getTemplate },
-    { practiceSessionId: session.id, userId, now },
+    { practiceSessionId: session.id, now },
   );
   if (resumed) return NextResponse.json(resumed, { status: 200 });
 

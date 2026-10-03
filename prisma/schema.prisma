@@ -63,7 +63,8 @@ model Attempt {
   transcript String? // M4
 
   // Urteil
-  // OPEN | ANSWERED | SKIPPED — SKIPPED heißt seit M2f „aufgegeben".
+  // OPEN | ANSWERED | SKIPPED | VOIDED — SKIPPED heißt seit M2f „aufgegeben",
+  // VOIDED „verworfen wegen Template-Änderung" (zählt nirgends).
   status        String   @default("OPEN")
   isCorrect     Boolean?
   reviewVerdict Json? // M4: LLM-Schritturteil

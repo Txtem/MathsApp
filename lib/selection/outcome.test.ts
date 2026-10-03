@@ -12,6 +12,11 @@ describe("classifyOutcome", () => {
     expect(classifyOutcome(attempt({ status: "OPEN", isCorrect: null, tries: 1 }))).toBeNull();
   });
 
+  it("gibt verworfenen Attempts keinen Ausgang", () => {
+    expect(classifyOutcome(attempt({ status: "VOIDED", isCorrect: null, tries: 1 }))).toBeNull();
+    expect(countsAsSuccess(attempt({ status: "VOIDED", isCorrect: null, tries: 1 }))).toBe(false);
+  });
+
   it("nennt SKIPPED aufgegeben, gleich was sonst auf der Zeile steht", () => {
     expect(classifyOutcome(attempt({ status: "SKIPPED", isCorrect: null, tries: 0 }))).toBe(
       "gave_up",
@@ -67,7 +72,7 @@ describe("countsAsSuccess", () => {
   it("ist nie Erfolg, wo classifyOutcome nicht right_first sagt", () => {
     // Die beiden Funktionen dürfen nicht auseinanderlaufen: Erfolg ist eine
     // Teilmenge von „richtig im ersten Versuch".
-    for (const status of ["OPEN", "ANSWERED", "SKIPPED"] as const) {
+    for (const status of ["OPEN", "ANSWERED", "SKIPPED", "VOIDED"] as const) {
       for (const isCorrect of [true, false, null]) {
         for (const tries of [0, 1, 2]) {
           for (const hintsUsed of [0, 1, 3]) {

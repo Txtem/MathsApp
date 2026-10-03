@@ -20,8 +20,15 @@ export const AnswerTypeSchema = z.enum([
   "choice",
 ]);
 
-/** SQLite kennt keine Enums; `Attempt.status` ist ein String und wird hier erzwungen. */
-export const AttemptStatusSchema = z.enum(["OPEN", "ANSWERED", "SKIPPED"]);
+/**
+ * SQLite kennt keine Enums; `Attempt.status` ist ein String und wird hier erzwungen.
+ *
+ * - `SKIPPED` heißt seit M2f „aufgegeben" — ein Misserfolg.
+ * - `VOIDED` heißt „verworfen": Das Template hat sich geändert, während der
+ *   Attempt offen war. Das lösen Entwickler aus, nicht der Übende; der Attempt
+ *   hat deshalb keinen Ausgang und zählt in keiner Statistik.
+ */
+export const AttemptStatusSchema = z.enum(["OPEN", "ANSWERED", "SKIPPED", "VOIDED"]);
 export type AttemptStatus = z.infer<typeof AttemptStatusSchema>;
 
 /** Ergebnisse der Compute-Registry sind Dezimalstrings, nie `number`. */

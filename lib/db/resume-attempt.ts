@@ -7,7 +7,7 @@ import {
 import { renderHint } from "@/lib/engine/instantiate";
 
 import type { AnswerDeps } from "./answer-attempt";
-import { abandonOpenAttempts } from "./attempts";
+import { voidAttempt } from "./attempts";
 import { currentTemplate } from "./solution";
 
 /**
@@ -26,7 +26,6 @@ import { currentTemplate } from "./solution";
 
 export interface ResumeInput {
   readonly practiceSessionId: string;
-  readonly userId: string;
   /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
   readonly now: Date;
 }
@@ -55,12 +54,10 @@ export async function resumeOpenAttempt(
   const template = currentTemplate(deps.findTemplate, attempt);
   if (!template) {
     // Das Template hat sich seit dem Stellen geändert — die Aufgabe lässt sich
-    // nicht mehr mit Zielzeit und Tipps zeigen. Wer schon einen Versuch oder
-    // Tipp hatte, hat sie damit verlassen, wie beim Weggehen; eine unberührte
-    // bleibt liegen, sie trägt keine Information.
-    await deps.prisma.$transaction((tx) =>
-      abandonOpenAttempts(tx, { userId: input.userId, attemptIds: [attempt.id], now: input.now }),
-    );
+    // nicht mehr mit Zielzeit und Tipps zeigen. Ein begonnener Attempt wird
+    // verworfen, ohne Misserfolg: Den Versionswechsel haben Entwickler
+    // ausgelöst, nicht der Übende. Ein unberührter bleibt liegen.
+    await voidAttempt(deps.prisma, { attemptId: attempt.id, now: input.now });
     return undefined;
   }
 

@@ -134,19 +134,10 @@ const INFORMATIVE_OPEN: Prisma.AttemptWhereInput = {
  */
 export async function abandonOpenAttempts(
   tx: Prisma.TransactionClient,
-  input: {
-    readonly userId: string;
-    /** Nur diese Attempts — ohne Angabe alle offenen des Nutzers. */
-    readonly attemptIds?: readonly string[];
-    readonly now: Date;
-  },
+  input: { readonly userId: string; readonly now: Date },
 ): Promise<number> {
   const candidates = await tx.attempt.findMany({
-    where: {
-      userId: input.userId,
-      ...INFORMATIVE_OPEN,
-      ...(input.attemptIds ? { id: { in: [...input.attemptIds] } } : {}),
-    },
+    where: { userId: input.userId, ...INFORMATIVE_OPEN },
     select: { id: true },
   });
 
@@ -163,6 +154,30 @@ export async function abandonOpenAttempts(
     closed++;
   }
   return closed;
+}
+
+/**
+ * Einen begonnenen Attempt verwerfen, weil sich sein Template seit dem Stellen
+ * geändert hat: `VOIDED`, `answeredAt = now`, **kein** Fortschritt.
+ *
+ * Nicht als Misserfolg wie beim Weggehen: Den Versionswechsel lösen Entwickler
+ * aus, nicht der Übende, und die Statistik soll niemanden dafür bestrafen, dass
+ * ein Template verbessert wurde. Ein Schlupfloch entsteht nicht — der Übende
+ * kann keinen Versionswechsel herbeiführen. `VOIDED` steht in keinem Fenster
+ * und hat keinen Ausgang (`classifyOutcome` gibt `null`).
+ *
+ * Nur Attempts mit Versuch oder Tipp; ein unberührter trägt keine Information
+ * und bleibt liegen. `true`, wenn dieser Aufruf verworfen hat.
+ */
+export async function voidAttempt(
+  prisma: PrismaClient,
+  input: { readonly attemptId: string; readonly now: Date },
+): Promise<boolean> {
+  const updated = await prisma.attempt.updateMany({
+    where: { id: input.attemptId, ...INFORMATIVE_OPEN },
+    data: { status: "VOIDED", answeredAt: input.now },
+  });
+  return updated.count === 1;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { NextQuestionResponseSchema } from "@/lib/api/contracts";
+import { AttemptStatusSchema, NextQuestionResponseSchema } from "@/lib/api/contracts";
+import { classifyOutcome } from "@/lib/selection/outcome";
 
 import {
   antwort,
@@ -13,6 +14,7 @@ import {
 import { answerAttempt } from "./answer-attempt";
 import { requestHint } from "./hint-attempt";
 import { resumeOpenAttempt } from "./resume-attempt";
+import { loadTopicStats } from "./topic-stats";
 
 /**
  * Weg 1 aus SPEC-M2f Schritt 4b: Neuladen. `/next` liefert den offenen Attempt
@@ -28,7 +30,6 @@ const LATER = new Date(NOW.getTime() + 60_000);
 function neuladen() {
   return resumeOpenAttempt(deps(MIT_TIPPS), {
     practiceSessionId: fixture.sessionId(),
-    userId: USER,
     now: LATER,
   });
 }
@@ -55,7 +56,7 @@ describe("resumeOpenAttempt — Neuladen", () => {
       targetTimeSeconds: 60,
       topic: TOPIC,
       difficulty: 1,
-      hintsTotal: 3,
+      hintsTotal: 2,
       openedHints: [],
       firstTryWrong: false,
     });
@@ -71,7 +72,7 @@ describe("resumeOpenAttempt — Neuladen", () => {
       firstTryWrong: true,
       openedHints: [
         "Kommt es auf die Reihenfolge an?",
-        "Für den ersten Platz gibt es 6 Möglichkeiten.",
+        "Alle 6 Personen werden angeordnet. Wie viele kommen für den ersten Platz infrage?",
       ],
     });
   });
@@ -86,7 +87,7 @@ describe("resumeOpenAttempt — Neuladen", () => {
   });
 
   it("verrät nichts aus der Lösung und hält sich an den strikten Vertrag", async () => {
-    await seedAttempt({ tries: 1, hintsUsed: 3 });
+    await seedAttempt({ tries: 1, hintsUsed: 2 });
 
     const response = await neuladen();
 
@@ -115,23 +116,42 @@ describe("resumeOpenAttempt — Neuladen", () => {
 });
 
 describe("resumeOpenAttempt — Template geändert", () => {
+  // Den Versionswechsel lösen Entwickler aus, nicht der Übende. Der Attempt
+  // wird geschlossen, aber nicht als Misserfolg fortgeschrieben.
   const nachher = () =>
-    resumeOpenAttempt(deps(MIT_TIPPS), {
-      practiceSessionId: fixture.sessionId(),
-      userId: USER,
-      now: LATER,
-    });
+    resumeOpenAttempt(deps(MIT_TIPPS), { practiceSessionId: fixture.sessionId(), now: LATER });
 
-  it("schließt einen begonnenen Attempt als aufgegeben, wenn die Version nicht mehr passt", async () => {
-    const id = await seedAttempt({ templateVersion: 2, tries: 1 });
+  it("verwirft einen begonnenen Attempt, wenn die Version nicht mehr passt", async () => {
+    const id = await seedAttempt({ templateVersion: 2, tries: 1, hintsUsed: 1 });
 
     expect(await nachher()).toBeUndefined();
-    expect(await zeile(id)).toMatchObject({ status: "SKIPPED", answeredAt: LATER });
+    const r = await zeile(id);
+    expect(r).toMatchObject({ status: "VOIDED", answeredAt: LATER });
+    expect(classifyOutcome({ ...r, status: AttemptStatusSchema.parse(r.status) })).toBeNull();
+  });
+
+  it("schreibt dabei keinen Fortschritt fort", async () => {
+    await fixture.prisma().topicMastery.create({
+      data: { userId: USER, topic: TOPIC, attempts: 3, correct: 3, intervalDays: 8 },
+    });
+    await seedAttempt({ templateVersion: 2, tries: 1 });
+
+    await nachher();
+
     expect(
       await fixture.prisma().topicMastery.findUnique({
         where: { userId_topic: { userId: USER, topic: TOPIC } },
       }),
-    ).toMatchObject({ attempts: 1, correct: 0, intervalDays: 1 });
+    ).toMatchObject({ attempts: 3, correct: 3, intervalDays: 8 });
+  });
+
+  it("taucht in der gleitenden Quote nicht auf", async () => {
+    await seedAttempt({ templateVersion: 2, tries: 1 });
+
+    await nachher();
+
+    const [stats] = await loadTopicStats(fixture.prisma(), USER, [TOPIC]);
+    expect(stats).toMatchObject({ recentClosed: 0, recentSuccess: 0, recentRight: 0 });
   });
 
   it("lässt einen unberührten liegen", async () => {

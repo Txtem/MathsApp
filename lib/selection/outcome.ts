@@ -28,8 +28,8 @@ export interface SuccessFields extends OutcomeFields {
 }
 
 /**
- * Der Ausgang, wie ihn die Anzeige zeigt. `null` heißt: Die Aufgabe ist noch
- * offen und hat keinen.
+ * Der Ausgang, wie ihn die Anzeige zeigt. `null` heißt: Die Aufgabe hat
+ * keinen — sie ist noch offen oder wurde verworfen.
  *
  * Für die Anzeige ist richtig richtig, gleich in welchem Versuch (`IDEEN.md`).
  * Die beiden Richtig-Varianten bleiben trotzdem getrennt, damit die
@@ -42,6 +42,11 @@ export interface SuccessFields extends OutcomeFields {
 export function classifyOutcome(attempt: OutcomeFields): Outcome | null {
   switch (attempt.status) {
     case "OPEN":
+      return null;
+    // Verworfen, weil sich das Template geändert hat: kein Ausgang. Den
+    // Versionswechsel lösen Entwickler aus — die Statistik soll niemanden dafür
+    // bestrafen, dass ein Template verbessert wurde.
+    case "VOIDED":
       return null;
     case "SKIPPED":
       return "gave_up";
