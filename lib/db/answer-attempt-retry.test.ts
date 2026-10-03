@@ -8,7 +8,7 @@ import { antwort, TEMPLATE, TOPIC, USER, setupAnswerFixture } from "./__testing_
 import { answerAttempt } from "./answer-attempt";
 
 /**
- * Der zweite Versuch (SPEC-M2f, D-1). Die heikelste Änderung des Meilensteins:
+ * Der zweite Versuch (SPEC.md Abschnitt 8). Die heikelste Änderung des Meilensteins:
  * Bis M2e schloss jede lesbare Antwort den Attempt. Jetzt bleibt er nach der
  * ersten falschen Antwort offen — und Invariante 2 verlangt, dass dann nichts
  * aus der Lösung in der Response steht.

@@ -4,7 +4,7 @@ import type { AnsweredDuration } from "./stats-rows";
 
 /**
  * Welche Zeiten in die Statistik eingehen, seit es zwei Versuche gibt
- * (SPEC-M2f, Schritt 7). Rein und getestet, wie `stats-rows.ts` (D-16).
+ * (SPEC.md Abschnitt 10a). Rein und getestet, wie `stats-rows.ts` (D-16).
  *
  * - Die **Medianzeit** rechnet weiter über richtige Antworten, beide Varianten,
  *   mit `durationMs` — der Zeit bis zur letzten Antwort.

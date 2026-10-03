@@ -1,6 +1,6 @@
 /**
  * Was die Übungsseite rund um Tipps, zweiten Versuch und Aufgeben anzeigt
- * (SPEC-M2f, Abschnitt A). Rein und getestet — dieselbe Trennung wie bei
+ * (SPEC.md Abschnitt 8). Rein und getestet — dieselbe Trennung wie bei
  * `stats-rows.ts` und aus demselben Grund (D-16): Für React-Komponenten gibt es
  * keine Tests, also steht die Entscheidung hier und nicht im JSX.
  *
@@ -23,7 +23,7 @@ export interface QuestionControls {
   readonly hintButton: string | null;
   /**
    * „Lösung zeigen" erscheint erst, wenn alle Tipps offen sind. Ohne Tipps
-   * steht der Knopf von Anfang an da (SPEC-M2f, Entscheidung 3).
+   * steht der Knopf von Anfang an da (D-31).
    */
   readonly showGiveUp: boolean;
   /** Die Zeile über dem Eingabefeld im zweiten Versuch, sonst `null`. */

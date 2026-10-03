@@ -16,7 +16,7 @@ import { giveUpAttempt } from "./give-up-attempt";
 import { requestHint } from "./hint-attempt";
 
 /**
- * Aufgeben (SPEC-M2f, D-3), gegen eine echte Datenbank (D-19).
+ * Aufgeben (SPEC.md Abschnitt 8), gegen eine echte Datenbank (D-19).
  *
  * Abnahme: Aufgeben vor dem letzten Tipp lehnt der Server ab, nicht nur die
  * Oberfläche. Aufgeben verändert den Themenfortschritt.

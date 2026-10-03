@@ -45,7 +45,7 @@ export const TemplateSchema = z.object({
    * Tipps, geordnet vom Allgemeinen zum Konkreten: erst den Aufgabentyp
    * erkennen, dann der Ansatz, dann der erste Rechenschritt. Optional — ein
    * Template ohne Tipps ist zulässig, „Lösung zeigen" steht dann sofort da
-   * (SPEC-M2f, Entscheidung 3). Platzhalter nur aus `param_spec`, siehe
+   * (D-31). Platzhalter nur aus `param_spec`, siehe
    * Prüfung 11 in `checks.ts`.
    */
   hints: z.array(z.string().trim().min(1)).default([]),

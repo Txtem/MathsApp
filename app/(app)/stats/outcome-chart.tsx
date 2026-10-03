@@ -3,7 +3,7 @@ import type { Outcome } from "@/lib/selection/outcome";
 
 /**
  * Kreisdiagramm der vier Ausgänge, handgeschriebenes SVG ohne Bibliothek
- * (SPEC-M2f, Schritt 7). Die Geometrie rechnet `pieSegments`, die Zahlen
+ * (SPEC.md Abschnitt 10a). Die Geometrie rechnet `pieSegments`, die Zahlen
  * `summarizeOutcomes` — hier wird nur gezeichnet.
  *
  * Beide Richtig-Varianten sind grün, in zwei Abstufungen: Für die Anzeige ist

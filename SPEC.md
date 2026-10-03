@@ -76,17 +76,22 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   ├── (app)/
 │   │   ├── layout.tsx
 │   │   ├── stats/page.tsx              # Fortschritt je Thema, force-dynamic
+│   │   ├── stats/outcome-chart.tsx     # Kreisdiagramm der vier Ausgänge, SVG
 │   │   └── practice/
 │   │       ├── page.tsx                # Themenauswahl aus dem Themenbaum
 │   │       ├── topic-picker.tsx        # Client: startet die Session
 │   │       └── [sessionId]/
 │   │           ├── page.tsx            # prüft die Session, rendert den Loop
 │   │           ├── practice-loop.tsx   # Client: Aufgabe → Antwort → Urteil
+│   │           ├── question-form.tsx   # offene Aufgabe mit Eingabe
+│   │           ├── hint-box.tsx        # Tipps und „Lösung zeigen"
 │   │           └── verdict-panel.tsx
 │   └── api/
 │       ├── session/route.ts            # POST: Session starten
 │       ├── session/[id]/next/route.ts  # POST: nächste Aufgabe
 │       ├── attempt/[id]/answer/route.ts# POST: Antwort bewerten
+│       ├── attempt/[id]/hint/route.ts  # POST: nächster Tipp
+│       ├── attempt/[id]/give-up/route.ts # POST: Lösung zeigen = aufgeben
 │       ├── attempt/[id]/transcribe/route.ts  # M4
 │       └── attempt/[id]/review/route.ts      # M4, streamt
 │
@@ -95,6 +100,9 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   ├── split-math.ts                   # trennt Text von $…$ und $$…$$
 │   ├── topic-groups.ts                 # Gruppierung der Themen, rein
 │   ├── stats-rows.ts                   # Zeilen der Statistik-Seite, rein
+│   ├── answer-times.ts                 # erste vs. schließende Antworten, rein
+│   ├── outcome-chart.ts                # vier Ausgänge und Kreissegmente, rein
+│   ├── question-controls.ts            # Tipp-Knopf, Lösung zeigen, Urteil, rein
 │   └── answer-format.ts                # Formathinweis je answer_type
 │
 ├── content/
@@ -140,12 +148,18 @@ Service — das ist dann eine bewusste Entscheidung, keine Altlast.
 │   ├── auth/current-user.ts            # getCurrentUserId(), einzige Nutzerquelle
 │   ├── selection/
 │   │   ├── next-template.ts            # Welches Template als Nächstes?
+│   │   ├── outcome.ts                  # classifyOutcome, countsAsSuccess — einzige Stelle
 │   │   └── mastery.ts                  # SM-2-light, rein
 │   ├── llm/                            # ab M3
 │   └── db/
 │       ├── client.ts                   # Prisma-Singleton, server-only
 │       ├── answer-attempt.ts           # was beim Beantworten passiert, ohne HTTP
-│       ├── attempts.ts                 # Attempt schließen + Fortschritt, eine Transaktion
+│       ├── attempts.ts                 # schließen, aufgeben, weggehen, verwerfen + Fortschritt
+│       ├── hint-attempt.ts             # Tipp öffnen, ohne HTTP
+│       ├── give-up-attempt.ts          # aufgeben, ohne HTTP
+│       ├── resume-attempt.ts           # offenen Attempt bei /next erneut ausliefern
+│       ├── start-session.ts            # Sitzung starten, Verlassenes schließen
+│       ├── solution.ts                 # Lösung für geschlossene Attempts
 │       ├── topic-stats.ts              # Stand je Thema für die Auswahl
 │       ├── stats.ts                    # Zahlen für die Statistik-Seite
 │       ├── dev-user.ts                 # nur von lib/auth/current-user.ts benutzt
@@ -218,10 +232,16 @@ model Attempt {
   transcript      String?          // M4
 
   // Urteil
-  status          String   @default("OPEN")   // OPEN | ANSWERED | SKIPPED
+  status          String   @default("OPEN")   // OPEN | ANSWERED | SKIPPED | VOIDED
   isCorrect       Boolean?
   reviewVerdict   Json?            // M4: LLM-Schritturteil
-  durationMs      Int?
+  durationMs      Int?             // bis zur letzten bewerteten Antwort
+
+  // Versuche und Tipps (M2f)
+  tries           Int      @default(0)   // bewertete Versuche, 0–2
+  hintsUsed       Int      @default(0)
+  firstAnswer     String?          // die falsche erste Antwort, falls es einen zweiten Versuch gab
+  firstDurationMs Int?             // Zeit bis zur ersten bewerteten Antwort
 
   createdAt       DateTime @default(now())
   answeredAt      DateTime?
@@ -248,6 +268,28 @@ model TopicMastery {
 `Attempt.status` ist ein `String` mit Default `"OPEN"`, kein Prisma-`enum`: Für SQLite
 kennt Prisma keine Enum-Typen. Die gültigen Werte erzwingt Zod an den Grenzen
 (`lib/api/contracts.ts`), nicht die Datenbank. Dasselbe gilt für `answerType`.
+
+Die Werte von `status`:
+
+| Wert | Bedeutung |
+|---|---|
+| `OPEN` | offen — auch nach der ersten falschen Antwort (`tries = 1`) |
+| `ANSWERED` | beantwortet, richtig oder falsch, im ersten oder zweiten Versuch |
+| `SKIPPED` | **aufgegeben** — über „Lösung zeigen" oder durch Weggehen (Abschnitt 10) |
+| `VOIDED` | **verworfen**: Das Template hat sich geändert, während der Attempt begonnen war. Kein Ausgang, zählt in keiner Statistik (D-32) |
+
+Es gibt **kein** Feld `outcome`. Der Ausgang — `gave_up`, `wrong`, `right_first`,
+`right_second` — folgt aus `status`, `isCorrect` und `tries` und wird ausschließlich in
+`classifyOutcome` (`lib/selection/outcome.ts`) bestimmt; ob ein Attempt für die Steuerung
+als Erfolg zählt, ausschließlich in `countsAsSuccess` daneben (D-30). Die Migration
+`versuche_und_tipps` hat jedem damals beantworteten Attempt `tries = 1` gegeben — im
+alten Ablauf gab es genau einen Versuch und keinen Tipp.
+
+`firstAnswer` ist kein Zierrat: Die falsche erste Antwort ist die wertvollste Information
+darüber, **welcher** Fehler gemacht wurde. Ohne das Feld wäre sie verloren, sobald der
+zweite Versuch sitzt. Die Statistik braucht nur, dass es sie gab (`loadClosedAttempts`
+liest den Wortlaut nicht mit); der Wortlaut ist für eine spätere Fehleranalyse da.
+`firstDurationMs` trägt die Schnellschüsse (Abschnitt 10a).
 
 `expectedAnswer` liegt bewusst in der DB und nicht nur im Speicher: Der Nutzer soll die
 Seite neu laden können, ohne dass die Aufgabe kaputtgeht.
@@ -284,6 +326,10 @@ question_text: |
 solution_text: |
   Permutation ohne Wiederholung von {{n}} Elementen:
   $${{n}}! = {{result}}$$
+
+hints:                      # genau zwei oder keiner — Erkennen, Ansatz
+  - "Kommt es auf die Reihenfolge an? Kommt jede Person genau einmal vor? Werden alle angeordnet oder nur eine Auswahl?"
+  - "Alle {{n}} Personen werden angeordnet, jede genau einmal. Überlege, wie viele für den ersten Platz infrage kommen und wie sich das von Platz zu Platz ändert."
 
 tags: [permutation, ohne_wiederholung]
 ```
@@ -325,6 +371,7 @@ export const TemplateSchema = z.object({
   constraints: z.array(z.string()).default([]),
   question_text: z.string().trim().min(1),
   solution_text: z.string().trim().optional(),
+  hints: z.array(z.string().trim().min(1)).default([]),
   tags: z.array(z.string()).default([]),
 });
 ```
@@ -338,8 +385,8 @@ einen Zeilenumbruch an, der in der Aufgabe landet.
 
 ### Statische Prüfungen beim Laden
 
-Prüfung 1 bis 10 sind harte Fehler: Der Ladevorgang bricht ab, `npm run content:check`
-schlägt fehl. Prüfung 11 ist eine **Warnung** — sie hält nichts an.
+Prüfung 1 bis 13 sind harte Fehler: Der Ladevorgang bricht ab, `npm run content:check`
+schlägt fehl. Prüfung 14 ist eine **Warnung** — sie hält nichts an.
 Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 
 1. `compute_ref` existiert in der Registry.
@@ -357,7 +404,34 @@ Implementiert in `lib/content/checks.ts`, jede mit einem Negativ-Fixture belegt:
 9. In `constraints` kommen nur Namen aus `param_spec` plus `result` vor. Ein Constraint,
    das gar kein Vergleich ist, wird als eigener Befund (`invalid_constraint`) gemeldet.
 10. Kein Anzeigewert der Compute-Funktion heißt wie ein Parameter des Templates.
-11. **Warnung:** Der Parameterraum umfasst mindestens 20 gültige Kombinationen.
+11. Jeder `{{x}}` in einem Tipp ist ein Key aus `param_spec` — **nicht** `result` und
+    **nicht** ein Anzeigewert: Beide sind Teil der Lösung (`hint_reveals_solution`,
+    sonst `unknown_hint_placeholder`).
+12. `hints` hat genau 0 oder 2 Einträge (`hint_count`).
+13. In keinem Tipp steht ein Platzhalter direkt neben einem Rechenzeichen
+    (`+ − - · * / !`, auch mit Leerzeichen dazwischen): `{{n}} − 1` ist ein Stück
+    Lösungsweg (`hint_formula`). Bewusst grob — auch `{{k}}-mal` schlägt an, dann wird
+    umformuliert, nicht die Regel aufgeweicht.
+14. **Warnung:** Der Parameterraum umfasst mindestens 20 gültige Kombinationen.
+
+### Tipps
+
+Ein Template hat **genau zwei Tipps oder keinen** (Prüfung 12). Tipp 1 dient dem
+**Erkennen** — Fragen zur Situation: Reihenfolge? Wiederholung? Alle oder eine Auswahl?
+Tipp 2 nennt den **Ansatz** — das Prinzip und die entscheidende Frage, aber ohne
+Rechenkette mit den Parametern und ohne Zwischenergebnis. Danach kommt „Lösung zeigen".
+Die Arithmetik-Templates haben keine Tipps: Dort gibt es nichts zu erkennen. Die
+ausführliche Leitlinie mit Beispiel und Begründung steht in `content/templates/_README.md`
+(Herkunft: D-31).
+
+Ein Tipp verrät nie das Ergebnis. Prüfung 11 und 13 fangen das Offensichtliche; ein
+Property-Test über 200 Seeds je Template (`lib/content/hints.test.ts`) prüft zusätzlich,
+dass kein gerenderter Tipp die gerenderte Lösung als Zeichenfolge enthält — außer bei
+Ergebnissen unter drei Ziffern, wo das nur Fehlalarme gäbe. Was keine Prüfung fängt, ob
+Tipp 2 zu viel verrät oder nur umformuliert, bleibt Lesearbeit.
+
+Gerendert wird ein Tipp mit `renderHint` (`lib/engine/instantiate.ts`), nur aus den
+Parametern.
 
 ### Der Parameterraum
 
@@ -387,9 +461,13 @@ zwanzig Kombinationen liefert gemessen 17,7 verschiedene Aufgaben je Sitzung. F�
 - Änderung an `param_spec`, `compute_ref`, `constraints` oder an der **Bedeutung** von
   `question_text` ⇒ `version` erhöhen.
 - Reine Tippfehlerkorrektur ohne Bedeutungsänderung ⇒ keine Erhöhung.
+- Änderungen an `solution_text` oder `hints` allein ⇒ keine Erhöhung. Beide werden beim
+  Anzeigen aus den persistierten Parametern gerendert und sollen rückwirkend gelten.
 
 Beim Bewerten wird der Lösungstext nur gerendert, wenn die gespeicherte Version noch der
 aktuellen entspricht — ein Text zu einer anderen Version wäre schlechter als gar keiner.
+Dasselbe gilt für Tipps. Ein begonnener Attempt, dessen Template-Version nicht mehr passt,
+wird beim nächsten `/next` als `VOIDED` verworfen, ohne Misserfolg (D-32).
 
 ---
 
@@ -692,6 +770,10 @@ Die Regel ist getestet: `lib/auth/current-user.test.ts` liest den Quelltext unte
 Request:  { topicFilter?: string }
 Response: { sessionId: string }
 ```
+Vor dem Anlegen werden offene Attempts desselben Nutzers mit `tries >= 1` oder
+`hintsUsed >= 1` als `SKIPPED` geschlossen und als Misserfolg fortgeschrieben — mit dem
+`now` dieser Anfrage, in derselben Transaktion (`lib/db/start-session.ts`). Wer weggeht,
+hat aufgegeben. Unberührte offene Attempts bleiben (D-33).
 
 ### `POST /api/session/[id]/next`
 ```ts
@@ -703,9 +785,18 @@ Response: {
   topic: string,
   difficulty: number,
   roundTo?: number,           // nur bei numeric, für den Formathinweis
+  hintsTotal: number,         // 0 oder 2
+  openedHints: string[],      // schon geöffnete Tipps, gerendert
+  firstTryWrong: boolean,     // der erste Versuch war falsch
 }
 ```
 **Enthält niemals `expectedAnswer`.** Das ist der wichtigste Vertrag im ganzen System.
+
+Gibt es in der Sitzung einen offenen Attempt, liefert `/next` **ihn** erneut aus (Status
+200), statt einen neuen anzulegen (201) — mit den geöffneten Tipps, ohne `hintsUsed` zu
+erhöhen, und mit `firstTryWrong` (`lib/db/resume-attempt.ts`). Neuladen ist kein Ausweg
+aus einem Fehlversuch (D-33). Die Stoppuhr im Browser misst danach nur ab dem Neuladen;
+das ist hingenommen und steht so im Code.
 
 ### Routen sind Adapter
 
@@ -721,6 +812,7 @@ D-19.
 Request:  { answer: string, durationMs: number }
 Response:
   | { isCorrect: false, parseError: "unparseable" }        // Aufgabe bleibt OPEN
+  | { isCorrect: false, retry: true }                      // erster Fehlversuch, bleibt OPEN
   | { isCorrect: boolean,
       expectedAnswer: string,   // JETZT erlaubt — Aufgabe ist geschlossen
       solutionText?: string,
@@ -732,7 +824,48 @@ Der Statuswechsel auf `ANSWERED` passiert in derselben Anweisung wie die Prüfun
 nicht beide bewertet werden. Ein zweiter Aufruf wird mit 409 abgelehnt.
 
 Eine nicht lesbare Eingabe lässt den Attempt offen und gibt weder `expectedAnswer` noch
-`solutionText` zurück (`DECISIONS.md`, D-04). Bei `answer_type: numeric` mit
+`solutionText` zurück (`DECISIONS.md`, D-04). Sie verbraucht keinen Versuch.
+
+Zwei Versuche (M2f):
+
+| Lage | Ergebnis | Attempt danach | Lösung? |
+|---|---|---|---|
+| unlesbar | `parseError` | `OPEN`, `tries` unverändert | nein |
+| richtig, `tries` war 0 | richtig | `ANSWERED`, `tries = 1` | ja |
+| falsch, `tries` war 0 | `retry: true` | `OPEN`, `tries = 1`, `firstAnswer`, `firstDurationMs` | **nein** |
+| richtig, `tries` war 1 | richtig | `ANSWERED`, `tries = 2` | ja |
+| falsch, `tries` war 1 | falsch | `ANSWERED`, `tries = 2` | ja |
+
+Die Antwort auf den ersten Fehlversuch ist die Konstante `RETRY` in
+`lib/db/answer-attempt.ts` — wie `UNPARSEABLE` als Konstante, damit sichtbar bleibt, dass
+sie nichts aus der Lösung enthält. Beide Übergänge sind atomar: Der Schritt 0 → 1 bedingt
+auf `tries: 0`, das Schließen auf den gelesenen Versuchsstand. Ohne Letzteres könnten zwei
+gleichzeitige erste Antworten (eine falsch, eine richtig) als „richtig im ersten Versuch"
+mit gesetztem `firstAnswer` enden. `durationMs` ist die Zeit bis zur letzten Antwort.
+
+### `POST /api/attempt/[id]/hint`
+```ts
+Response: { hint: string, index: number, total: number }
+```
+Nur für offene Attempts des eigenen Nutzers. Liefert den Tipp mit Index `hintsUsed` und
+erhöht `hintsUsed` atomar (alter Wert in der Bedingung). Alle geöffnet: 409
+`no_more_hints`; zwei gleichzeitige Klicks: einer 200, der andere 409 `conflict`. Passt
+die Template-Version nicht mehr, gibt es keine Tipps. Ein Tipp darf an einen offenen
+Attempt, weil er nur aus Parametern entsteht (Prüfung 11). Logik in
+`lib/db/hint-attempt.ts`.
+
+### `POST /api/attempt/[id]/give-up`
+```ts
+Response: { expectedAnswer: string, expectedRounded?: string, solutionText?: string }
+```
+„Lösung zeigen". Nur für offene Attempts des eigenen Nutzers. **Abgelehnt mit 409
+`hints_remaining`, solange `hintsUsed` unter der Zahl der Tipps liegt** — die Regel „erst
+alle Tipps" setzt der Server durch, und zwar in der Bedingung des Updates, nicht in einer
+Prüfung davor. Setzt `SKIPPED` und `answeredAt`, schreibt den Fortschritt als Misserfolg
+fort. Logik in `lib/db/give-up-attempt.ts`.
+
+Antwort-, Tipp- und Aufgeben-Route lehnen jeden Attempt ab, der nicht `OPEN` ist —
+`ANSWERED`, `SKIPPED` und `VOIDED` gleichermaßen (`lib/db/voided.test.ts`). Bei `answer_type: numeric` mit
 `round_to` wird die Stellenzahl aus dem Template an `grade` durchgereicht.
 
 ### `POST /api/attempt/[id]/transcribe` *(M4)*
@@ -798,8 +931,9 @@ Pro Kandidaten-Topic:
 score = (1 - erfolgsquote) * 2 + faelligkeitsbonus
 ```
 
-- `erfolgsquote`: Anteil korrekter unter den **letzten zehn beantworteten** Attempts des
-  Nutzers in diesem Topic. Weniger als drei Attempts ⇒ Topic gilt als unerprobt und
+- `erfolgsquote`: Anteil der **Erfolge** unter den **letzten zehn geschlossenen** Attempts
+  des Nutzers in diesem Topic. Erfolg heißt `countsAsSuccess`: richtig im ersten Versuch
+  und ohne geöffneten Tipp (D-30). Weniger als drei Attempts ⇒ Topic gilt als unerprobt und
   bekommt `erfolgsquote = 0.5`, damit weder Bevorzugung noch Meidung entsteht.
 - `faelligkeitsbonus`: `1`, wenn `TopicMastery.dueAt <= now`, sonst `0`.
   Kein `TopicMastery`-Eintrag ⇒ fällig.
@@ -808,8 +942,13 @@ Höchster Score gewinnt. Bei Gleichstand entscheidet der ältere `lastSeenAt`; e
 gestelltes Topic gilt dabei als das älteste.
 
 Die Quote kommt aus den Attempts, nicht aus `TopicMastery` — dort stehen nur
-Gesamtzahlen. Gefiltert wird auf `status: "ANSWERED"`: Ein übersprungener Attempt trägt
-kein Urteil und darf die Quote nicht verwässern.
+Gesamtzahlen. Das Fenster umfasst `ANSWERED` **und** `SKIPPED`: Aufgeben ist ein
+Misserfolg, sonst wäre es ein Ausgang aus der Statistik. `VOIDED` zählt nicht.
+
+Warum nicht „richtig" als Erfolg: Die Quote steuert Score und Zielschwierigkeit
+zugleich. Zählte der zweite Versuch oder ein Versuch mit Tipp, ginge die Quote eines
+schwachen Themas gegen 1,0 — es käme seltener und mit Schwierigkeit 4. Die **Anzeige**
+ist davon unberührt: Dort ist richtig richtig, in beiden Versuchen (D-30).
 
 ### Templatewahl innerhalb des Topics
 
@@ -874,14 +1013,23 @@ zwei Spalten, `templateId` und `questionText` (`lib/db/session-history.ts`):
 Beim Schließen eines Attempts, in derselben Transaktion wie der Statuswechsel
 (`lib/db/attempts.ts`):
 
-- `TopicMastery` upsert: `attempts + 1`, bei richtig `correct + 1`, `lastSeenAt = now`.
-- SM-2-light: richtig ⇒ `intervalDays *= 2` (Deckel bei 60), falsch ⇒ `intervalDays = 1`.
+- `TopicMastery` upsert: `attempts + 1`, bei richtig (gleich in welchem Versuch)
+  `correct + 1`, `lastSeenAt = now`. `correct` trägt nur die Anzeige.
+- SM-2-light: Erfolg (`countsAsSuccess`) ⇒ `intervalDays *= 2` (Deckel bei 60), sonst
+  `intervalDays = 1`. `advanceMastery` bekommt dafür `{ correct, success }` getrennt.
 - `dueAt = now + intervalDays`.
+
+Geschlossen wird auf drei Wegen, alle mit derselben Fortschreibung aus der geschlossenen
+Zeile: beantworten (zweite Antwort oder richtige erste), aufgeben (`give-up`) und
+weggehen (neue Sitzung mit begonnenen Attempts in älteren Sitzungen). Aufgeben und
+Weggehen sind Misserfolge. Ein Attempt, der wegen eines Versionswechsels verworfen wird
+(`VOIDED`), schreibt **nichts** fort — den Wechsel lösen Entwickler aus, nicht der Übende
+(D-32).
 
 **Wichtig:** Die Fortschreibung passiert nur, wenn der `updateMany` mit der Bedingung
 `status: "OPEN"` tatsächlich eine Zeile getroffen hat. Sonst zählt ein doppeltes Absenden
 zweimal. Ein `unparseable` schließt den Attempt nicht (D-04) und schreibt folglich auch
-nichts fort.
+nichts fort, ebenso wenig der erste Fehlversuch.
 
 ### Reinheit
 
@@ -902,7 +1050,8 @@ alles hinter einer Funktion mit klarer Signatur.
 Aufruf frisch, statt beim Build einen Stand von damals einzufrieren.
 
 Pro Thema eine Zeile: Beschriftung aus dem Themenbaum, Zahl der Versuche, Erfolgsquote
-gesamt, Erfolgsquote der letzten zehn, der Termin relativ als „fällig", „morgen" oder
+gesamt, Erfolgsquote der letzten zehn (richtig in jedem Versuch, über die letzten zehn
+geschlossenen — **nicht** die Steuerungsquote, D-30), der Termin relativ als „fällig", „morgen" oder
 „in N Tagen" (D-22 — nie als Kalenderdatum). Gruppiert nach
 Oberthema, in derselben Form wie die Themenauswahl — die Gruppierung kommt aus
 `toTopicGroups` und nicht aus einer zweiten Umformung (D-16). Jedes Thema mit Aufgaben
@@ -910,9 +1059,22 @@ bekommt eine Zeile, auch bei null Versuchen.
 
 Dazu eine Gesamtzeile: Versuche insgesamt, Quote insgesamt, Medianzeit.
 
+### Die vier Ausgänge
+
+Ein Kreisdiagramm über alle geschlossenen Attempts: **Richtig (1. Versuch)**, **Richtig
+(2. Versuch)** — beide grün, in zwei Abstufungen —, **Falsch** und **Aufgegeben**. Die
+Einordnung kommt aus `classifyOutcome`; alte Attempts aus der Zeit vor M2f erscheinen als
+Richtig (1. Versuch) oder Falsch. Daneben je Ausgang die Tipps, als Zahl der Aufgaben mit
+Tipp und als Summe — eine zweite Dimension, keine fünfte Kategorie. `VOIDED` fehlt.
+
+Gezeichnet als handgeschriebenes SVG ohne Diagrammbibliothek
+(`app/(app)/stats/outcome-chart.tsx`). Zahlen und Geometrie stehen rein und getestet in
+`components/outcome-chart.ts` (`summarizeOutcomes`, `pieSegments`).
+
 ### Die Medianzeit
 
-Grundgesamtheit sind **nur** Attempts mit `status = "ANSWERED"` und `isCorrect = true`.
+Grundgesamtheit sind **nur** Attempts mit `status = "ANSWERED"` und `isCorrect = true` —
+richtig im ersten wie im zweiten Versuch, mit `durationMs` bis zur letzten Antwort.
 Angezeigt wird nicht in Sekunden, sondern relativ: der Median von
 `durationMs / (target_time_seconds · 1000)`, beschriftet als „1,3× Zielzeit". Absolute
 Sekunden vergleichen über Aufgabentypen hinweg nichts.
@@ -923,9 +1085,12 @@ Sekunden vergleichen über Aufgabentypen hinweg nichts.
 - **Beschriftung:** „Medianzeit bei richtigen Antworten" — die Einschränkung gehört
   sichtbar in die Oberfläche, nicht nur in den Code.
 
-Zusätzlich zählt die Seite je Thema die **falschen** Antworten unter 20 % der Zielzeit und
-zeigt sie ab drei Stück als „n× geraten". Wer so schnell falsch antwortet, hat geraten
-oder das Verfahren nicht erkannt; das ist etwas anderes als eine lange Fehlrechnung.
+Zusätzlich zählt die Seite je Thema die **falschen ersten** Antworten unter 20 % der
+Zielzeit und zeigt sie ab drei Stück als „n× sehr schnell falsch". Wer so schnell falsch
+antwortet, hat geraten oder das Verfahren nicht erkannt; das ist etwas anderes als eine
+lange Fehlrechnung. Gezählt werden erste Antworten über `firstDurationMs` — sonst
+verschwände ein geratener erster Versuch, sobald der zweite sitzt. Welche Zeit wohin
+geht, entscheidet `toTimings` in `components/answer-times.ts`.
 
 Begründung, warum die Definition geändert wurde statt einen Schalter zu bauen: D-21.
 
@@ -936,8 +1101,8 @@ Ohne Versuche steht hier nichts.
 Die Umformung steht als reine Funktion in `components/stats-rows.ts` und hat eigene
 Tests. Die Seite selbst holt nur Daten und rendert.
 
-Kein Diagramm. Ein Zeitverlauf braucht mehr Daten, als bisher existieren; eine Kurve über
-zwölf Attempts sieht nach Aussage aus, wo keine ist.
+Kein Zeitverlauf. Er braucht mehr Daten, als bisher existieren; eine Kurve über zwölf
+Attempts sieht nach Aussage aus, wo keine ist.
 
 ---
 
@@ -982,6 +1147,15 @@ Neun Beobachtungen aus den ersten Übungssitzungen, keine davon eine falsch bewe
 Antwort. Behoben: Funktionsnamen buchstabenunabhängig, geschärfte Formathinweise, gerundete
 Musterlösung neben dem exakten Wert, Aufgabe bleibt nach dem Beantworten sichtbar,
 Anzeigewerte im Lösungsweg (D-29).
+
+**M2f — Zweiter Versuch, Tipps, Aufgeben** ✅
+Aus den Beobachtungen 4 und 5, Ablauf von Peter und Joshua festgelegt. Eine falsche erste
+Antwort öffnet automatisch einen zweiten Versuch, ohne die Lösung preiszugeben. Zwei Tipps
+je Template (Erkennen, Ansatz), jederzeit abrufbar; „Lösung zeigen" erst nach dem letzten
+— das ist das Aufgeben, vom Server durchgesetzt und als Misserfolg fortgeschrieben.
+Neuladen und neue Sitzung sind kein Ausweg aus einem Fehlversuch. Für die Steuerung
+zählt nur richtig im ersten Versuch ohne Tipp, für die Anzeige ist richtig richtig
+(D-30). Statistik mit Kreisdiagramm der vier Ausgänge.
 
 **Dazwischen und danach: benutzen.** Kein Meilenstein — die App wird zum Üben verwendet,
 bevor weitergebaut wird. Die letzten guten Anforderungen kamen aus dem Gebrauch und nicht

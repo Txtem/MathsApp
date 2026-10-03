@@ -16,7 +16,7 @@ import { startSession } from "./start-session";
 import { loadTopicStats } from "./topic-stats";
 
 /**
- * Weg 2 aus SPEC-M2f Schritt 4b: eine neue Sitzung starten. Offene Attempts
+ * Weg 2 aus D-33: eine neue Sitzung starten. Offene Attempts
  * aus älteren Sitzungen mit Versuch oder Tipp gelten als aufgegeben — gegen
  * eine echte Datenbank (D-19).
  */

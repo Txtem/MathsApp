@@ -9,7 +9,8 @@ import { parameterSpace } from "./parameter-space";
 import { leafTopics, type Topics, type ValidatedTemplate } from "./schema";
 
 /**
- * Die statischen Prüfungen aus SPEC.md, Abschnitt 5.
+ * Die statischen Prüfungen aus SPEC.md, Abschnitt 5. Die Nummern in den
+ * Kommentaren unten sind die aus SPEC.md.
  *
  * Die meisten sind harte Fehler: Der Ladevorgang bricht ab,
  * `npm run content:check` schlägt fehl. Eine ist eine **Warnung** — ein zu
@@ -148,7 +149,7 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
     }
   }
 
-  // 3a. Ein Anzeigewert darf nicht heißen wie ein Parameter — sonst überdeckt
+  // 10. Ein Anzeigewert darf nicht heißen wie ein Parameter — sonst überdeckt
   //     still das eine das andere, und niemand sieht, welcher Wert gerendert
   //     wurde. Harter Fehler, kein Hinweis.
   for (const name of collidingDisplayKeys(paramKeys, displayKeys)) {
@@ -255,7 +256,7 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
     }
   });
 
-  // 10. Der Parameterraum trägt eine Sitzung. Nur eine Warnung — und nur, wenn
+  // 14. Der Parameterraum trägt eine Sitzung. Nur eine Warnung — und nur, wenn
   //     sonst nichts zu beanstanden war: Die Zählung braucht eine gültige
   //     `compute_ref` und lesbare Constraints, und ein Template mit Fehlern
   //     wird ohnehin nicht geladen.

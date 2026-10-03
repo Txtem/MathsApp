@@ -27,7 +27,7 @@ export interface TopicStats {
    * Erfolge unter den letzten `RECENT_WINDOW` geschlossenen Versuchen — im Sinne
    * von `countsAsSuccess`: richtig im ersten Versuch ohne Tipp. Nicht „richtig":
    * Sonst ginge die Quote eines Themas, das man erst im zweiten Anlauf trifft,
-   * gegen 1,0, und es käme seltener und schwerer (SPEC-M2f, Entscheidung 1).
+   * gegen 1,0, und es käme seltener und schwerer (D-30).
    */
   readonly recentSuccess: number;
   /** Anzahl dieser Versuche (beantwortet oder aufgegeben), höchstens `RECENT_WINDOW`. */

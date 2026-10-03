@@ -56,6 +56,12 @@ Ebenfalls hart: Ein Anzeigewert der Compute-Funktion (`displayKeys`), der wie ei
 Parameter heißt. Sonst überdeckt still das eine das andere, und niemand sieht, welcher
 Wert im Lösungsweg landet.
 
+Und für Tipps (D-31): Ein Tipp nennt nur Platzhalter aus `param_spec` — nicht `result`,
+keine Anzeigewerte. Ein Template hat genau 0 oder 2 Tipps. Kein Platzhalter steht in einem
+Tipp direkt neben einem Rechenzeichen (`{{n}} − 1`, `{{n}}!`). Die Leitlinie, was in
+Tipp 1 und Tipp 2 gehört, steht in `content/templates/_README.md`; was die Regeln nicht
+fangen, bleibt Lesearbeit.
+
 Jede dieser Prüfungen hat ein Negativ-Fixture unter `lib/content/__fixtures__/`. Neue
 Prüfung ⇒ neues Fixture, sonst weiß niemand, ob sie je anschlägt — und zwar auch dann,
 wenn der Fall nur zusammen mit einem zweiten Befund zu bauen ist: Dann prüft der Test auf

@@ -3,7 +3,7 @@ import type { PrismaClient } from "@/lib/generated/prisma/client";
 import { abandonOpenAttempts } from "./attempts";
 
 /**
- * Eine neue Übungssitzung starten (SPEC-M2f, Schritt 4b).
+ * Eine neue Übungssitzung starten (D-33).
  *
  * Vorher werden offene Attempts desselben Nutzers aus älteren Sitzungen, die
  * schon einen Versuch oder einen Tipp hatten, als aufgegeben geschlossen und

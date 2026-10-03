@@ -18,7 +18,7 @@ die naheliegende Variante nicht gewählt wurde.
 
 <!-- Diesen Block bei jedem Meilenstein von Hand aktualisieren. -->
 
-- Meilenstein: **M2e (Korrekturen aus der Übungsphase)** abgeschlossen
+- Meilenstein: **M2f (Zweiter Versuch, Tipps, Aufgeben)** abgeschlossen
 - M0: Next.js-Scaffold, Prisma 7 + SQLite, Engine-Kern, drei API-Routen, Practice-Loop
 - M1: Platzhalter `{{name}}`; exakte Brüche (`lib/engine/expr/rational.ts`); Themenbaum
   `content/topics.yaml`; Content-Pipeline mit neun statischen Prüfungen und
@@ -50,10 +50,18 @@ die naheliegende Variante nicht gewählt wurde.
   Wert nebeneinander; Frage und eigene Antwort bleiben nach dem Beantworten sichtbar;
   Compute-Funktionen liefern Anzeigewerte, damit Lösungswege eingesetzte Zahlen zeigen
   (D-29) — 1192 Tests grün
+- M2f: zweiter Versuch nach einer falschen ersten Antwort, ohne die Lösung zu verraten;
+  zwei Tipps je Template (Erkennen, Ansatz), „Lösung zeigen" erst danach, vom Server
+  durchgesetzt; Aufgeben, Weggehen (neue Sitzung) und Neuladen zählen nicht als Ausweg
+  (D-33); für die Steuerung zählt nur richtig im ersten Versuch ohne Tipp, für die Anzeige
+  ist richtig richtig — `classifyOutcome` und `countsAsSuccess` in
+  `lib/selection/outcome.ts` sind die einzige Stelle dafür (D-30); Ladeprüfungen 11–13
+  für Tipps (D-31); `VOIDED` bei Versionswechsel (D-32); Kreisdiagramm der vier Ausgänge
+  auf `/stats` — 1378 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
   zurückgestellt); `kombinatorik.verteilung` hat nur ein Template
-- Als Nächstes: **weiter üben.** Die Übungsphase läuft; M2e hat nur Reibung beseitigt, die
-  dabei gestört hat. Was auffällt, kommt nach `BEOBACHTUNGEN.md`; was daraus geworden ist,
+- Als Nächstes: **weiter üben**, jetzt mit Tipps und zweitem Versuch. Die Tipps sind
+  Lesearbeit und lassen sich ohne Versionssprung nachbessern (D-31). Was auffällt, kommt nach `BEOBACHTUNGEN.md`; was daraus geworden ist,
   steht in `IDEEN.md`. **Keinen neuen Meilenstein vorschlagen, solange das nicht gesagt
   wird.**
 

@@ -1,8 +1,7 @@
 import { classifyOutcome, type Outcome, type SuccessFields } from "@/lib/selection/outcome";
 
 /**
- * Das Kreisdiagramm der vier Ausgänge auf der Statistik-Seite (SPEC-M2f,
- * Schritt 7): Aufgegeben, Falsch, Richtig (1. Versuch), Richtig (2. Versuch).
+ * Das Kreisdiagramm der vier Ausgänge auf der Statistik-Seite (SPEC.md Abschnitt 10a): Aufgegeben, Falsch, Richtig (1. Versuch), Richtig (2. Versuch).
  * Die Tipps stehen daneben, je Ausgang — sie sind eine zweite Dimension, keine
  * fünfte Kategorie.
  *

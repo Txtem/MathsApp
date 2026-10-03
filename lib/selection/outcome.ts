@@ -59,8 +59,7 @@ export function classifyOutcome(attempt: OutcomeFields): Outcome | null {
 /**
  * Ob der Attempt für die Steuerung als Erfolg zählt: **richtig im ersten
  * Versuch und ohne geöffneten Tipp.** Alles andere — zweiter Versuch, Tipp,
- * aufgegeben, falsch — ist für die Auswahl ein Misserfolg (SPEC-M2f,
- * Entscheidung 1).
+ * aufgegeben, falsch — ist für die Auswahl ein Misserfolg (D-30).
  *
  * Grund: Die Erfolgsquote steuert Score und Zielschwierigkeit zugleich. Zählte
  * der zweite Versuch oder ein Versuch mit Tipp als Erfolg, ginge die Quote

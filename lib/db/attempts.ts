@@ -88,7 +88,7 @@ export interface GiveUpInput {
 /**
  * Aufgeben: Der Attempt wird `SKIPPED`, `answeredAt = now`, und der
  * Themenfortschritt wird **als Misserfolg** fortgeschrieben — in derselben
- * Transaktion (SPEC-M2f, D-3). Sonst wäre Aufgeben ein Ausgang aus der
+ * Transaktion (SPEC.md Abschnitt 8). Sonst wäre Aufgeben ein Ausgang aus der
  * Statistik: Wer merkt, dass er es nicht kann, gibt auf, und das Thema gilt
  * als gekonnt.
  *
@@ -113,7 +113,7 @@ export async function giveUp(prisma: PrismaClient, input: GiveUpInput): Promise<
  * Ein offener Attempt, der etwas über den Übenden verrät: mindestens ein
  * bewerteter Versuch oder ein geöffneter Tipp. Nur solche Attempts werden beim
  * Weggehen als aufgegeben geschlossen; einer ohne Versuch und ohne Tipp trägt
- * keine Information und bleibt unberührt (SPEC-M2f, Schritt 4b).
+ * keine Information und bleibt unberührt (D-33).
  */
 const INFORMATIVE_OPEN: Prisma.AttemptWhereInput = {
   status: "OPEN",
@@ -228,7 +228,7 @@ export interface FirstMissInput {
 /**
  * Die erste lesbare, falsche Antwort: Der Attempt bleibt **offen**, `tries`
  * geht von 0 auf 1, die Antwort und ihre Dauer werden festgehalten
- * (SPEC-M2f, D-1 dritte Zeile).
+ * (SPEC.md Abschnitt 8).
  *
  * Kein Fortschritt, kein `answeredAt`, kein `isCorrect` — es gibt noch kein
  * Urteil über die Aufgabe. `userAnswer` bleibt leer; es ist die Antwort, mit

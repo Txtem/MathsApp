@@ -33,7 +33,7 @@ export async function loadTopicTotals(
  * Alle geschlossenen Aufgaben des Nutzers — beantwortet und aufgegeben. Eine
  * Abfrage trägt drei Dinge auf der Statistik-Seite: das Kreisdiagramm der vier
  * Ausgänge mit den Tipps je Ausgang, die Medianzeit über richtige Antworten und
- * die Schnellschüsse über erste Antworten (SPEC-M2f, Schritt 7). Gefiltert und
+ * die Schnellschüsse über erste Antworten (SPEC.md Abschnitt 10a). Gefiltert und
  * gerechnet wird erst in `components/`, nicht hier.
  *
  * Offene und verworfene (`VOIDED`) Attempts fehlen: Sie haben keinen Ausgang.

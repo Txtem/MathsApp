@@ -10,7 +10,7 @@ import { migrationNames, migrationSql } from "./__testing__/temp-database";
 
 /**
  * Die Migration `versuche_und_tipps` gegen Zeilen aus dem alten Ablauf
- * (SPEC-M2f Abschnitt C). Die übrigen Datenbanktests sehen nur leere Tabellen;
+ * (SPEC.md Abschnitt 4). Die übrigen Datenbanktests sehen nur leere Tabellen;
  * ob der Bestand richtig übersetzt wird, zeigt nur ein Altbestand.
  *
  * Abnahme: Alte Attempts erscheinen als „Richtig (1. Versuch)" oder „Falsch".

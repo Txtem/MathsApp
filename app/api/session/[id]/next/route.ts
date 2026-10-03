@@ -25,7 +25,7 @@ import { matchesTopic } from "@/lib/selection/next-template";
  *
  * Gibt es in der Sitzung noch einen offenen Attempt, wird **er** ausgeliefert,
  * nicht ein neuer angelegt — Neuladen ist kein Ausweg aus einem Fehlversuch
- * (SPEC-M2f, Schritt 4b, `lib/db/resume-attempt.ts`).
+ * (D-33, `lib/db/resume-attempt.ts`).
  */
 export async function POST(
   _request: Request,

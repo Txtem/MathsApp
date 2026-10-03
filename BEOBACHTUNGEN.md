@@ -120,8 +120,8 @@ Entscheidung hat gehalten.
 | 1 | Lösungsformel ohne eingesetzte Werte | **erledigt**, M2e C-1. Compute-Funktionen liefern jetzt Anzeigewerte für den Lösungsweg (D-29). |
 | 2 | „Reihenfolge" bei Variation und Permutation irreführend | **erledigt.** Fachurteil: „Reihenfolge bzw. Anordnung", an vier Stellen. Drei geändert in M2e (`kombination_mit_wdh` Frage, `kombination_ohne_wdh` Lösung, `variation_ohne_wdh` Lösung); der Fragetext von `variation_ohne_wdh` fragt seit M2f Schritt 0 nach „Anordnungen" (Fassung B, `aufg_00005` Version 2) — „Reihenfolgen bzw. Anordnungen" las sich mit zwei Pluralen schwer. |
 | 3 | Hypergeometrisch: Werte immer ähnlich groß | **kein Befund.** Zufall innerhalb der Wertebereiche. |
-| 4 | Zweiter Versuch | **vertagt**, steht in `IDEEN.md`. Braucht eine Entscheidung am Datenmodell: Zählt ein im zweiten Anlauf richtiger Versuch als richtig? |
-| 5 | Tipps | **vertagt**, steht in `IDEEN.md`. Dieselbe offene Frage wie beim zweiten Versuch. |
+| 4 | Zweiter Versuch | **erledigt**, M2f. Eine falsche erste Antwort öffnet automatisch einen zweiten Versuch. Für die Anzeige ist richtig richtig, für die Steuerung zählt nur der erste Versuch ohne Tipp (D-30). |
+| 5 | Tipps | **erledigt**, M2f. Zwei Tipps je Template (Erkennen, Ansatz), „Lösung zeigen" erst danach (D-31). |
 | 6 | Aufgabe nach dem Lösen nicht mehr sichtbar | **erledigt**, M2e C-3. Frage und eigene Antwort bleiben über dem Urteil stehen. |
 | 7 | `\frac{69}{420}` wird nicht gelesen | **entschieden und geschlossen**, M2e C-4. Der Formathinweis nennt die akzeptierte Schreibweise; der Parser bleibt, wie er ist. LaTeX kommt nicht in die Grammatik — danach kämen `\binom`, `\cdot`, `^{}`, und sie franst aus. |
 | 8 | Rundung verlangt, Bruch angezeigt | **erledigt**, M2e C-2. Bei `round_to` stehen die gerundete Zahl und der exakte Wert nebeneinander. |

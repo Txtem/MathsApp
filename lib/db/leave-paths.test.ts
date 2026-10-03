@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { productionSources, readSource } from "@/lib/__testing__/sources";
 
 /**
- * Die beiden Wege aus einer begonnenen Aufgabe (SPEC-M2f, Schritt 4b) sind in
+ * Die beiden Wege aus einer begonnenen Aufgabe (D-33) sind in
  * `resume-attempt.ts` und `start-session.ts` gegen die Datenbank getestet. Die
  * Routen selbst lassen sich nicht importieren — hier wird am Quelltext
  * festgehalten, dass sie genau diese Funktionen aufrufen und nicht daneben

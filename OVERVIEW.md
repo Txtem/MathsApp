@@ -137,6 +137,15 @@ Lösungswege zeigen eingesetzte Zahlen statt Formelbuchstaben (D-29). 1192 Tests
 **Bemerkenswert daran:** Keine der neun war eine falsch bewertete Antwort. Bei den zwei
 Lesefehlern blieb der Versuch nach D-04 offen und zählte nicht als falsch.
 
+**M2f — Zweiter Versuch, Tipps, Aufgeben** ✅ Die beiden vertagten Beobachtungen aus M2e,
+Ablauf von Peter und Joshua. Eine falsche erste Antwort öffnet automatisch einen zweiten
+Versuch, ohne etwas von der Lösung zu verraten. Jedes Template außer der Arithmetik hat
+zwei Tipps — Erkennen, Ansatz —, und „Lösung zeigen" erscheint erst nach dem letzten; das
+ist das Aufgeben, vom Server durchgesetzt und als Misserfolg gezählt. Neuladen und eine
+neue Sitzung sind kein Ausweg aus einem Fehlversuch (D-33). Für die Auswahl zählt nur
+richtig im ersten Versuch ohne Tipp, auf der Statistik-Seite ist richtig richtig (D-30);
+dort zeigt ein Kreisdiagramm die vier Ausgänge. 1378 Tests grün.
+
 **Damit ist die App für ihren Zweck fertig.**
 
 ## 5a. Was jetzt ansteht: benutzen
@@ -199,6 +208,14 @@ steht in `CLAUDE.md`; das hier sind die, die am häufigsten überrascht haben:
   Schnellschüsse haben je eine Mindestzahl, unter der nichts dasteht — und die Auswahl
   benutzt für unerprobte Themen einen Steuerungswert, der auf der Statistik-Seite
   ausdrücklich nicht auftaucht. (D-21)
+- **„Richtig" und „Erfolg" sind seit M2f zwei Dinge.** Die Anzeige fragt
+  `classifyOutcome`, die Auswahl `countsAsSuccess` — beide in `lib/selection/outcome.ts`
+  und nirgends sonst. Wer an Quote, Intervall oder Statistik etwas ändert, muss wissen,
+  welche der beiden Fragen er beantwortet. (D-30)
+- **Ein offener Attempt kann schon einen Fehlversuch hinter sich haben.** Nach der ersten
+  falschen Antwort bleibt er `OPEN`; Invariante 2 gilt dann genauso. Geschlossen wird auf
+  drei Wegen — beantworten, aufgeben, weggehen —, verworfen (`VOIDED`) nur bei einem
+  Versionswechsel. (D-32, D-33)
 - **SQLite kennt keine Prisma-Enums.** `status` und `answerType` sind `String`,
   die erlaubten Werte erzwingt Zod.
 - **Prisma 7** braucht einen Driver Adapter, der Client kommt aus
@@ -212,7 +229,10 @@ Ehrlich benannt, damit sie nicht als Überraschung wiederkommen:
 
 - **Die UI ist ungetestet.** Beide bisher gefundenen Anzeigefehler (D-16) lagen dort.
   Gegenmittel bisher: Darstellungslogik als reine Funktion herausziehen und diese testen
-  (`components/topic-groups.ts`). Das trägt, ersetzt aber keine Komponententests.
+  (`components/topic-groups.ts`, seit M2f auch `question-controls.ts` und
+  `outcome-chart.ts`). Das trägt, ersetzt aber keine Komponententests. Die Oberfläche aus
+  M2f — Tipp-Knopf, zweiter Versuch, Kreisdiagramm — wurde nur über die Routen und das
+  gerenderte HTML geprüft, nicht im Browser angesehen.
 - **Tests, die aus dem Template abgeleitet sind, prüfen nichts.** D-15 ist der Lehrfall:
   Template und Test teilten dieselbe falsche Annahme, die Suite blieb grün, das Ergebnis
   war falsch. Erwartungswerte gehören unabhängig nachgerechnet.

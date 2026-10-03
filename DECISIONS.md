@@ -863,3 +863,136 @@ Die Anzeigewerte stehen in keiner Spalte. `renderSolution` bildet sie aus den
 persistierten Parametern neu — sie sind eine reine Funktion davon, und ein Feld mehr am
 `Attempt` wäre eine Datenmodelländerung für etwas Ableitbares.
 
+
+---
+
+## D-30 — Für die Steuerung zählt nur richtig im ersten Versuch ohne Tipp, für die Anzeige ist richtig richtig
+*2026-10-03, M2f*
+
+Seit M2f gibt es einen zweiten Versuch und Tipps. Damit fallen zwei Fragen auseinander,
+die vorher dieselbe waren: Was zeigt die Statistik als „richtig", und was zählt für die
+Auswahl als Erfolg? Beide werden an genau einer Stelle beantwortet,
+`lib/selection/outcome.ts`: `classifyOutcome` für die Anzeige, `countsAsSuccess` für die
+Steuerung. `countsAsSuccess` ist aus `classifyOutcome` abgeleitet — Erfolg heißt
+`right_first` und `hintsUsed = 0`.
+
+**Steuerung.** Erfolg ist nur richtig im ersten Versuch ohne geöffneten Tipp. Die
+Erfolgsquote steuert Score und Zielschwierigkeit zugleich (SPEC.md Abschnitt 10). Zählte
+der zweite Versuch oder ein Versuch mit Tipp, ginge die Quote eines schwachen Themas gegen
+1,0 — es käme seltener und mit Schwierigkeit 4. Mit jederzeit abrufbaren Tipps ließe sich
+jedes Thema per Klick auf „gekonnt" stellen. Aufgeben ist ein Misserfolg.
+
+**Anzeige.** Richtig ist richtig, im ersten wie im zweiten Versuch — so von Peter und
+Joshua festgelegt (`IDEEN.md`, jetzt umgesetzt). Der zweite Versuch fängt auch
+Flüchtigkeitsfehler ab; ihn auf der Statistik-Seite als falsch zu zeigen, wäre unwahr.
+Die beiden Richtig-Varianten bleiben getrennt und grün.
+
+**Getrennt bis in die Fortschreibung.** Wörtlich nach dem Arbeitsplan hätte
+`advanceMastery` nur noch `countsAsSuccess` bekommen. Dann hätten aber beide Quoten-Spalten
+auf `/stats` die Steuerungsquote gezeigt: `TopicMastery.correct` trägt nur die Spalte
+„gesamt", und „letzte zehn" kam aus derselben Abfrage wie die Auswahl. Deshalb bekommt
+`advanceMastery` `{ correct, success }` — `correct` zählt richtig in jedem Versuch hoch,
+`success` steuert das Intervall —, und `loadTopicStats` liefert aus demselben Fenster
+`recentSuccess` (Auswahl) und `recentRight` (Anzeige). Entschieden im Chat vor der
+Migration.
+
+**Nach der zweiten falschen Antwort** wird geschlossen und die Lösung gezeigt, ohne dass
+vorher alle Tipps geöffnet sein müssen. Zwei Fehlversuche reichen; der Zwang, danach
+noch Tipps zu öffnen, wäre Schikane ohne Lerngewinn.
+
+**Atomar an beiden Übergängen.** Der Arbeitsplan sicherte nur den Schritt `tries` 0 → 1
+ab. Das Schließen bedingt ebenfalls auf den gelesenen Versuchsstand: Sonst könnten zwei
+gleichzeitige erste Antworten, eine falsch und eine richtig, einen Attempt ergeben, der
+als „richtig im ersten Versuch" mit gesetztem `firstAnswer` endet.
+
+---
+
+## D-31 — Genau zwei Tipps oder keiner, und kein Tipp rechnet mit den Parametern
+*2026-10-03, M2f*
+
+Die erste Fassung hatte drei Tipps je Template: Erkennen, Ansatz, erster Rechenschritt.
+Nach dem ersten Lesen: Tipp 1 passte, Tipp 2 formulierte meist nur die Aufgabe um, Tipp 3
+— „für den ersten Platz {{n}}, für den zweiten {{n}} − 1, …" — war praktisch die Lösung.
+
+Seitdem gilt für alle Templates: **genau zwei Tipps oder keiner**. Tipp 1 Erkennen
+(Fragen zur Situation), Tipp 2 Ansatz (Prinzip und entscheidende Frage, ohne Rechenkette
+und ohne Zwischenergebnis). Die Leitlinie mit Beispiel steht in
+`content/templates/_README.md`.
+
+Durchgesetzt von drei Ladeprüfungen und einem Property-Test (SPEC.md Abschnitt 5):
+
+- Prüfung 11: nur Platzhalter aus `param_spec`, nicht `result` und nicht die Anzeigewerte.
+  Anzeigewerte sind Zwischenergebnisse der Lösung (`n_minus_1` beim runden Tisch).
+- Prüfung 12: 0 oder 2 Tipps.
+- Prüfung 13: kein Platzhalter direkt neben einem Rechenzeichen. **Bewusst grob** — auch
+  `{{k}}-mal` schlägt an. Dann wird umformuliert, die Regel bleibt ohne Ausnahmeliste.
+  Beim Schreiben der Tipps für dreizehn Templates hat sie kein einziges Mal fälschlich angeschlagen.
+- Property-Test über 200 Seeds: Kein gerenderter Tipp enthält die Lösung als
+  Zeichenfolge. Ergebnisse unter drei Ziffern werden übersprungen (Fehlalarme durch
+  Parameter), das steht im Test.
+
+Was keine Regel fängt, bleibt Lesearbeit: Bei der hypergeometrischen Verteilung wäre
+„wähle {{k}} aus {{K}}" schon fast die Formel, obwohl Prüfung 13 nicht anschlägt. Dort
+nennt Tipp 2 nur das Prinzip.
+
+**Templates ohne Tipps** sind zulässig; „Lösung zeigen" steht dann sofort da. Die
+Arithmetik-Templates haben keine — dort gibt es nichts zu erkennen und keinen Ansatz zu
+verraten.
+
+**Keine neue Version für Tipps.** Wie `solution_text` werden sie beim Anzeigen aus den
+persistierten Parametern gerendert und ändern die Aufgabe nicht. Ein besserer Tipp soll
+auch für eine gestern gestellte, noch offene Aufgabe gelten.
+
+---
+
+## D-32 — Ein Versionswechsel verwirft einen begonnenen Attempt, ohne Misserfolg
+*2026-10-03, M2f*
+
+Wird bei `/next` ein offener Attempt erneut ausgeliefert (D-33), dessen Template sich seit
+dem Stellen geändert hat, lässt er sich nicht mehr mit Zielzeit und Tipps zeigen. Er wird
+geschlossen — aber **nicht** als Misserfolg fortgeschrieben. Den Versionswechsel lösen
+Entwickler aus, nicht der Übende, und die Statistik soll niemanden dafür bestrafen, dass
+ein Template verbessert wurde. Ein Schlupfloch entsteht nicht: Der Übende kann keinen
+Versionswechsel herbeiführen.
+
+**Dafür ein eigener Status, `VOIDED`.** `SKIPPED` ohne Fortschreibung hätte nicht
+gereicht: Der Attempt stünde weiter als „aufgegeben" in der gleitenden Quote und im
+Kreisdiagramm. `VOIDED` hat keinen Ausgang (`classifyOutcome` gibt `null`), steht in
+keinem Fenster und schreibt `TopicMastery` nicht fort. `status` ist ein String, deshalb
+keine Migration — nur der Zod-Enum. Antwort-, Tipp- und Aufgeben-Route lehnen `VOIDED` ab
+wie jeden geschlossenen Attempt; bei Antwort und Aufgeben doppelt gesichert, durch die
+Vorprüfung und durch `status: "OPEN"` in der Bedingung des Updates.
+
+Unberührte Attempts (kein Versuch, kein Tipp) bleiben bei einem Versionswechsel offen
+liegen — sie tragen keine Information.
+
+**Grenzfall, bewusst so:** Ein begonnener Attempt in einer *älteren* Sitzung, dessen
+Template sich inzwischen geändert hat, wird beim Start einer neuen Sitzung als aufgegeben
+gezählt, nicht verworfen. Wer weggeht, ist weggegangen, bevor sich das Template geändert
+hat.
+
+---
+
+## D-33 — Wer weggeht, hat aufgegeben
+*2026-10-03, M2f*
+
+Nach dem ersten Fehlversuch bleibt der Attempt offen. Ohne weitere Regel gab es zwei Wege
+aus einem Fehlversuch, die ihn nie zählen ließen: die Seite neu laden (neue Aufgabe) und
+zur Themenauswahl zurückgehen (neue Sitzung). Nur einen der beiden zu schließen, hätte
+das Schlupfloch einen Klick weiter verschoben.
+
+- **Neuladen:** `/next` liefert den jüngsten offenen Attempt der Sitzung erneut aus, mit
+  den geöffneten Tipps (ohne `hintsUsed` zu erhöhen) und `firstTryWrong`. Keine Lösung in
+  der Response — die Zeile wird ohne `expectedAnswer` geladen.
+- **Neue Sitzung:** Offene Attempts desselben Nutzers aus älteren Sitzungen mit
+  `tries >= 1` oder `hintsUsed >= 1` werden `SKIPPED` und als Misserfolg fortgeschrieben,
+  mit dem `now` der neuen Anfrage, in derselben Transaktion wie das Anlegen.
+- **Unberührte offene Attempts** bleiben, wie sie sind: Sie tragen keine Information.
+
+Die Stoppuhr im Browser misst nach einem Neuladen nur ab dem Neuladen; `durationMs`
+fällt dann zu kurz aus. Hingenommen, weil Neuladen mitten in einer Aufgabe selten ist —
+und so an der Stelle in `practice-loop.tsx` vermerkt, damit es niemand für einen Fehler
+hält.
+
+Ein Quelltext-Test (`lib/db/leave-paths.test.ts`) hält fest, dass die Routen genau die
+getesteten Funktionen aufrufen und keine andere Stelle Sitzungen anlegt.

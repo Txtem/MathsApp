@@ -17,7 +17,7 @@ import { resumeOpenAttempt } from "./resume-attempt";
 import { loadTopicStats } from "./topic-stats";
 
 /**
- * Weg 1 aus SPEC-M2f Schritt 4b: Neuladen. `/next` liefert den offenen Attempt
+ * Weg 1 aus D-33: Neuladen. `/next` liefert den offenen Attempt
  * der Sitzung erneut aus, statt einen neuen anzulegen — gegen eine echte
  * Datenbank (D-19).
  */

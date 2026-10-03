@@ -7,7 +7,7 @@ import type { Template } from "@/lib/engine/types";
 import { readContent } from "./read";
 
 /**
- * Tipps verraten nie das Ergebnis (SPEC-M2f, E-3).
+ * Tipps verraten nie das Ergebnis (D-31).
  *
  * Prüfung 11 in `checks.ts` verhindert `{{result}}` und Anzeigewerte im Tipp,
  * aber nicht, dass jemand die Zahl ausrechnet und hineinschreibt. Deshalb hier
@@ -126,8 +126,7 @@ for (const template of withHints) {
 describe("Tipps im Content als Ganzes", () => {
   it("gibt Arithmetik keine Tipps und allen anderen Templates zwei", () => {
     // Bei Addition und Subtraktion gibt es nichts zu erkennen und keinen Ansatz
-    // zu verraten. Überall sonst gehören Erkennen und Ansatz dazu (SPEC-M2f,
-    // Schritt 8; Leitlinie in content/templates/_README.md).
+    // zu verraten. Überall sonst gehören Erkennen und Ansatz dazu (D-31; Leitlinie in content/templates/_README.md).
     for (const template of readContent().templates) {
       const expected = template.topic.startsWith("arithmetik.") ? 0 : 2;
       expect(template.hints.length, template.id).toBe(expected);

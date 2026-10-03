@@ -11,7 +11,7 @@ import { voidAttempt } from "./attempts";
 import { currentTemplate } from "./solution";
 
 /**
- * Neuladen ist kein Ausweg (SPEC-M2f, Schritt 4b): `/next` liefert den offenen
+ * Neuladen ist kein Ausweg (D-33): `/next` liefert den offenen
  * Attempt der Sitzung erneut aus, statt einen neuen anzulegen — mit den schon
  * geöffneten Tipps und dem Hinweis, dass der erste Versuch falsch war.
  *

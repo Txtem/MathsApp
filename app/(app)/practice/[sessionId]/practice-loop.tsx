@@ -86,7 +86,7 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       setAnswer("");
       setNotice(null);
       // Bewusst so, kein Fehler: Liefert der Server nach einem Neuladen eine
-      // schon begonnene Aufgabe erneut aus (SPEC-M2f, Schritt 4b), misst die
+      // schon begonnene Aufgabe erneut aus (D-33), misst die
       // Stoppuhr nur ab dem Neuladen. Die Zeit davor kennt der Browser nicht
       // mehr, und der Server misst keine Dauer. `durationMs` fällt dann zu kurz
       // aus — hinnehmbar, weil Neuladen mitten in einer Aufgabe selten ist.

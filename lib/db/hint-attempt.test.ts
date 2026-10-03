@@ -12,7 +12,7 @@ import {
 import { requestHint } from "./hint-attempt";
 
 /**
- * Tipps öffnen (SPEC-M2f, D-2), gegen eine echte Datenbank (D-19): Der Zähler
+ * Tipps öffnen (SPEC.md Abschnitt 8), gegen eine echte Datenbank (D-19): Der Zähler
  * hängt an einer bedingten Aktualisierung der Zeile.
  */
 

@@ -18,7 +18,7 @@ import { buildSolution, currentTemplate, roundedForm } from "./solution";
  * Diese Funktion trägt Invariante 2: `expectedAnswer` verlässt den Server
  * nicht, solange der Attempt `OPEN` ist. Seit M2f gibt es dafür zwei Wege, auf
  * denen eine lesbare Antwort den Attempt offen lässt: unlesbar (D-04) und die
- * erste falsche Antwort, nach der ein zweiter Versuch folgt (SPEC-M2f, D-1). Sie stand bis M2a ungetestet in der
+ * erste falsche Antwort, nach der ein zweiter Versuch folgt (SPEC.md Abschnitt 8). Sie stand bis M2a ungetestet in der
  * Route, weil sich die Route nicht importieren lässt — `server-only` und der
  * Prisma-Singleton aus `process.env` stehen im Weg. Deshalb bekommt sie ihre
  * Umgebung jetzt als Parameter, nach demselben Muster wie `lib/content/read.ts`

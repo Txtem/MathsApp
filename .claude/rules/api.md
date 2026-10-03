@@ -19,8 +19,11 @@ Der wichtigste Vertrag im System: `expectedAnswer` und `solution_text` erscheine
 **keiner** Response, solange der Attempt `status: OPEN` hat. Auch nicht in einem Feld,
 das das Frontend gerade nicht rendert — es steht trotzdem im Network-Tab.
 
-Erst `POST /api/attempt/[id]/answer` darf beides zurückgeben, und nur, nachdem der
-Status auf `ANSWERED` gesetzt wurde.
+Erst `POST /api/attempt/[id]/answer` und `POST /api/attempt/[id]/give-up` dürfen beides
+zurückgeben, und nur, nachdem der Status auf `ANSWERED` bzw. `SKIPPED` gesetzt wurde.
+Seit M2f bleibt ein Attempt nach der ersten falschen Antwort **offen** — die Antwort darauf
+ist die Konstante `RETRY` ohne jedes Lösungsfeld. Auch `/next` liefert einen offenen
+Attempt erneut aus und darf dabei Tipps mitschicken, aber nie die Lösung.
 
 ## Autorisierung an jeder Route
 
@@ -46,8 +49,10 @@ Der Prisma-Client ist ein Singleton (Dev-HMR erzeugt sonst Connection-Leaks), un
 trägt das `server-only`.
 
 Module, die ihren Client als Parameter bekommen, tragen es **nicht** — sonst wären sie
-nicht testbar, weil `server-only` unter Vitest wirft. Das betrifft `lib/db/attempts.ts`,
-`lib/db/answer-attempt.ts` und `lib/db/topic-stats.ts`. Begründung in D-12 und D-19.
+nicht testbar, weil `server-only` unter Vitest wirft. Das betrifft alle Module unter
+`lib/db` außer `client.ts` — etwa `attempts.ts`, `answer-attempt.ts`, `hint-attempt.ts`,
+`give-up-attempt.ts`, `resume-attempt.ts`, `start-session.ts` und `topic-stats.ts`.
+Begründung in D-12 und D-19.
 
 ## Routen sind Adapter
 

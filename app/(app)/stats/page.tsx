@@ -31,7 +31,7 @@ import { OutcomeChart } from "./outcome-chart";
  * Gerechnet wird nichts hier — die Umformung steht als reine Funktion in
  * `components/stats-rows.ts` und hat eigene Tests (D-16).
  *
- * Ein einziges Diagramm: die vier Ausgänge als Kreis (SPEC-M2f, Schritt 7).
+ * Ein einziges Diagramm: die vier Ausgänge als Kreis (SPEC.md Abschnitt 10a).
  * Kein Zeitverlauf — eine Kurve über zwölf Versuche sieht nach Aussage aus, wo
  * keine ist.
  */
@@ -175,7 +175,7 @@ function Numbers({ row, now }: { row: StatsRow; now: Date }) {
 
 /**
  * Falsche **erste** Antworten, die sehr schnell kamen — auch wenn der zweite
- * Versuch danach saß (SPEC-M2f, Schritt 7). Erscheint erst, wenn es mehrfach
+ * Versuch danach saß (SPEC.md Abschnitt 10a). Erscheint erst, wenn es mehrfach
  * vorkam; einmal ist Zufall (D-21).
  *
  * Beschriftet als „sehr schnell falsch", nicht als „geraten": Gemessen ist die

@@ -10,7 +10,7 @@ import { giveUp } from "./attempts";
 import { buildSolution, currentTemplate, roundedForm } from "./solution";
 
 /**
- * Aufgeben (SPEC-M2f, D-3) — die Entscheidungen ohne HTTP.
+ * Aufgeben (SPEC.md Abschnitt 8) — die Entscheidungen ohne HTTP.
  *
  * „Lösung zeigen" erscheint erst, wenn alle Tipps offen sind. Diese Regel setzt
  * **der Server** durch, nicht die Oberfläche: `giveUp` schließt nur, wenn

@@ -14,7 +14,7 @@ import { startSession } from "@/lib/db/start-session";
  *
  * Die Uhr wird hier einmal gelesen und weitergereicht (D-20). Offene Attempts
  * aus älteren Sitzungen mit Versuch oder Tipp schließt `startSession` als
- * aufgegeben — wer weggeht, hat aufgegeben (SPEC-M2f, Schritt 4b).
+ * aufgegeben — wer weggeht, hat aufgegeben (D-33).
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const now = new Date();

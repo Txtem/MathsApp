@@ -5,7 +5,7 @@ import type { AnswerDeps } from "./answer-attempt";
 import { currentTemplate } from "./solution";
 
 /**
- * Den nächsten Tipp öffnen (SPEC-M2f, D-2) — die Entscheidungen ohne HTTP,
+ * Den nächsten Tipp öffnen (SPEC.md Abschnitt 8) — die Entscheidungen ohne HTTP,
  * nach demselben Muster wie `answer-attempt.ts`.
  *
  * Ein Tipp gibt nichts aus der Lösung preis: Er wird nur aus den Parametern
