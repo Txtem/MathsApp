@@ -9,6 +9,7 @@ import {
   AttemptStatusSchema,
   CreateSessionRequestSchema,
   ExpectedAnswerSchema,
+  FRESH_QUESTION,
   ParamsSchema,
   NextQuestionResponseSchema,
   toNextQuestionResponse,
@@ -31,11 +32,14 @@ describe("toNextQuestionResponse — der wichtigste Vertrag im System", () => {
     params: { a: 18, b: 23 },
   };
 
-  it("gibt genau die sechs Felder aus SPEC Abschnitt 8 zurück", () => {
-    expect(Object.keys(toNextQuestionResponse(attemptRow, template)).sort()).toEqual([
+  it("gibt genau die Felder aus SPEC Abschnitt 8 zurück", () => {
+    expect(Object.keys(toNextQuestionResponse(attemptRow, template, FRESH_QUESTION)).sort()).toEqual([
       "answerType",
       "attemptId",
       "difficulty",
+      "firstTryWrong",
+      "hintsTotal",
+      "openedHints",
       "questionText",
       "targetTimeSeconds",
       "topic",
@@ -43,20 +47,36 @@ describe("toNextQuestionResponse — der wichtigste Vertrag im System", () => {
   });
 
   it("enthält die Lösung an keiner Stelle des JSON", () => {
-    const json = JSON.stringify(toNextQuestionResponse(attemptRow, template));
+    const json = JSON.stringify(toNextQuestionResponse(attemptRow, template, FRESH_QUESTION));
     expect(json).not.toContain("expectedAnswer");
     expect(json).not.toContain("41");
     expect(json).not.toContain("seed");
   });
 
   it("übernimmt die Werte aus Attempt und Template", () => {
-    expect(toNextQuestionResponse(attemptRow, template)).toEqual({
+    expect(toNextQuestionResponse(attemptRow, template, FRESH_QUESTION)).toEqual({
       attemptId: "attempt-1",
       questionText: "Berechne: 18 + 23",
       answerType: "integer",
       targetTimeSeconds: 30,
       topic: "arithmetik.addition",
       difficulty: 1,
+      hintsTotal: 0,
+      openedHints: [],
+      firstTryWrong: false,
+    });
+  });
+
+  it("reicht geöffnete Tipps und den ersten Fehlversuch durch", () => {
+    const response = toNextQuestionResponse(
+      attemptRow,
+      { ...template, hints: ["Erst die Zehner.", "Dann die Einer."] },
+      { openedHints: ["Erst die Zehner."], firstTryWrong: true },
+    );
+    expect(response).toMatchObject({
+      hintsTotal: 2,
+      openedHints: ["Erst die Zehner."],
+      firstTryWrong: true,
     });
   });
 });
@@ -141,6 +161,7 @@ describe("Response-Schemas passen zu dem, was der Server baut", () => {
     const response = toNextQuestionResponse(
       { id: "a1", questionText: "Berechne: 1 + 1", answerType: "integer" },
       template,
+      FRESH_QUESTION,
     );
     expect(NextQuestionResponseSchema.safeParse(response).success).toBe(true);
   });

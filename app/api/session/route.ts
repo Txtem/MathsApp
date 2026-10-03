@@ -4,6 +4,7 @@ import { type CreateSessionResponse, CreateSessionRequestSchema } from "@/lib/ap
 import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db/client";
+import { startSession } from "@/lib/db/start-session";
 
 /**
  * POST /api/session — startet eine Übungssitzung.
@@ -11,7 +12,9 @@ import { prisma } from "@/lib/db/client";
  * Request:  { topicFilter?: string }
  * Response: { sessionId: string }
  *
- * Die Uhr wird hier einmal gelesen und weitergereicht (D-20).
+ * Die Uhr wird hier einmal gelesen und weitergereicht (D-20). Offene Attempts
+ * aus älteren Sitzungen mit Versuch oder Tipp schließt `startSession` als
+ * aufgegeben — wer weggeht, hat aufgegeben (SPEC-M2f, Schritt 4b).
  */
 export async function POST(request: Request): Promise<NextResponse> {
   const now = new Date();
@@ -24,11 +27,12 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   const userId = await getCurrentUserId(now);
 
-  const session = await prisma.practiceSession.create({
-    data: { userId, topicFilter: parsed.data.topicFilter ?? null, startedAt: now },
-    select: { id: true },
+  const session = await startSession(prisma, {
+    userId,
+    topicFilter: parsed.data.topicFilter ?? null,
+    now,
   });
 
-  const body: CreateSessionResponse = { sessionId: session.id };
+  const body: CreateSessionResponse = { sessionId: session.sessionId };
   return NextResponse.json(body, { status: 201 });
 }

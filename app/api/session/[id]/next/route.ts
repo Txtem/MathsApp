@@ -2,11 +2,12 @@ import { randomUUID } from "node:crypto";
 
 import { NextResponse } from "next/server";
 
-import { AnswerTypeSchema, toNextQuestionResponse } from "@/lib/api/contracts";
+import { AnswerTypeSchema, FRESH_QUESTION, toNextQuestionResponse } from "@/lib/api/contracts";
 import { apiError } from "@/lib/api/responses";
 import { getCurrentUserId } from "@/lib/auth/current-user";
-import { getTemplates } from "@/lib/content/load";
+import { getTemplate, getTemplates } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
+import { resumeOpenAttempt } from "@/lib/db/resume-attempt";
 import { loadSessionHistory } from "@/lib/db/session-history";
 import { loadTopicStats } from "@/lib/db/topic-stats";
 import { drawQuestion } from "@/lib/selection/next-question";
@@ -21,6 +22,10 @@ import { matchesTopic } from "@/lib/selection/next-template";
  *
  * Die Uhr wird hier einmal gelesen: Auswahl und `createdAt` sehen denselben
  * Zeitpunkt (D-20).
+ *
+ * Gibt es in der Sitzung noch einen offenen Attempt, wird **er** ausgeliefert,
+ * nicht ein neuer angelegt — Neuladen ist kein Ausweg aus einem Fehlversuch
+ * (SPEC-M2f, Schritt 4b, `lib/db/resume-attempt.ts`).
  */
 export async function POST(
   _request: Request,
@@ -38,6 +43,12 @@ export async function POST(
   if (!session) return apiError("not_found", "Session existiert nicht.");
   if (session.userId !== userId) return apiError("forbidden", "Session gehört zu einem anderen User.");
   if (session.endedAt) return apiError("invalid_request", "Session ist bereits beendet.");
+
+  const resumed = await resumeOpenAttempt(
+    { prisma, findTemplate: getTemplate },
+    { practiceSessionId: session.id, userId, now },
+  );
+  if (resumed) return NextResponse.json(resumed, { status: 200 });
 
   const history = await loadSessionHistory(prisma, session.id);
 
@@ -98,6 +109,7 @@ export async function POST(
     toNextQuestionResponse(
       { ...attempt, answerType: AnswerTypeSchema.parse(attempt.answerType) },
       template,
+      FRESH_QUESTION,
     ),
     { status: 201 },
   );

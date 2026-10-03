@@ -66,7 +66,14 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       if (!parsed.success) throw new Error("Unerwartete Antwort des Servers");
 
       setAnswer("");
-      setNotice(null);
+      setNotice(
+        parsed.data.firstTryWrong ? "Der erste Versuch war falsch. Das ist dein zweiter." : null,
+      );
+      // Bewusst so, kein Fehler: Liefert der Server nach einem Neuladen eine
+      // schon begonnene Aufgabe erneut aus (SPEC-M2f, Schritt 4b), misst die
+      // Stoppuhr nur ab dem Neuladen. Die Zeit davor kennt der Browser nicht
+      // mehr, und der Server misst keine Dauer. `durationMs` fällt dann zu kurz
+      // aus — hinnehmbar, weil Neuladen mitten in einer Aufgabe selten ist.
       setPhase({ kind: "question", question: parsed.data, startedAt: Date.now() });
     } catch (cause) {
       setPhase({ kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" });

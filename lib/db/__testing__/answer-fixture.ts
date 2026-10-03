@@ -52,6 +52,9 @@ export interface SeedOverrides {
   readonly answerType?: string;
   readonly tries?: number;
   readonly hintsUsed?: number;
+  /** Ohne Angabe die Sitzung der Fixture. */
+  readonly practiceSessionId?: string;
+  readonly createdAt?: Date;
 }
 
 export interface AnswerFixture {
@@ -63,6 +66,8 @@ export interface AnswerFixture {
    */
   readonly deps: (template?: ValidatedTemplate | null) => AnswerDeps;
   readonly seedAttempt: (overrides?: SeedOverrides) => Promise<string>;
+  /** Die Sitzung, in der `seedAttempt` ohne Angabe anlegt. */
+  readonly sessionId: () => string;
 }
 
 /** Registriert `beforeEach`/`afterEach` für die Datei, in der es aufgerufen wird. */
@@ -90,6 +95,7 @@ export function setupAnswerFixture(): AnswerFixture {
 
   return {
     prisma: () => database.prisma,
+    sessionId: () => sessionId,
     deps: (template = TEMPLATE) => ({
       prisma: database.prisma,
       findTemplate: (id) => (template?.id === id ? template : undefined),
@@ -97,7 +103,7 @@ export function setupAnswerFixture(): AnswerFixture {
     seedAttempt: async (overrides = {}) => {
       const attempt = await database.prisma.attempt.create({
         data: {
-          practiceSessionId: sessionId,
+          practiceSessionId: overrides.practiceSessionId ?? sessionId,
           templateId: TEMPLATE.id,
           templateVersion: overrides.templateVersion ?? TEMPLATE.version,
           seed: `seed-${Math.random()}`,
@@ -111,7 +117,7 @@ export function setupAnswerFixture(): AnswerFixture {
           status: overrides.status ?? "OPEN",
           tries: overrides.tries ?? 0,
           hintsUsed: overrides.hintsUsed ?? 0,
-          createdAt: NOW,
+          createdAt: overrides.createdAt ?? NOW,
         },
       });
       return attempt.id;

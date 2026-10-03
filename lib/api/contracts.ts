@@ -49,7 +49,25 @@ export interface NextQuestionResponse {
   readonly difficulty: number;
   /** Nur bei `numeric`: auf so viele Nachkommastellen wird gerundet. */
   readonly roundTo?: number;
+  /** Wie viele Tipps die Aufgabe hat. 0 heißt: „Lösung zeigen" steht sofort da. */
+  readonly hintsTotal: number;
+  /**
+   * Die schon geöffneten Tipps, gerendert — nach einem Neuladen wieder da, ohne
+   * dass `hintsUsed` steigt. Bei einer neuen Aufgabe leer.
+   */
+  readonly openedHints: readonly string[];
+  /** Der erste Versuch war falsch, dies ist der zweite. Nur bei erneuter Auslieferung. */
+  readonly firstTryWrong: boolean;
 }
+
+/** Was an einer erneut ausgelieferten Aufgabe schon geschehen ist. */
+export interface QuestionProgress {
+  readonly openedHints: readonly string[];
+  readonly firstTryWrong: boolean;
+}
+
+/** Der Stand einer frisch gestellten Aufgabe. */
+export const FRESH_QUESTION: QuestionProgress = { openedHints: [], firstTryWrong: false };
 
 export type AnswerResponse =
   | {
@@ -98,12 +116,16 @@ export interface GiveUpResponse {
  * Baut die Antwort auf `/next`. Die Felder werden **einzeln** aus Attempt und
  * Template genommen, nie per Spread: So kann kein neues Spaltenfeld — und schon
  * gar nicht `expectedAnswer` — versehentlich in die Response rutschen.
+ *
+ * `progress` ist Pflicht: Eine erneut ausgelieferte Aufgabe ohne ihre geöffneten
+ * Tipps wäre stiller Datenverlust, und ein Default würde ihn erlauben.
  */
 export function toNextQuestionResponse(
   attempt: { readonly id: string; readonly questionText: string; readonly answerType: AnswerType },
-  template: Pick<Template, "topic" | "difficulty" | "target_time_seconds"> & {
+  template: Pick<Template, "topic" | "difficulty" | "target_time_seconds" | "hints"> & {
     readonly round_to?: number;
   },
+  progress: QuestionProgress,
 ): NextQuestionResponse {
   return {
     attemptId: attempt.id,
@@ -113,6 +135,9 @@ export function toNextQuestionResponse(
     topic: template.topic,
     difficulty: template.difficulty,
     ...(template.round_to === undefined ? {} : { roundTo: template.round_to }),
+    hintsTotal: template.hints?.length ?? 0,
+    openedHints: [...progress.openedHints],
+    firstTryWrong: progress.firstTryWrong,
   };
 }
 
@@ -138,6 +163,9 @@ export const NextQuestionResponseSchema = z.strictObject({
   topic: z.string().min(1),
   difficulty: z.number().int().min(1).max(5),
   roundTo: z.number().int().min(0).max(10).optional(),
+  hintsTotal: z.number().int().nonnegative(),
+  openedHints: z.array(z.string().min(1)),
+  firstTryWrong: z.boolean(),
 });
 
 export const AnswerResponseSchema = z.union([

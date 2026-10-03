@@ -110,6 +110,62 @@ export async function giveUp(prisma: PrismaClient, input: GiveUpInput): Promise<
 }
 
 /**
+ * Ein offener Attempt, der etwas über den Übenden verrät: mindestens ein
+ * bewerteter Versuch oder ein geöffneter Tipp. Nur solche Attempts werden beim
+ * Weggehen als aufgegeben geschlossen; einer ohne Versuch und ohne Tipp trägt
+ * keine Information und bleibt unberührt (SPEC-M2f, Schritt 4b).
+ */
+const INFORMATIVE_OPEN: Prisma.AttemptWhereInput = {
+  status: "OPEN",
+  OR: [{ tries: { gte: 1 } }, { hintsUsed: { gte: 1 } }],
+};
+
+/**
+ * Wer weggeht, hat aufgegeben: Offene Attempts des Nutzers mit Versuch oder
+ * Tipp werden `SKIPPED` und als Misserfolg fortgeschrieben — mit dem `now` der
+ * Anfrage, die das Weggehen feststellt.
+ *
+ * Läuft in der Transaktion des Aufrufers, damit das Schließen und das, was es
+ * auslöst (eine neue Sitzung), zusammen gelingen oder zusammen scheitern.
+ * Gibt zurück, wie viele Attempts geschlossen wurden.
+ *
+ * Ohne das wäre Weggehen ein Ausgang aus der Statistik: nach dem ersten
+ * Fehlversuch eine neue Sitzung starten, und der Fehlversuch zählte nie.
+ */
+export async function abandonOpenAttempts(
+  tx: Prisma.TransactionClient,
+  input: {
+    readonly userId: string;
+    /** Nur diese Attempts — ohne Angabe alle offenen des Nutzers. */
+    readonly attemptIds?: readonly string[];
+    readonly now: Date;
+  },
+): Promise<number> {
+  const candidates = await tx.attempt.findMany({
+    where: {
+      userId: input.userId,
+      ...INFORMATIVE_OPEN,
+      ...(input.attemptIds ? { id: { in: [...input.attemptIds] } } : {}),
+    },
+    select: { id: true },
+  });
+
+  let closed = 0;
+  for (const { id } of candidates) {
+    // Die Bedingung noch einmal in der Aktualisierung: Was inzwischen
+    // beantwortet wurde, bleibt, wie es ist.
+    const updated = await tx.attempt.updateMany({
+      where: { id, ...INFORMATIVE_OPEN },
+      data: { status: "SKIPPED", answeredAt: input.now },
+    });
+    if (updated.count === 0) continue;
+    await advanceFromClosedRow(tx, id, input.now);
+    closed++;
+  }
+  return closed;
+}
+
+/**
  * Schreibt den Themenfortschritt aus der eben geschlossenen Zeile fort.
  *
  * Nutzer und Topic stehen auf dem Attempt selbst (D-18) — kein Umweg über
