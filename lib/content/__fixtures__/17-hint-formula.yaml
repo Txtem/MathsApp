@@ -1,0 +1,15 @@
+# Prüfung 13: Ein Tipp rechnet nicht mit den Parametern vor. „{{n}} − 1" ist
+# ein Stück Lösungsweg, kein Ansatz mehr.
+id: aufg_90017
+version: 1
+topic: kombinatorik.permutation
+difficulty: 1
+target_time_seconds: 60
+compute_ref: kombinatorik.permutation.factorial
+answer_type: integer
+param_spec:
+  n: { type: int, min: 3, max: 9 }
+question_text: "Auf wie viele Arten können {{n}} Personen in einer Reihe angeordnet werden?"
+hints:
+  - "Kommt es auf die Reihenfolge an?"
+  - "Für den zweiten Platz bleiben {{n}} − 1 Personen."

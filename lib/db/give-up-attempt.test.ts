@@ -42,12 +42,12 @@ function zeile(id: string) {
 }
 
 async function alleTipps(id: string): Promise<void> {
-  for (let i = 0; i < 3; i++) await requestHint(deps(MIT_TIPPS), { attemptId: id, userId: USER });
+  for (let i = 0; i < 2; i++) await requestHint(deps(MIT_TIPPS), { attemptId: id, userId: USER });
 }
 
 describe("giveUpAttempt — erst alle Tipps", () => {
   it("lehnt Aufgeben vor dem letzten Tipp ab", async () => {
-    for (const geoeffnet of [0, 1, 2]) {
+    for (const geoeffnet of [0, 1]) {
       const id = await seedAttempt({ hintsUsed: geoeffnet });
 
       expect(await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id))).toEqual({
@@ -59,7 +59,7 @@ describe("giveUpAttempt — erst alle Tipps", () => {
   });
 
   it("verrät bei der Ablehnung nichts aus der Lösung", async () => {
-    const id = await seedAttempt({ hintsUsed: 2 });
+    const id = await seedAttempt({ hintsUsed: 1 });
 
     const outcome = await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id));
 
@@ -89,7 +89,7 @@ describe("giveUpAttempt — erst alle Tipps", () => {
 
 describe("giveUpAttempt — Zustand und Fortschritt", () => {
   it("schließt als SKIPPED mit answeredAt, ohne Urteil", async () => {
-    const id = await seedAttempt({ hintsUsed: 3 });
+    const id = await seedAttempt({ hintsUsed: 2 });
 
     await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id));
 
@@ -104,7 +104,7 @@ describe("giveUpAttempt — Zustand und Fortschritt", () => {
     await fixture.prisma().topicMastery.create({
       data: { userId: USER, topic: TOPIC, attempts: 4, correct: 4, intervalDays: 8 },
     });
-    const id = await seedAttempt({ hintsUsed: 3 });
+    const id = await seedAttempt({ hintsUsed: 2 });
 
     await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id));
 
@@ -114,14 +114,14 @@ describe("giveUpAttempt — Zustand und Fortschritt", () => {
   });
 
   it("geht auch im zweiten Versuch", async () => {
-    const id = await seedAttempt({ tries: 1, hintsUsed: 3 });
+    const id = await seedAttempt({ tries: 1, hintsUsed: 2 });
 
     expect((await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id))).kind).toBe("given_up");
     expect(await zeile(id)).toMatchObject({ status: "SKIPPED", tries: 1 });
   });
 
   it("lehnt einen geschlossenen Attempt ab und zählt nicht noch einmal", async () => {
-    const id = await seedAttempt({ hintsUsed: 3 });
+    const id = await seedAttempt({ hintsUsed: 2 });
     await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id));
 
     expect(await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id))).toEqual({
@@ -131,7 +131,7 @@ describe("giveUpAttempt — Zustand und Fortschritt", () => {
   });
 
   it("zählt bei gleichzeitigem Aufgeben nur einmal", async () => {
-    const id = await seedAttempt({ hintsUsed: 3 });
+    const id = await seedAttempt({ hintsUsed: 2 });
 
     const results = await Promise.all([
       giveUpAttempt(deps(MIT_TIPPS), aufgeben(id)),
@@ -143,7 +143,7 @@ describe("giveUpAttempt — Zustand und Fortschritt", () => {
   });
 
   it("nur für den eigenen Nutzer", async () => {
-    const id = await seedAttempt({ userId: ANDERER, hintsUsed: 3 });
+    const id = await seedAttempt({ userId: ANDERER, hintsUsed: 2 });
 
     expect(await giveUpAttempt(deps(MIT_TIPPS), aufgeben(id))).toEqual({ kind: "forbidden" });
     expect(await giveUpAttempt(deps(MIT_TIPPS), aufgeben("gibt-es-nicht"))).toEqual({

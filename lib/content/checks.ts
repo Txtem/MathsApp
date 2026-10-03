@@ -34,6 +34,8 @@ export type CheckCode =
   | "display_key_collision"
   | "hint_reveals_solution"
   | "unknown_hint_placeholder"
+  | "hint_count"
+  | "hint_formula"
   | "small_parameter_space";
 
 export type Severity = "error" | "warning";
@@ -61,6 +63,30 @@ export interface LoadedTemplate {
   readonly template: ValidatedTemplate;
   /** Herkunft für die Fehlermeldung, üblicherweise der Dateipfad. */
   readonly source: string;
+}
+
+/**
+ * Erlaubte Zahl von Tipps: keiner oder genau zwei — erst Erkennen, dann Ansatz.
+ * Ein dritter Tipp war in der ersten Übungsrunde jedes Mal schon die Lösung.
+ * Begründung in `content/templates/_README.md`.
+ */
+export const ALLOWED_HINT_COUNTS: readonly number[] = [0, 2];
+
+/**
+ * Ein Platzhalter direkt neben einem Rechenzeichen — `{{n}} − 1`, `{{n}}!`,
+ * `2·{{k}}`. Das ist ein Stück Lösungsweg, kein Tipp mehr: Der Ansatz darf das
+ * Prinzip nennen, das Rechnen mit den Parametern bleibt beim Übenden.
+ *
+ * Bewusst grob. Auch harmlose Wortbildungen wie `{{k}}-mal` schlagen an; das
+ * ist der Preis dafür, dass die Regel ohne Ausnahmeliste auskommt. Leerzeichen
+ * zwischen Platzhalter und Zeichen helfen nicht.
+ */
+const FORMULA_NEXT_TO_PLACEHOLDER =
+  /\{\{[a-z][a-z0-9_]*\}\}\s*[+−\-·*/!]|[+−\-·*/!]\s*\{\{[a-z][a-z0-9_]*\}\}/;
+
+/** Die Fundstelle, an der ein Tipp mit einem Parameter rechnet — oder `undefined`. */
+export function formulaInHint(hint: string): string | undefined {
+  return FORMULA_NEXT_TO_PLACEHOLDER.exec(hint)?.[0];
 }
 
 /** So viele Seeds werden probiert, um das Compute-Schema zu prüfen. */
@@ -206,6 +232,26 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
           `Tipp ${index + 1} nennt {{${name}}}, param_spec kennt es nicht.`,
         );
       }
+    }
+  });
+
+  // 12. Keiner oder genau zwei Tipps — Erkennen und Ansatz. Danach kommt
+  //     „Lösung zeigen".
+  if (!ALLOWED_HINT_COUNTS.includes(template.hints.length)) {
+    report(
+      "hint_count",
+      `${template.hints.length} Tipp(s); erlaubt sind keiner oder genau zwei (Erkennen, Ansatz).`,
+    );
+  }
+
+  // 13. Kein Tipp rechnet mit den Parametern vor.
+  template.hints.forEach((hint, index) => {
+    const found = formulaInHint(hint);
+    if (found !== undefined) {
+      report(
+        "hint_formula",
+        `Tipp ${index + 1} rechnet mit einem Parameter („${found.trim()}") — das ist ein Stück Lösungsweg.`,
+      );
     }
   });
 

@@ -29,8 +29,7 @@ solution_text: |
   $$\frac{ {{n}}! }{ ({{n}}-{{k}})! } = {{result}}$$
 
 hints:
-  - "Kommt es auf die Reihenfolge an? Und darf ein Element mehrfach vorkommen?"
-  - "Es werden nur {{k}} Plätze vergeben, und jeder Platz geht an eine andere der {{n}} Teilnehmerinnen."
-  - "Für Platz 1 gibt es {{n}} Möglichkeiten, für Platz 2 noch {{n}} − 1, … – und nach Platz {{k}} hörst du auf."
+  - "Kommt es auf die Reihenfolge an? Darf jemand mehrfach vorkommen? Bekommen alle einen Platz oder nur eine Auswahl?"
+  - "Die Reihenfolge zählt, niemand steht zweimal auf dem Treppchen, aber nur {{k}} der {{n}} bekommen einen Platz. Zähle Platz für Platz, wie viele noch infrage kommen, und überlege, wann du aufhörst."
 
 tags: [variation, ohne_wiederholung, geordnet]

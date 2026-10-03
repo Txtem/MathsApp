@@ -8,6 +8,7 @@ import {
   checkTemplate,
   collidingDisplayKeys,
   errorsOf,
+  formulaInHint,
   MIN_PARAMETER_SPACE,
   warningsOf,
 } from "./checks";
@@ -43,6 +44,8 @@ describe("Negativ-Fixtures — jede Prüfung schlägt an", () => {
     ["13-hint-reveals-result.yaml", "hint_reveals_solution"],
     ["14-hint-reveals-display-key.yaml", "hint_reveals_solution"],
     ["15-unknown-hint-placeholder.yaml", "unknown_hint_placeholder"],
+    ["16-hint-count.yaml", "hint_count"],
+    ["17-hint-formula.yaml", "hint_formula"],
   ];
 
   it.each(cases)("%s meldet genau %s", (file, code) => {
@@ -235,5 +238,34 @@ describe("Der echte Content", () => {
   it("vergibt jede ID nur einmal", () => {
     const ids = readContent().templates.map((template) => template.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("formulaInHint — Prüfung 13", () => {
+  it.each([
+    ["{{n}} − 1", "Minuszeichen"],
+    ["{{n}}-1", "Bindestrich als Minus"],
+    ["{{n}}!", "Fakultät"],
+    ["2·{{k}}", "Malpunkt davor"],
+    ["{{a}} + {{b}}", "Plus"],
+    ["{{n}} / {{k}}", "Bruchstrich"],
+    ["{{n}} * 2", "Stern"],
+  ])("schlägt an bei %s (%s)", (hint) => {
+    expect(formulaInHint(`Bedenke: ${hint} ist wichtig.`)).toBeDefined();
+  });
+
+  it.each([
+    ["nur {{k}} der {{n}} bekommen einen Platz"],
+    ["Alle {{n}} Personen werden angeordnet, jede genau einmal."],
+    ["Platz – angeordnet werden alle {{n}}"],
+    ["Wie viele Reihen-Anordnungen gibt es für {{n}} Personen?"],
+  ])("lässt %s durch", (hint) => {
+    expect(formulaInHint(hint)).toBeUndefined();
+  });
+
+  it("ist bewusst grob: auch eine harmlose Wortbildung schlägt an", () => {
+    // Der Preis dafür, ohne Ausnahmeliste auszukommen. Umformulieren
+    // („{{k}} Mal") ist billiger als eine Regel mit Löchern.
+    expect(formulaInHint("Würfle {{k}}-mal.")).toBeDefined();
   });
 });

@@ -34,13 +34,12 @@ export const TEMPLATE = {
   solution_text: "$${{n}}! = {{result}}$$",
 } as unknown as ValidatedTemplate;
 
-/** Dasselbe Template mit drei Tipps; der zweite nennt einen Parameter. */
+/** Dasselbe Template mit zwei Tipps (Erkennen, Ansatz); der zweite nennt einen Parameter. */
 export const MIT_TIPPS = {
   ...TEMPLATE,
   hints: [
     "Kommt es auf die Reihenfolge an?",
-    "Für den ersten Platz gibt es {{n}} Möglichkeiten.",
-    "Für den zweiten Platz bleibt eine weniger.",
+    "Alle {{n}} Personen werden angeordnet. Wie viele kommen für den ersten Platz infrage?",
   ],
 } as unknown as ValidatedTemplate;
 

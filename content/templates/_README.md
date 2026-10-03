@@ -14,15 +14,55 @@ Kurz das Wichtigste:
 - Änderung an `param_spec`, `compute_ref`, `constraints` oder an der Bedeutung
   des `question_text` ⇒ `version` erhöhen. Reine Tippfehler nicht.
   **Eine Änderung am `solution_text` allein zieht keine neue Version nach sich.**
-  Dasselbe gilt für `hints`: Tipps werden wie der Lösungsweg beim Anzeigen aus den
-  persistierten Parametern gerendert und ändern die Aufgabe nicht. Ein besserer Tipp
-  soll auch für eine gestern gestellte, noch offene Aufgabe gelten.
   `templateVersion` steht für die Reproduzierbarkeit der *Aufgabe*: Aus Seed, `id` und
   Version muss dieselbe Instanz wieder entstehen. Der Lösungsweg wird nicht je Versuch
   gespeichert, sondern beim Anzeigen aus den persistierten Parametern neu gerendert —
   ein besser erklärter Lösungsweg soll deshalb **rückwirkend** gelten, auch für Aufgaben
   von gestern. Eine neue Version würde ihn den alten Attempts vorenthalten: Passt die
   Version nicht mehr, zeigt `answer-attempt.ts` gar keinen Lösungsweg.
+  Dasselbe gilt für `hints`: Tipps werden wie der Lösungsweg beim Anzeigen aus den
+  persistierten Parametern gerendert und ändern die Aufgabe nicht. Ein besserer Tipp
+  soll auch für eine gestern gestellte, noch offene Aufgabe gelten.
+
+## Tipps
+
+Ein Template hat **genau zwei Tipps oder keinen**. Danach kommt „Lösung zeigen".
+
+1. **Erkennen.** Fragen zur Situation: Kommt es auf die Reihenfolge an? Darf
+   etwas mehrfach vorkommen? Werden alle angeordnet oder nur eine Auswahl?
+   Der Tipp ordnet die Aufgabe ein, ohne sie zu lösen.
+2. **Ansatz.** Nennt das Prinzip und stellt die entscheidende Frage — aber ohne
+   Rechenkette mit den Parametern und ohne Zwischenergebnis. Das Ausrechnen
+   bleibt beim Übenden.
+
+Ein Beispiel (`aufg_00005`, Treppchen):
+
+> 1. Kommt es auf die Reihenfolge an? Darf jemand mehrfach vorkommen? Bekommen
+>    alle einen Platz oder nur eine Auswahl?
+> 2. Die Reihenfolge zählt, niemand steht zweimal auf dem Treppchen, aber nur
+>    {{k}} der {{n}} bekommen einen Platz. Zähle Platz für Platz, wie viele noch
+>    infrage kommen, und überlege, wann du aufhörst.
+
+**Warum so.** Die erste Fassung hatte drei Tipps je Template. Nach dem ersten
+Üben: Tipp 1 passte. Tipp 2 formulierte meist nur die Aufgabe um und war fast
+nutzlos. Tipp 3 — „für den ersten Platz {{n}}, für den zweiten {{n}} − 1, …" — war
+praktisch die Lösung: Wer ihn las, musste nur noch abschreiben. Ein Tipp soll
+den nächsten Gedanken anstoßen, nicht ihn abnehmen.
+
+`npm run content:check` setzt das zum Teil durch:
+
+- Prüfung 11: Nur Platzhalter aus `param_spec` — kein `{{result}}`, keine
+  Anzeigewerte. Die sind Zwischenergebnisse der Lösung.
+- Prüfung 12: genau 0 oder 2 Tipps.
+- Prüfung 13: Kein Platzhalter direkt neben einem Rechenzeichen
+  (`+ − - · * / !`). `{{n}} − 1` oder `{{n}}!` ist ein Stück Lösungsweg. Die Regel
+  ist bewusst grob: Auch `{{k}}-mal` schlägt an. Dann umformulieren
+  („{{k}} Mal"), nicht die Regel aufweichen.
+- Ein Property-Test prüft über 200 Seeds, dass kein gerenderter Tipp die Lösung
+  ausschreibt (`lib/content/hints.test.ts`).
+
+Was keine Prüfung fängt — ob Tipp 2 nur umformuliert oder doch zu viel verrät —,
+bleibt Lesearbeit.
 
 ## Wie viele Aufgaben ein Template hergeben muss
 

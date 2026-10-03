@@ -36,8 +36,7 @@ solution_text: |
   $${{n}}! = {{result}}$$
 
 hints:
-  - "Kommt es auf die Reihenfolge an? Und kommt jede Person genau einmal vor?"
-  - "Alle {{n}} Personen bekommen einen Platz – angeordnet werden alle {{n}}, keine doppelt."
-  - "Für den ersten Platz gibt es {{n}} Möglichkeiten, für den zweiten bleiben {{n}} − 1, für den dritten {{n}} − 2, …"
+  - "Kommt es auf die Reihenfolge an? Kommt jede Person genau einmal vor? Werden alle angeordnet oder nur eine Auswahl?"
+  - "Alle {{n}} Personen werden angeordnet, jede genau einmal. Überlege, wie viele für den ersten Platz infrage kommen und wie sich das von Platz zu Platz ändert."
 
 tags: [permutation, ohne_wiederholung]

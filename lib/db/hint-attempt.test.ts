@@ -35,7 +35,7 @@ describe("requestHint", () => {
 
     expect(outcome).toEqual({
       kind: "hint",
-      response: { hint: "Kommt es auf die Reihenfolge an?", index: 0, total: 3 },
+      response: { hint: "Kommt es auf die Reihenfolge an?", index: 0, total: 2 },
     });
     expect(await hintsUsed(id)).toBe(1);
   });
@@ -48,16 +48,20 @@ describe("requestHint", () => {
 
     expect(zweiter).toEqual({
       kind: "hint",
-      response: { hint: "Für den ersten Platz gibt es 6 Möglichkeiten.", index: 1, total: 3 },
+      response: {
+        hint: "Alle 6 Personen werden angeordnet. Wie viele kommen für den ersten Platz infrage?",
+        index: 1,
+        total: 2,
+      },
     });
   });
 
   it("lehnt ab, wenn alle Tipps geöffnet sind, und ändert nichts", async () => {
     const id = await seedAttempt();
-    for (let i = 0; i < 3; i++) await requestHint(deps(MIT_TIPPS), tipp(id));
+    for (let i = 0; i < 2; i++) await requestHint(deps(MIT_TIPPS), tipp(id));
 
     expect(await requestHint(deps(MIT_TIPPS), tipp(id))).toEqual({ kind: "no_more_hints" });
-    expect(await hintsUsed(id)).toBe(3);
+    expect(await hintsUsed(id)).toBe(2);
   });
 
   it("gibt bei einem Template ohne Tipps keinen", async () => {
@@ -99,7 +103,7 @@ describe("requestHint", () => {
   it("verrät nichts aus der Lösung und hält sich an den strikten Vertrag", async () => {
     const id = await seedAttempt();
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       const outcome = await requestHint(deps(MIT_TIPPS), tipp(id));
       if (outcome.kind !== "hint") throw new Error(outcome.kind);
       expect(HintResponseSchema.safeParse(outcome.response).success).toBe(true);

@@ -38,7 +38,6 @@ solution_text: |
 
 hints:
   - "Was ist am runden Tisch anders als in einer Reihe? Wann gelten zwei Sitzordnungen hier als gleich?"
-  - "Jede Sitzordnung lässt sich auf {{n}} Arten drehen, ohne dass sich etwas ändert. Zähle erst so, als säßen die {{n}} Personen in einer Reihe."
-  - "Halte eine Person fest: Ihr Platz legt die Drehung fest. Dann bleiben die übrigen {{n}} − 1 Personen frei anzuordnen."
+  - "Zähle zuerst so, als säßen alle {{n}} in einer Reihe. Wie viele dieser Reihen-Anordnungen ergeben am Tisch dieselbe Sitzordnung?"
 
 tags: [permutation, zyklisch, rundtisch]

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { questionControls, type QuestionState, verdictLook, withHint } from "./question-controls";
 
 function state(overrides: Partial<QuestionState>): QuestionState {
-  return { hintsTotal: 3, openedHints: [], firstTryWrong: false, ...overrides };
+  return { hintsTotal: 2, openedHints: [], firstTryWrong: false, ...overrides };
 }
 
 describe("questionControls", () => {
@@ -17,16 +17,13 @@ describe("questionControls", () => {
 
   it("zählt beim nächsten Tipp mit", () => {
     expect(questionControls(state({ openedHints: ["a"] })).hintButton).toBe(
-      "Nächster Tipp (2 von 3)",
-    );
-    expect(questionControls(state({ openedHints: ["a", "b"] })).hintButton).toBe(
-      "Nächster Tipp (3 von 3)",
+      "Nächster Tipp (2 von 2)",
     );
   });
 
   it("zeigt „Lösung zeigen“ erst, wenn alle Tipps offen sind", () => {
-    expect(questionControls(state({ openedHints: ["a", "b"] })).showGiveUp).toBe(false);
-    expect(questionControls(state({ openedHints: ["a", "b", "c"] }))).toMatchObject({
+    expect(questionControls(state({ openedHints: ["a"] })).showGiveUp).toBe(false);
+    expect(questionControls(state({ openedHints: ["a", "b"] }))).toMatchObject({
       hintButton: null,
       showGiveUp: true,
     });
@@ -46,7 +43,7 @@ describe("questionControls", () => {
   it("bleibt bei Tipps und zweitem Versuch unabhängig", () => {
     // Tipps gibt es jederzeit, auch im zweiten Versuch.
     expect(questionControls(state({ firstTryWrong: true, openedHints: ["a"] }))).toMatchObject({
-      hintButton: "Nächster Tipp (2 von 3)",
+      hintButton: "Nächster Tipp (2 von 2)",
       showGiveUp: false,
     });
   });
@@ -58,9 +55,9 @@ describe("withHint", () => {
   });
 
   it("ignoriert einen doppelten oder verspäteten Tipp", () => {
-    const s = state({ openedHints: ["a", "b"] });
+    const s = state({ openedHints: ["a"] });
     expect(withHint(s, "a", 0)).toBe(s);
-    expect(withHint(s, "d", 3)).toBe(s);
+    expect(withHint(s, "c", 2)).toBe(s);
   });
 });
 
