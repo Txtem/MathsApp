@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
 import { createTempDatabase, type TempDatabase } from "./__testing__/temp-database";
-import { loadAnsweredDurations, loadTopicTotals } from "./stats";
+import { loadClosedAttempts, loadTopicTotals } from "./stats";
 
 /** Gegen eine echte SQLite-Datei (D-19). Gerechnet wird in `components/stats-rows.ts`. */
 
@@ -22,7 +22,11 @@ async function seedAttempt(options: {
   readonly status?: string;
   readonly durationMs?: number | null;
   readonly templateId?: string;
-  readonly isCorrect?: boolean;
+  readonly isCorrect?: boolean | null;
+  readonly tries?: number;
+  readonly hintsUsed?: number;
+  readonly firstAnswer?: string;
+  readonly firstDurationMs?: number;
 }): Promise<void> {
   await prisma.attempt.create({
     data: {
@@ -39,7 +43,11 @@ async function seedAttempt(options: {
       answerType: "integer",
       status: options.status ?? "ANSWERED",
       durationMs: options.durationMs === undefined ? 5000 : options.durationMs,
-      isCorrect: options.isCorrect ?? true,
+      isCorrect: options.isCorrect === undefined ? true : options.isCorrect,
+      tries: options.tries ?? 1,
+      hintsUsed: options.hintsUsed ?? 0,
+      firstAnswer: options.firstAnswer ?? null,
+      firstDurationMs: options.firstDurationMs ?? null,
       createdAt: NOW,
     },
   });
@@ -85,50 +93,64 @@ describe("loadTopicTotals", () => {
   });
 });
 
-describe("loadAnsweredDurations", () => {
-  it("gibt eine leere Liste ohne beantwortete Aufgaben", async () => {
-    expect(await loadAnsweredDurations(prisma, USER)).toEqual([]);
+describe("loadClosedAttempts", () => {
+  it("gibt eine leere Liste ohne geschlossene Aufgaben", async () => {
+    expect(await loadClosedAttempts(prisma, USER)).toEqual([]);
   });
 
-  it("liefert Template, Thema, Zeit und Urteil", async () => {
-    await seedAttempt({ durationMs: 12_000, templateId: "aufg_00007" });
+  it("liefert, was Diagramm, Medianzeit und Schnellschüsse brauchen", async () => {
+    await seedAttempt({
+      durationMs: 12_000,
+      templateId: "aufg_00007",
+      tries: 2,
+      hintsUsed: 1,
+      firstAnswer: "42",
+      firstDurationMs: 3000,
+    });
 
-    expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00007", topic: TOPIC, durationMs: 12_000, isCorrect: true },
+    expect(await loadClosedAttempts(prisma, USER)).toEqual([
+      {
+        templateId: "aufg_00007",
+        topic: TOPIC,
+        status: "ANSWERED",
+        isCorrect: true,
+        tries: 2,
+        hintsUsed: 1,
+        durationMs: 12_000,
+        firstMissed: true,
+        firstDurationMs: 3000,
+      },
     ]);
   });
 
-  it("liefert falsche Antworten mit — die Schnellschüsse brauchen sie", async () => {
-    await seedAttempt({ durationMs: 800, isCorrect: false });
+  it("verrät die erste Antwort selbst nicht — nur, dass es sie gab", async () => {
+    await seedAttempt({ tries: 2, firstAnswer: "42", firstDurationMs: 3000 });
 
-    expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00001", topic: TOPIC, durationMs: 800, isCorrect: false },
+    const [row] = await loadClosedAttempts(prisma, USER);
+    expect(row).not.toHaveProperty("firstAnswer");
+    expect(row?.firstMissed).toBe(true);
+  });
+
+  it("nimmt aufgegebene Aufgaben mit, auch ohne Zeit", async () => {
+    await seedAttempt({ status: "SKIPPED", durationMs: null, isCorrect: null });
+
+    expect(await loadClosedAttempts(prisma, USER)).toMatchObject([
+      { status: "SKIPPED", durationMs: null, isCorrect: null, firstMissed: false },
     ]);
   });
 
-  it("lässt offene Aufgaben aus", async () => {
-    await seedAttempt({ status: "OPEN", durationMs: null });
-    await seedAttempt({ durationMs: 9000 });
+  it("lässt offene und verworfene Aufgaben aus", async () => {
+    await seedAttempt({ status: "OPEN", durationMs: null, isCorrect: null });
+    await seedAttempt({ status: "VOIDED", durationMs: null, isCorrect: null });
+    await seedAttempt({});
 
-    expect(await loadAnsweredDurations(prisma, USER)).toHaveLength(1);
-  });
-
-  it("lässt Aufgaben ohne gemessene Zeit aus", async () => {
-    // Sonst zöge eine fehlende Zeit den Median nach unten.
-    await seedAttempt({ durationMs: null });
-    await seedAttempt({ durationMs: 9000 });
-
-    expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00001", topic: TOPIC, durationMs: 9000, isCorrect: true },
-    ]);
+    expect(await loadClosedAttempts(prisma, USER)).toHaveLength(1);
   });
 
   it("trennt die Nutzer", async () => {
     await seedAttempt({ durationMs: 1000 });
     await seedAttempt({ userId: ANDERER, durationMs: 2000 });
 
-    expect(await loadAnsweredDurations(prisma, USER)).toEqual([
-      { templateId: "aufg_00001", topic: TOPIC, durationMs: 1000, isCorrect: true },
-    ]);
+    expect((await loadClosedAttempts(prisma, USER)).map((row) => row.durationMs)).toEqual([1000]);
   });
 });

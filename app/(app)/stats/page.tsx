@@ -1,8 +1,9 @@
 import Link from "next/link";
 
+import { toTimings } from "@/components/answer-times";
 import { dueLabel } from "@/components/due-label";
+import { summarizeOutcomes } from "@/components/outcome-chart";
 import {
-  type AnsweredDuration,
   SNAP_SHARE,
   type StatsGroup,
   type StatsRow,
@@ -15,8 +16,10 @@ import { toTopicGroups } from "@/components/topic-groups";
 import { getCurrentUserId } from "@/lib/auth/current-user";
 import { getTemplate, getTopicOffers } from "@/lib/content/load";
 import { prisma } from "@/lib/db/client";
-import { loadAnsweredDurations, loadTopicTotals } from "@/lib/db/stats";
+import { loadClosedAttempts, loadTopicTotals } from "@/lib/db/stats";
 import { loadTopicStats } from "@/lib/db/topic-stats";
+
+import { OutcomeChart } from "./outcome-chart";
 
 /**
  * Fortschritt pro Thema (SPEC.md Abschnitt 10a).
@@ -28,8 +31,9 @@ import { loadTopicStats } from "@/lib/db/topic-stats";
  * Gerechnet wird nichts hier — die Umformung steht als reine Funktion in
  * `components/stats-rows.ts` und hat eigene Tests (D-16).
  *
- * Kein Diagramm: Ein Zeitverlauf über zwölf Versuche sieht nach Aussage aus,
- * wo keine ist.
+ * Ein einziges Diagramm: die vier Ausgänge als Kreis (SPEC-M2f, Schritt 7).
+ * Kein Zeitverlauf — eine Kurve über zwölf Versuche sieht nach Aussage aus, wo
+ * keine ist.
  */
 export const dynamic = "force-dynamic";
 
@@ -42,33 +46,30 @@ export default async function StatsPage() {
   const groups = toTopicGroups(getTopicOffers());
   const topics = groups.flatMap((group) => group.leaves.map((leaf) => leaf.topic));
 
-  const [totals, recent, durations] = await Promise.all([
+  const [totals, recent, closed] = await Promise.all([
     loadTopicTotals(prisma, userId),
     loadTopicStats(prisma, userId, topics),
-    loadAnsweredDurations(prisma, userId),
+    loadClosedAttempts(prisma, userId),
   ]);
 
   // Die Zielzeit steht im Template, nicht am Attempt. Fehlt das Template,
   // fällt die Aufgabe aus dem Zeitvergleich.
-  const answered: AnsweredDuration[] = durations.map((entry) => {
-    const target = getTemplate(entry.templateId)?.target_time_seconds;
-    return {
-      topic: entry.topic,
-      durationMs: entry.durationMs,
-      targetMs: target === undefined ? null : target * 1000,
-      isCorrect: entry.isCorrect,
-    };
+  const { finalAnswers, firstAnswers } = toTimings(closed, (templateId) => {
+    const target = getTemplate(templateId)?.target_time_seconds;
+    return target === undefined ? null : target * 1000;
   });
 
+  // Schnellschüsse zählen erste Antworten, die Medianzeit schließende.
   const rows = toStatsGroups(
     groups,
     new Map(totals.map((entry) => [entry.topic, entry])),
     new Map(recent.map((entry) => [entry.topic, entry])),
-    answered,
+    firstAnswers,
     now,
   );
 
-  const summary = toSummary(totals, answered);
+  const summary = toSummary(totals, finalAnswers);
+  const outcomes = summarizeOutcomes(closed);
 
   return (
     <div className="flex flex-col gap-8">
@@ -83,6 +84,8 @@ export default async function StatsPage() {
       </div>
 
       <Summary summary={summary} />
+
+      <OutcomeChart slices={outcomes} />
 
       {rows.map((group) => (
         <Group key={group.topic} group={group} now={now} />
@@ -171,7 +174,8 @@ function Numbers({ row, now }: { row: StatsRow; now: Date }) {
 }
 
 /**
- * Falsche Antworten, die sehr schnell kamen. Erscheint erst, wenn es mehrfach
+ * Falsche **erste** Antworten, die sehr schnell kamen — auch wenn der zweite
+ * Versuch danach saß (SPEC-M2f, Schritt 7). Erscheint erst, wenn es mehrfach
  * vorkam; einmal ist Zufall (D-21).
  *
  * Beschriftet als „sehr schnell falsch", nicht als „geraten": Gemessen ist die
@@ -185,7 +189,7 @@ function Snaps({ row }: { row: StatsRow }) {
   return (
     <span
       className="text-amber-700 dark:text-amber-500"
-      title={`Falsche Antworten in weniger als ${Math.round(SNAP_SHARE * 100)} % der Zielzeit`}
+      title={`Falsche erste Antworten in weniger als ${Math.round(SNAP_SHARE * 100)} % der Zielzeit`}
     >
       {row.snapAnswers}× sehr schnell falsch
     </span>

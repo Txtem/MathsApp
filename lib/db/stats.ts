@@ -1,4 +1,6 @@
+import type { ClosedAttempt } from "@/components/answer-times";
 import type { TopicTotals } from "@/components/stats-rows";
+import { AttemptStatusSchema } from "@/lib/api/contracts";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
 /**
@@ -27,41 +29,44 @@ export async function loadTopicTotals(
   }));
 }
 
-/** Eine beantwortete Aufgabe mit gemessener Zeit. */
-export interface AnsweredAttempt {
-  readonly templateId: string;
-  readonly topic: string;
-  readonly durationMs: number;
-  readonly isCorrect: boolean;
-}
-
 /**
- * Alle beantworteten Aufgaben mit gemessener Zeit — richtige wie falsche.
+ * Alle geschlossenen Aufgaben des Nutzers — beantwortet und aufgegeben. Eine
+ * Abfrage trägt drei Dinge auf der Statistik-Seite: das Kreisdiagramm der vier
+ * Ausgänge mit den Tipps je Ausgang, die Medianzeit über richtige Antworten und
+ * die Schnellschüsse über erste Antworten (SPEC-M2f, Schritt 7). Gefiltert und
+ * gerechnet wird erst in `components/`, nicht hier.
  *
- * Beide werden gebraucht: Die Medianzeit rechnet nur mit den richtigen, die
- * Schnellschüsse nur mit den falschen (D-21). Gefiltert wird deshalb erst in
- * `components/stats-rows.ts`, nicht schon hier.
+ * Offene und verworfene (`VOIDED`) Attempts fehlen: Sie haben keinen Ausgang.
  *
  * Bewusst ohne Obergrenze: Ein Median über die Hälfte der Daten wäre kein
  * Median. Für einen einzelnen Übenden sind das einige tausend schmale Zeilen;
- * wenn das je zum Problem wird, gehört die Zeit als Aggregat in `TopicMastery`
- * und nicht in eine größere Abfrage.
+ * wenn das je zum Problem wird, gehören die Zahlen als Aggregat in
+ * `TopicMastery` und nicht in eine größere Abfrage.
  */
-export async function loadAnsweredDurations(
+export async function loadClosedAttempts(
   prisma: PrismaClient,
   userId: string,
-): Promise<AnsweredAttempt[]> {
+): Promise<ClosedAttempt[]> {
   const rows = await prisma.attempt.findMany({
-    where: { userId, status: "ANSWERED", durationMs: { not: null } },
-    select: { templateId: true, topic: true, durationMs: true, isCorrect: true },
+    where: { userId, status: { in: ["ANSWERED", "SKIPPED"] } },
+    select: {
+      templateId: true,
+      topic: true,
+      status: true,
+      isCorrect: true,
+      tries: true,
+      hintsUsed: true,
+      durationMs: true,
+      firstAnswer: true,
+      firstDurationMs: true,
+    },
   });
 
-  return rows.map((row) => ({
-    templateId: row.templateId,
-    topic: row.topic,
-    durationMs: row.durationMs as number,
-    // `isCorrect` ist nullable, weil ein offener Attempt noch kein Urteil hat.
-    // Hier sind alle ANSWERED; alles außer `true` zählt als nicht richtig.
-    isCorrect: row.isCorrect === true,
+  // `firstAnswer` selbst bleibt hier: Die Statistik braucht nur, dass es eine
+  // falsche erste Antwort gab, nicht welche.
+  return rows.map(({ firstAnswer, ...row }) => ({
+    ...row,
+    status: AttemptStatusSchema.parse(row.status),
+    firstMissed: firstAnswer !== null,
   }));
 }
