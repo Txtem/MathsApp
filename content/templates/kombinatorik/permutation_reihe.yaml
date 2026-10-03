@@ -35,4 +35,9 @@ solution_text: |
   Permutation ohne Wiederholung von {{n}} Elementen:
   $${{n}}! = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge an? Und kommt jede Person genau einmal vor?"
+  - "Alle {{n}} Personen bekommen einen Platz – angeordnet werden alle {{n}}, keine doppelt."
+  - "Für den ersten Platz gibt es {{n}} Möglichkeiten, für den zweiten bleiben {{n}} − 1, für den dritten {{n}} − 2, …"
+
 tags: [permutation, ohne_wiederholung]

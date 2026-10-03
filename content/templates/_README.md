@@ -14,6 +14,9 @@ Kurz das Wichtigste:
 - Änderung an `param_spec`, `compute_ref`, `constraints` oder an der Bedeutung
   des `question_text` ⇒ `version` erhöhen. Reine Tippfehler nicht.
   **Eine Änderung am `solution_text` allein zieht keine neue Version nach sich.**
+  Dasselbe gilt für `hints`: Tipps werden wie der Lösungsweg beim Anzeigen aus den
+  persistierten Parametern gerendert und ändern die Aufgabe nicht. Ein besserer Tipp
+  soll auch für eine gestern gestellte, noch offene Aufgabe gelten.
   `templateVersion` steht für die Reproduzierbarkeit der *Aufgabe*: Aus Seed, `id` und
   Version muss dieselbe Instanz wieder entstehen. Der Lösungsweg wird nicht je Versuch
   gespeichert, sondern beim Anzeigen aus den persistierten Parametern neu gerendert —

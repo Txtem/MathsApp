@@ -28,4 +28,9 @@ solution_text: |
   Variation ohne Wiederholung, die Reihenfolge bzw. Anordnung zählt:
   $$\frac{ {{n}}! }{ ({{n}}-{{k}})! } = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge an? Und darf ein Element mehrfach vorkommen?"
+  - "Es werden nur {{k}} Plätze vergeben, und jeder Platz geht an eine andere der {{n}} Teilnehmerinnen."
+  - "Für Platz 1 gibt es {{n}} Möglichkeiten, für Platz 2 noch {{n}} − 1, … – und nach Platz {{k}} hörst du auf."
+
 tags: [variation, ohne_wiederholung, geordnet]
