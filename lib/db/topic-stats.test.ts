@@ -27,8 +27,9 @@ async function seedUser(id: string): Promise<void> {
 }
 
 /**
- * Legt einen Attempt an. `isCorrect: null` heißt: noch offen, also unbeantwortet.
- * `answeredAt` wird künstlich gestaffelt, damit die Reihenfolge eindeutig ist.
+ * Legt einen Attempt an. `isCorrect: null` ohne `status` heißt: noch offen.
+ * `answeredAt` wird künstlich gestaffelt, damit die Reihenfolge eindeutig ist;
+ * jeder geschlossene Attempt hat eines, auch ein aufgegebener.
  */
 async function seedAttempt(options: {
   readonly userId?: string;
@@ -36,8 +37,11 @@ async function seedAttempt(options: {
   readonly isCorrect: boolean | null;
   readonly minutesAgo?: number;
   readonly status?: string;
+  readonly tries?: number;
+  readonly hintsUsed?: number;
 }): Promise<void> {
-  const answered = options.isCorrect !== null;
+  const status = options.status ?? (options.isCorrect !== null ? "ANSWERED" : "OPEN");
+  const closed = status !== "OPEN";
   const minutesAgo = options.minutesAgo ?? 0;
 
   await prisma.attempt.create({
@@ -53,9 +57,11 @@ async function seedAttempt(options: {
       difficulty: 1,
       expectedAnswer: "1",
       answerType: "integer",
-      status: options.status ?? (answered ? "ANSWERED" : "OPEN"),
+      status,
       isCorrect: options.isCorrect,
-      answeredAt: answered ? new Date(NOW.getTime() - minutesAgo * 60_000) : null,
+      tries: options.tries ?? (status === "ANSWERED" ? 1 : 0),
+      hintsUsed: options.hintsUsed ?? 0,
+      answeredAt: closed ? new Date(NOW.getTime() - minutesAgo * 60_000) : null,
       createdAt: NOW,
     },
   });
@@ -85,8 +91,9 @@ describe("loadTopicStats", () => {
 
     expect(stats).toEqual({
       topic: TOPIC,
-      recentAnswered: 0,
-      recentCorrect: 0,
+      recentClosed: 0,
+      recentSuccess: 0,
+      recentRight: 0,
       dueAt: null,
       lastSeenAt: null,
     });
@@ -104,8 +111,8 @@ describe("loadTopicStats", () => {
     await seedAttempt({ isCorrect: true, minutesAgo: 1 });
 
     const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
-    expect(stats.recentAnswered).toBe(3);
-    expect(stats.recentCorrect).toBe(2);
+    expect(stats.recentClosed).toBe(3);
+    expect(stats.recentSuccess).toBe(2);
   });
 
   it("zählt offene Attempts nicht mit", async () => {
@@ -113,17 +120,39 @@ describe("loadTopicStats", () => {
     await seedAttempt({ isCorrect: null });
 
     const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
-    expect(stats.recentAnswered).toBe(1);
+    expect(stats.recentClosed).toBe(1);
   });
 
-  it("zählt übersprungene Attempts nicht mit", async () => {
-    // SKIPPED trägt kein Urteil und darf die Quote nicht verwässern.
+  it("zählt aufgegebene Attempts als Misserfolg mit", async () => {
+    // SKIPPED heißt seit M2f „aufgegeben". Bliebe es draußen, wäre Aufgeben
+    // ein Ausgang aus der Statistik, und das Thema gälte als gekonnt.
     await seedAttempt({ isCorrect: true, minutesAgo: 2 });
-    await seedAttempt({ isCorrect: null, status: "SKIPPED" });
+    await seedAttempt({ isCorrect: null, status: "SKIPPED", minutesAgo: 1 });
 
     const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
-    expect(stats.recentAnswered).toBe(1);
-    expect(stats.recentCorrect).toBe(1);
+    expect(stats).toMatchObject({ recentClosed: 2, recentSuccess: 1, recentRight: 1 });
+  });
+
+  it("zählt richtig im zweiten Versuch als richtig, nicht als Erfolg", async () => {
+    await seedAttempt({ isCorrect: true, tries: 2, minutesAgo: 2 });
+    await seedAttempt({ isCorrect: true, tries: 1, minutesAgo: 1 });
+
+    const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
+    expect(stats).toMatchObject({ recentClosed: 2, recentSuccess: 1, recentRight: 2 });
+  });
+
+  it("zählt richtig mit Tipp als richtig, nicht als Erfolg", async () => {
+    await seedAttempt({ isCorrect: true, hintsUsed: 2, minutesAgo: 1 });
+
+    const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
+    expect(stats).toMatchObject({ recentClosed: 1, recentSuccess: 0, recentRight: 1 });
+  });
+
+  it("zählt einen Attempt im zweiten Versuch, der noch offen ist, nicht mit", async () => {
+    await seedAttempt({ isCorrect: null, tries: 1 });
+
+    const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
+    expect(stats.recentClosed).toBe(0);
   });
 
   it("trennt die Themen", async () => {
@@ -131,8 +160,8 @@ describe("loadTopicStats", () => {
     await seedAttempt({ topic: "b", isCorrect: false, minutesAgo: 1 });
 
     const [a, b] = await loadTopicStats(prisma, USER, ["a", "b"]);
-    expect(a).toMatchObject({ recentAnswered: 1, recentCorrect: 1 });
-    expect(b).toMatchObject({ recentAnswered: 1, recentCorrect: 0 });
+    expect(a).toMatchObject({ recentClosed: 1, recentSuccess: 1 });
+    expect(b).toMatchObject({ recentClosed: 1, recentSuccess: 0 });
   });
 
   it("trennt die Nutzer", async () => {
@@ -140,10 +169,10 @@ describe("loadTopicStats", () => {
     await seedAttempt({ userId: ANDERER, isCorrect: true, minutesAgo: 1 });
 
     const [meine] = await loadTopicStats(prisma, USER, [TOPIC]);
-    expect(meine).toMatchObject({ recentAnswered: 1, recentCorrect: 0 });
+    expect(meine).toMatchObject({ recentClosed: 1, recentSuccess: 0 });
 
     const [fremde] = await loadTopicStats(prisma, ANDERER, [TOPIC]);
-    expect(fremde).toMatchObject({ recentAnswered: 1, recentCorrect: 1 });
+    expect(fremde).toMatchObject({ recentClosed: 1, recentSuccess: 1 });
   });
 
   describe("Fenster der letzten Versuche", () => {
@@ -153,7 +182,7 @@ describe("loadTopicStats", () => {
       }
 
       const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
-      expect(stats.recentAnswered).toBe(RECENT_WINDOW);
+      expect(stats.recentClosed).toBe(RECENT_WINDOW);
     });
 
     it("nimmt die jüngsten, nicht die ersten", async () => {
@@ -167,8 +196,8 @@ describe("loadTopicStats", () => {
       }
 
       const [stats] = await loadTopicStats(prisma, USER, [TOPIC]);
-      expect(stats.recentAnswered).toBe(RECENT_WINDOW);
-      expect(stats.recentCorrect).toBe(0);
+      expect(stats.recentClosed).toBe(RECENT_WINDOW);
+      expect(stats.recentSuccess).toBe(0);
     });
   });
 

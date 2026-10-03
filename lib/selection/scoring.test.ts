@@ -21,8 +21,8 @@ const MORGEN = new Date("2026-08-31T12:00:00.000Z");
 function stats(overrides: Partial<TopicStats> = {}): TopicStats {
   return {
     topic: "kombinatorik.permutation",
-    recentCorrect: 0,
-    recentAnswered: 0,
+    recentSuccess: 0,
+    recentClosed: 0,
     dueAt: null,
     lastSeenAt: null,
     ...overrides,
@@ -32,26 +32,26 @@ function stats(overrides: Partial<TopicStats> = {}): TopicStats {
 describe("successRate", () => {
   it("gibt 0.5, solange zu wenige Versuche vorliegen", () => {
     for (let answered = 0; answered < MIN_ATTEMPTS_FOR_RATE; answered++) {
-      expect(successRate(stats({ recentAnswered: answered, recentCorrect: answered }))).toBe(
+      expect(successRate(stats({ recentClosed: answered, recentSuccess: answered }))).toBe(
         UNTESTED_RATE,
       );
     }
   });
 
   it("rechnet ab dem dritten Versuch echt", () => {
-    expect(successRate(stats({ recentAnswered: 3, recentCorrect: 2 }))).toBeCloseTo(2 / 3);
-    expect(successRate(stats({ recentAnswered: 10, recentCorrect: 9 }))).toBe(0.9);
+    expect(successRate(stats({ recentClosed: 3, recentSuccess: 2 }))).toBeCloseTo(2 / 3);
+    expect(successRate(stats({ recentClosed: 10, recentSuccess: 9 }))).toBe(0.9);
   });
 
   it("kennt 0 und 1", () => {
-    expect(successRate(stats({ recentAnswered: 10, recentCorrect: 0 }))).toBe(0);
-    expect(successRate(stats({ recentAnswered: 10, recentCorrect: 10 }))).toBe(1);
+    expect(successRate(stats({ recentClosed: 10, recentSuccess: 0 }))).toBe(0);
+    expect(successRate(stats({ recentClosed: 10, recentSuccess: 10 }))).toBe(1);
   });
 
   it("lässt drei Fehlversuche nicht als Zufall durchgehen", () => {
     // Die Grenze ist bewusst niedrig: Wer dreimal daneben liegt, soll das
     // Thema häufiger bekommen, nicht erst nach zehn Versuchen.
-    expect(successRate(stats({ recentAnswered: 3, recentCorrect: 0 }))).toBe(0);
+    expect(successRate(stats({ recentClosed: 3, recentSuccess: 0 }))).toBe(0);
   });
 });
 
@@ -72,12 +72,12 @@ describe("isDue", () => {
 
 describe("topicScore", () => {
   it("bewertet das schwächste fällige Thema am höchsten", () => {
-    const schwach = stats({ recentAnswered: 10, recentCorrect: 0, dueAt: GESTERN });
+    const schwach = stats({ recentClosed: 10, recentSuccess: 0, dueAt: GESTERN });
     expect(topicScore(schwach, NOW)).toBe(3);
   });
 
   it("bewertet ein sicheres, nicht fälliges Thema mit null", () => {
-    const stark = stats({ recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN });
+    const stark = stats({ recentClosed: 10, recentSuccess: 10, dueAt: MORGEN });
     expect(topicScore(stark, NOW)).toBe(0);
   });
 
@@ -87,8 +87,8 @@ describe("topicScore", () => {
 
   it("wiegt Schwäche schwerer als Fälligkeit", () => {
     // Halb so gute Quote, aber nicht fällig, schlägt gute Quote plus fällig.
-    const schwachNichtFaellig = stats({ recentAnswered: 10, recentCorrect: 2, dueAt: MORGEN });
-    const starkFaellig = stats({ recentAnswered: 10, recentCorrect: 9, dueAt: GESTERN });
+    const schwachNichtFaellig = stats({ recentClosed: 10, recentSuccess: 2, dueAt: MORGEN });
+    const starkFaellig = stats({ recentClosed: 10, recentSuccess: 9, dueAt: GESTERN });
     expect(topicScore(schwachNichtFaellig, NOW)).toBeGreaterThan(topicScore(starkFaellig, NOW));
   });
 });
@@ -99,8 +99,8 @@ describe("chooseTopic", () => {
   });
 
   it("nimmt den höchsten Score", () => {
-    const stark = stats({ topic: "a", recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN });
-    const schwach = stats({ topic: "b", recentAnswered: 10, recentCorrect: 1, dueAt: MORGEN });
+    const stark = stats({ topic: "a", recentClosed: 10, recentSuccess: 10, dueAt: MORGEN });
+    const schwach = stats({ topic: "b", recentClosed: 10, recentSuccess: 1, dueAt: MORGEN });
     expect(chooseTopic([stark, schwach], NOW)?.topic).toBe("b");
     expect(chooseTopic([schwach, stark], NOW)?.topic).toBe("b");
   });
@@ -127,8 +127,8 @@ describe("chooseTopic", () => {
   });
 
   it("zieht ein fälliges Thema einem gleich starken, nicht fälligen vor", () => {
-    const faellig = stats({ topic: "a", recentAnswered: 10, recentCorrect: 8, dueAt: GESTERN });
-    const nicht = stats({ topic: "b", recentAnswered: 10, recentCorrect: 8, dueAt: MORGEN });
+    const faellig = stats({ topic: "a", recentClosed: 10, recentSuccess: 8, dueAt: GESTERN });
+    const nicht = stats({ topic: "b", recentClosed: 10, recentSuccess: 8, dueAt: MORGEN });
     expect(chooseTopic([nicht, faellig], NOW)?.topic).toBe("a");
   });
 });

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import type { TopicGroupChoice } from "@/components/topic-groups";
-import type { TopicStats } from "@/lib/selection/scoring";
 
 import {
   type AnsweredDuration,
+  type RecentWindow,
   countSnaps,
   INTERRUPTED_FACTOR,
   median,
@@ -37,15 +37,17 @@ function totals(entries: readonly TopicTotals[]): ReadonlyMap<string, TopicTotal
   return new Map(entries.map((entry) => [entry.topic, entry]));
 }
 
-function recent(entries: readonly TopicStats[]): ReadonlyMap<string, TopicStats> {
+function recent(entries: readonly RecentWindow[]): ReadonlyMap<string, RecentWindow> {
   return new Map(entries.map((entry) => [entry.topic, entry]));
 }
 
-function stats(topic: string, correct: number, answered: number): TopicStats {
+/** `success` ist der Erfolg im Sinne der Steuerung; ohne Angabe gleich `right`. */
+function stats(topic: string, right: number, closed: number, success = right): RecentWindow {
   return {
     topic,
-    recentCorrect: correct,
-    recentAnswered: answered,
+    recentRight: right,
+    recentSuccess: success,
+    recentClosed: closed,
     dueAt: null,
     lastSeenAt: null,
   };
@@ -113,6 +115,20 @@ describe("toStatsGroups", () => {
 
     expect(groups[0].rows[0].recentRate).toBe(1);
     expect(groups[0].rows[1].recentRate).toBeNull();
+  });
+
+  it("zeigt zuletzt richtig, nicht den Erfolg der Steuerung", () => {
+    // Sieben richtig, davon nur drei im ersten Versuch ohne Tipp: Die Auswahl
+    // rechnet mit 3/10, die Anzeige mit 7/10 — für sie ist richtig richtig.
+    const groups = toStatsGroups(
+      GRUPPEN,
+      totals([]),
+      recent([stats("kombinatorik.permutation", 7, 10, 3)]),
+      [],
+      NOW,
+    );
+
+    expect(groups[0].rows[0].recentRate).toBe(0.7);
   });
 
   describe("Fälligkeit", () => {

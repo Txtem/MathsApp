@@ -176,8 +176,8 @@ describe("was die Schwelle bedeutet — und was nicht", () => {
 
   const stats: TopicStats = {
     topic: "kombinatorik.permutation",
-    recentCorrect: 5,
-    recentAnswered: 10,
+    recentSuccess: 5,
+    recentClosed: 10,
     dueAt: null,
     lastSeenAt: null,
   };

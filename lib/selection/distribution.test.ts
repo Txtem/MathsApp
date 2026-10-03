@@ -39,8 +39,8 @@ const DRAWS = 20_000;
 /** Quote 1.0 ⇒ Zielschwierigkeit 4. */
 const BEHERRSCHT: TopicStats = {
   topic: TOPIC,
-  recentCorrect: 10,
-  recentAnswered: 10,
+  recentSuccess: 10,
+  recentClosed: 10,
   dueAt: null,
   lastSeenAt: null,
 };
@@ -114,7 +114,7 @@ function sitzung(
   // Testbedarf und hat in `SelectionInput` nichts zu suchen. Dass beide Wege
   // dasselbe tun, sichert der Test „selectTemplate benutzt dieselbe
   // Gewichtung" weiter unten.
-  const target = targetDifficulty(BEHERRSCHT.recentCorrect / BEHERRSCHT.recentAnswered);
+  const target = targetDifficulty(BEHERRSCHT.recentSuccess / BEHERRSCHT.recentClosed);
 
   for (let i = 0; i < DRAWS; i++) {
     const weights = candidateWeights(templates, target, mitAbwertung ? recent : [], factors);
@@ -251,7 +251,7 @@ describe("ohne Abwertung wird exakt nach Gewicht gezogen", () => {
   it("spiegelt sich bei schwacher Quote", () => {
     // Quote 0 ⇒ Zielschwierigkeit 1. Gewichte 1, 1/2, 1/3, 1/4, 1/5 — in
     // Sechzigsteln 60, 30, 20, 15, 12, zusammen 137.
-    const schwach: TopicStats = { ...BEHERRSCHT, recentCorrect: 0 };
+    const schwach: TopicStats = { ...BEHERRSCHT, recentSuccess: 0 };
     const rng = makeRng("verteilung-schwach");
 
     const picked: Template[] = [];

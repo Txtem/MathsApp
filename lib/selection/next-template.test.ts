@@ -30,8 +30,8 @@ const MORGEN = new Date("2026-08-31T12:00:00.000Z");
 function stats(topic: string, overrides: Partial<TopicStats> = {}): TopicStats {
   return {
     topic,
-    recentCorrect: 0,
-    recentAnswered: 0,
+    recentSuccess: 0,
+    recentClosed: 0,
     dueAt: null,
     lastSeenAt: null,
     ...overrides,
@@ -131,8 +131,8 @@ describe("selectTemplate", () => {
         {
           now: NOW,
           stats: [
-            stats("arithmetik.addition", { recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN }),
-            stats("arithmetik.subtraktion", { recentAnswered: 10, recentCorrect: 1 }),
+            stats("arithmetik.addition", { recentClosed: 10, recentSuccess: 10, dueAt: MORGEN }),
+            stats("arithmetik.subtraktion", { recentClosed: 10, recentSuccess: 1 }),
           ],
         },
         first,
@@ -147,7 +147,7 @@ describe("selectTemplate", () => {
         {
           now: NOW,
           stats: [
-            stats("arithmetik.addition", { recentAnswered: 10, recentCorrect: 10, dueAt: MORGEN }),
+            stats("arithmetik.addition", { recentClosed: 10, recentSuccess: 10, dueAt: MORGEN }),
           ],
         },
         first,
@@ -176,7 +176,7 @@ describe("selectTemplate", () => {
         {
           topicFilter: "arithmetik.addition",
           now: NOW,
-          stats: [stats("arithmetik.subtraktion", { recentAnswered: 10, recentCorrect: 0 })],
+          stats: [stats("arithmetik.subtraktion", { recentClosed: 10, recentSuccess: 0 })],
         },
         first,
       );
@@ -204,7 +204,7 @@ describe("selectTemplate", () => {
 
     it("bevorzugt bei schwacher Quote das leichte Template", () => {
       const counts = verteilung(
-        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 1 }),
+        stats("kombinatorik.permutation", { recentClosed: 10, recentSuccess: 1 }),
       );
       expect(counts.leicht).toBeGreaterThan(counts.mittel);
       expect(counts.mittel).toBeGreaterThan(counts.schwer);
@@ -212,7 +212,7 @@ describe("selectTemplate", () => {
 
     it("bevorzugt bei hoher Quote das schwere Template", () => {
       const counts = verteilung(
-        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 }),
+        stats("kombinatorik.permutation", { recentClosed: 10, recentSuccess: 10 }),
       );
       expect(counts.schwer).toBeGreaterThan(counts.mittel);
       expect(counts.schwer).toBeGreaterThan(counts.leicht);
@@ -220,7 +220,7 @@ describe("selectTemplate", () => {
 
     it("schließt kein Template ganz aus", () => {
       const counts = verteilung(
-        stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 }),
+        stats("kombinatorik.permutation", { recentClosed: 10, recentSuccess: 10 }),
       );
       expect(counts.leicht).toBeGreaterThan(0);
     });
@@ -237,7 +237,7 @@ describe("selectTemplate", () => {
           nurLeicht,
           {
             now: NOW,
-            stats: [stats("kombinatorik.permutation", { recentAnswered: 10, recentCorrect: 10 })],
+            stats: [stats("kombinatorik.permutation", { recentClosed: 10, recentSuccess: 10 })],
           },
           () => i / 400,
         );

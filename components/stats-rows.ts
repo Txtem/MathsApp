@@ -10,6 +10,16 @@ import type { TopicStats } from "@/lib/selection/scoring";
  * Themenauswahl nicht zwei Vorstellungen davon haben, was ein Oberthema ist.
  */
 
+/**
+ * Das gleitende Fenster der letzten zehn geschlossenen Versuche, wie es
+ * `loadTopicStats` liefert. Angezeigt wird `recentRight` — richtig in jedem
+ * Versuch —, nicht der Erfolg im Sinne der Steuerung (`IDEEN.md`: für die
+ * Anzeige ist richtig richtig).
+ */
+export interface RecentWindow extends TopicStats {
+  readonly recentRight: number;
+}
+
 /** Gesamtzahlen eines Themas, so wie sie in `TopicMastery` stehen. */
 export interface TopicTotals {
   readonly topic: string;
@@ -101,7 +111,7 @@ function rate(correct: number, attempts: number): number | null {
 export function toStatsGroups(
   groups: readonly TopicGroupChoice[],
   totals: ReadonlyMap<string, TopicTotals>,
-  recent: ReadonlyMap<string, TopicStats>,
+  recent: ReadonlyMap<string, RecentWindow>,
   answered: readonly AnsweredDuration[],
   now: Date,
 ): readonly StatsGroup[] {
@@ -123,7 +133,7 @@ export function toStatsGroups(
         // Bewusst **nicht** `successRate` aus der Auswahl: Deren 0.5 für
         // unerprobte Themen ist ein Steuerungswert, keine Messung. Auf einer
         // Statistik-Seite wäre sie schlicht gelogen.
-        recentRate: rate(window?.recentCorrect ?? 0, window?.recentAnswered ?? 0),
+        recentRate: rate(window?.recentRight ?? 0, window?.recentClosed ?? 0),
         dueAt: total?.dueAt ?? null,
         // Ohne Termin ist fällig: ein nie geübtes Thema steht an.
         isDue: total?.dueAt == null || total.dueAt.getTime() <= now.getTime(),

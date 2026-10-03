@@ -39,7 +39,7 @@ export function matchesTopic(topic: string, filter: string | null | undefined): 
  * zu erfinden.
  */
 function emptyStats(topic: string): TopicStats {
-  return { topic, recentCorrect: 0, recentAnswered: 0, dueAt: null, lastSeenAt: null };
+  return { topic, recentSuccess: 0, recentClosed: 0, dueAt: null, lastSeenAt: null };
 }
 
 export function selectTemplate(

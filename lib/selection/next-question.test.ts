@@ -21,8 +21,8 @@ const NOW = new Date("2026-08-30T12:00:00.000Z");
 
 const stats: TopicStats = {
   topic: TOPIC,
-  recentCorrect: 0,
-  recentAnswered: 0,
+  recentSuccess: 0,
+  recentClosed: 0,
   dueAt: null,
   lastSeenAt: null,
 };

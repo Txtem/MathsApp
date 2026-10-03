@@ -8,7 +8,7 @@
  * beiden bisher gefundenen Anzeigefehler lagen in ungetesteter Logik (D-16).
  */
 
-/** So viele beantwortete Versuche gehen in die gleitende Erfolgsquote ein. */
+/** So viele geschlossene Versuche gehen in die gleitende Erfolgsquote ein. */
 export const RECENT_WINDOW = 10;
 
 /** Darunter gilt ein Thema als unerprobt. */
@@ -23,10 +23,15 @@ export const UNTESTED_RATE = 0.5;
 /** Der Stand eines Themas, wie ihn die DB-Schicht liefert. */
 export interface TopicStats {
   readonly topic: string;
-  /** Richtige unter den letzten `RECENT_WINDOW` beantworteten Versuchen. */
-  readonly recentCorrect: number;
-  /** Anzahl dieser Versuche, höchstens `RECENT_WINDOW`. */
-  readonly recentAnswered: number;
+  /**
+   * Erfolge unter den letzten `RECENT_WINDOW` geschlossenen Versuchen — im Sinne
+   * von `countsAsSuccess`: richtig im ersten Versuch ohne Tipp. Nicht „richtig":
+   * Sonst ginge die Quote eines Themas, das man erst im zweiten Anlauf trifft,
+   * gegen 1,0, und es käme seltener und schwerer (SPEC-M2f, Entscheidung 1).
+   */
+  readonly recentSuccess: number;
+  /** Anzahl dieser Versuche (beantwortet oder aufgegeben), höchstens `RECENT_WINDOW`. */
+  readonly recentClosed: number;
   /** `null` heißt: kein `TopicMastery`-Eintrag, also fällig. */
   readonly dueAt: Date | null;
   /** `null` heißt: noch nie gestellt. */
@@ -39,8 +44,8 @@ export interface TopicStats {
  * verfehlt hat, nicht hoffnungslos.
  */
 export function successRate(stats: TopicStats): number {
-  if (stats.recentAnswered < MIN_ATTEMPTS_FOR_RATE) return UNTESTED_RATE;
-  return stats.recentCorrect / stats.recentAnswered;
+  if (stats.recentClosed < MIN_ATTEMPTS_FOR_RATE) return UNTESTED_RATE;
+  return stats.recentSuccess / stats.recentClosed;
 }
 
 /** Fällig ist, was dran ist — und alles, was noch nie geübt wurde. */
