@@ -32,6 +32,8 @@ export type CheckCode =
   | "unknown_constraint_name"
   | "invalid_constraint"
   | "display_key_collision"
+  | "hint_reveals_solution"
+  | "unknown_hint_placeholder"
   | "small_parameter_space";
 
 export type Severity = "error" | "warning";
@@ -185,6 +187,27 @@ export function checkTemplate(entry: LoadedTemplate, topics: Topics): readonly C
       }
     }
   }
+
+  // 11. Tipps nennen nur Parameter. Nicht `result` und nicht die Anzeigewerte:
+  //     Beide sind Teil der Lösung, und ein Tipp verrät nie das Ergebnis. Dass
+  //     jemand die Zahl ausrechnet und hineinschreibt, fängt diese Prüfung
+  //     nicht — dafür gibt es den Property-Test in `hints.test.ts`.
+  template.hints.forEach((hint, index) => {
+    for (const name of placeholders(hint)) {
+      if (paramKeys.has(name)) continue;
+      if (name === RESULT_KEY || displayKeys.has(name)) {
+        report(
+          "hint_reveals_solution",
+          `Tipp ${index + 1} nennt {{${name}}} — das ist Teil der Lösung. In Tipps sind nur Parameter erlaubt.`,
+        );
+      } else {
+        report(
+          "unknown_hint_placeholder",
+          `Tipp ${index + 1} nennt {{${name}}}, param_spec kennt es nicht.`,
+        );
+      }
+    }
+  });
 
   // 10. Der Parameterraum trägt eine Sitzung. Nur eine Warnung — und nur, wenn
   //     sonst nichts zu beanstanden war: Die Zählung braucht eine gültige

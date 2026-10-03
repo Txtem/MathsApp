@@ -40,6 +40,9 @@ describe("Negativ-Fixtures — jede Prüfung schlägt an", () => {
     ["08-round-to-without-numeric.yaml", "round_to_without_numeric"],
     ["09-unknown-constraint-name.yaml", "unknown_constraint_name"],
     ["10-invalid-constraint.yaml", "invalid_constraint"],
+    ["13-hint-reveals-result.yaml", "hint_reveals_solution"],
+    ["14-hint-reveals-display-key.yaml", "hint_reveals_solution"],
+    ["15-unknown-hint-placeholder.yaml", "unknown_hint_placeholder"],
   ];
 
   it.each(cases)("%s meldet genau %s", (file, code) => {

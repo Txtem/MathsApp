@@ -84,6 +84,31 @@ export function instantiate(tpl: Template, seed: string): Instance {
 }
 
 /**
+ * Der Tipp mit Index `index`, gerendert — oder `undefined`, wenn es ihn nicht
+ * gibt.
+ *
+ * Interpoliert wird **nur** mit den Parametern: weder `result` noch die
+ * Anzeigewerte der Compute-Funktion. Anzeigewerte sind Zwischenergebnisse der
+ * Lösung (`n_minus_1` beim runden Tisch) und verrieten im Tipp zu viel. Ein
+ * Template, das sie trotzdem nennt, lädt gar nicht erst (Prüfung 11); fehlte
+ * die Prüfung, würfe `interpolate` hier — ein lauter Fehler statt eines
+ * stillen Lecks.
+ */
+export function renderHint(
+  tpl: Template,
+  params: Readonly<Record<string, ParamValue>>,
+  index: number,
+): string | undefined {
+  const hint = tpl.hints?.[index];
+  return hint === undefined ? undefined : interpolate(hint, params);
+}
+
+/** Wie viele Tipps das Template hat. */
+export function hintCount(tpl: Template): number {
+  return tpl.hints?.length ?? 0;
+}
+
+/**
  * Der Lösungstext, gerendert. Bewusst nicht Teil von `Instance`: Er darf erst
  * an den Client, wenn der Attempt beantwortet ist, und wird dort aus den
  * persistierten Parametern neu erzeugt.

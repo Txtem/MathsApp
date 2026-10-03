@@ -133,6 +133,8 @@ export interface Template {
   readonly constraints: readonly string[];
   readonly question_text: string;
   readonly solution_text?: string;
+  /** Geordnete Tipps. Fehlt das Feld, hat das Template keine. */
+  readonly hints?: readonly string[];
   readonly tags?: readonly string[];
 }
 

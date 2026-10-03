@@ -1,0 +1,17 @@
+# Prüfung 11: Ein Tipp darf keinen Anzeigewert der Compute-Funktion nennen.
+# Anzeigewerte sind Zwischenergebnisse der Lösung — hier `n_minus_1` aus
+# `kombinatorik.permutation.zyklisch`, im Lösungsweg erlaubt, im Tipp nicht.
+id: aufg_90014
+version: 1
+topic: kombinatorik.permutation
+difficulty: 4
+target_time_seconds: 120
+compute_ref: kombinatorik.permutation.zyklisch
+answer_type: integer
+param_spec:
+  n: { type: int, min: 4, max: 24 }
+question_text: "An einem runden Tisch sitzen {{n}} Personen. Wie viele Sitzordnungen?"
+solution_text: "$$({{n}} - 1)! = {{n_minus_1}}! = {{result}}$$"
+hints:
+  - "Halte eine Person fest."
+  - "Dann bleiben {{n_minus_1}} Personen."
