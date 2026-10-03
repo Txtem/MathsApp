@@ -11,14 +11,16 @@ import { grade, toExpectedRational } from "@/lib/engine/grade";
 import { renderSolution } from "@/lib/engine/instantiate";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
-import { closeAttempt } from "./attempts";
+import { closeAttempt, recordFirstMiss } from "./attempts";
 
 /**
  * Was beim Beantworten einer Aufgabe passiert — die ganze Entscheidungskette,
  * ohne HTTP.
  *
  * Diese Funktion trägt Invariante 2: `expectedAnswer` verlässt den Server
- * nicht, solange der Attempt `OPEN` ist. Sie stand bis M2a ungetestet in der
+ * nicht, solange der Attempt `OPEN` ist. Seit M2f gibt es dafür zwei Wege, auf
+ * denen eine lesbare Antwort den Attempt offen lässt: unlesbar (D-04) und die
+ * erste falsche Antwort, nach der ein zweiter Versuch folgt (SPEC-M2f, D-1). Sie stand bis M2a ungetestet in der
  * Route, weil sich die Route nicht importieren lässt — `server-only` und der
  * Prisma-Singleton aus `process.env` stehen im Weg. Deshalb bekommt sie ihre
  * Umgebung jetzt als Parameter, nach demselben Muster wie `lib/content/read.ts`
@@ -56,6 +58,15 @@ export type AnswerOutcome =
  */
 const UNPARSEABLE: AnswerResponse = { isCorrect: false, parseError: "unparseable" };
 
+/**
+ * Die Antwort auf die erste lesbare, falsche Antwort. Der Attempt bleibt offen,
+ * es folgt der zweite Versuch. Als Konstante aus demselben Grund wie
+ * `UNPARSEABLE`: Sie enthält nichts aus der Lösung — weder `expectedAnswer`
+ * noch `expectedRounded` noch `solutionText` —, und das soll man ihr ansehen,
+ * statt es aus einem Objektliteral mit Spreads herauslesen zu müssen.
+ */
+const RETRY: AnswerResponse = { isCorrect: false, retry: true };
+
 export async function answerAttempt(
   deps: AnswerDeps,
   input: AnswerInput,
@@ -71,6 +82,7 @@ export async function answerAttempt(
       templateId: true,
       templateVersion: true,
       userId: true,
+      tries: true,
     },
   });
 
@@ -97,15 +109,28 @@ export async function answerAttempt(
   // Aufgabe offen. Hier darf kein Feld aus `attempt` in die Antwort.
   if (!verdict.ok) return { kind: "answered", response: UNPARSEABLE };
 
-  // Atomar: Nur wer den Attempt von OPEN auf ANSWERED dreht, darf antworten,
-  // und nur derselbe Aufruf schreibt den Themenfortschritt fort. Zwei
-  // gleichzeitige Absenden können so weder beide bewertet werden noch doppelt
-  // zählen.
+  // Die erste falsche Antwort schließt nicht. Der Attempt bleibt offen, also
+  // gilt Invariante 2 weiter: Hier darf ebenfalls kein Feld aus `attempt` in
+  // die Antwort, nur die Konstante.
+  if (attempt.tries === 0 && !verdict.isCorrect) {
+    const recorded = await recordFirstMiss(deps.prisma, {
+      attemptId: attempt.id,
+      userAnswer: input.answer,
+      durationMs: input.durationMs,
+    });
+    return recorded ? { kind: "answered", response: RETRY } : { kind: "already_answered" };
+  }
+
+  // Atomar: Nur wer den Attempt von OPEN auf ANSWERED dreht — und zwar vom
+  // gelesenen Versuchsstand aus —, darf antworten, und nur derselbe Aufruf
+  // schreibt den Themenfortschritt fort. Zwei gleichzeitige Absenden können so
+  // weder beide bewertet werden noch doppelt zählen.
   const closed = await closeAttempt(deps.prisma, {
     attemptId: attempt.id,
     userAnswer: input.answer,
     isCorrect: verdict.isCorrect,
     durationMs: input.durationMs,
+    previousTries: attempt.tries,
     now: input.now,
   });
 

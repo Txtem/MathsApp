@@ -46,7 +46,7 @@ interface Stats {
 export function PracticeLoop({ sessionId }: { sessionId: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" });
   const [answer, setAnswer] = useState("");
-  const [hint, setHint] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [stats, setStats] = useState<Stats>({ answered: 0, correct: 0 });
 
@@ -66,7 +66,7 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       if (!parsed.success) throw new Error("Unerwartete Antwort des Servers");
 
       setAnswer("");
-      setHint(null);
+      setNotice(null);
       setPhase({ kind: "question", question: parsed.data, startedAt: Date.now() });
     } catch (cause) {
       setPhase({ kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" });
@@ -92,7 +92,7 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
     if (phase.kind !== "question" || busy) return;
 
     setBusy(true);
-    setHint(null);
+    setNotice(null);
     try {
       const response = await fetch(`/api/attempt/${phase.question.attemptId}/answer`, {
         method: "POST",
@@ -107,9 +107,17 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       if ("parseError" in parsed.data) {
         // Nicht dasselbe wie falsch: Die Aufgabe bleibt offen, es darf noch
         // einmal getippt werden (Entscheidung E-04).
-        setHint(
+        setNotice(
           `Das konnte ich nicht lesen. ${answerFormatHint(phase.question.answerType, phase.question.roundTo)}`,
         );
+        return;
+      }
+
+      if ("retry" in parsed.data) {
+        // Erste falsche Antwort: Die Aufgabe bleibt offen, die Lösung kennt
+        // diese Komponente weiterhin nicht. Die Stoppuhr läuft weiter — die
+        // Dauer beim Schließen ist die bis zur letzten Antwort.
+        setNotice("Das stimmt noch nicht. Du hast einen zweiten Versuch.");
         return;
       }
 
@@ -176,9 +184,9 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
             <p className="text-sm text-zinc-500">
               {answerFormatHint(phase.question.answerType, phase.question.roundTo)}
             </p>
-            {hint ? (
+            {notice ? (
               <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
-                {hint}
+                {notice}
               </p>
             ) : null}
           </div>

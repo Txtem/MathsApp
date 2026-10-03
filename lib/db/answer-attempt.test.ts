@@ -1,103 +1,21 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { AnswerResponseSchema } from "@/lib/api/contracts";
 import type { ValidatedTemplate } from "@/lib/content/schema";
-import type { PrismaClient } from "@/lib/generated/prisma/client";
 
-import { createTempDatabase, type TempDatabase } from "./__testing__/temp-database";
+import { ANDERER, antwort, TEMPLATE, TOPIC, USER, setupAnswerFixture } from "./__testing__/answer-fixture";
 import { answerAttempt, type AnswerDeps } from "./answer-attempt";
 
 /**
  * Die Route `POST /api/attempt/[id]/answer` setzt Invariante 2 durch:
  * `expectedAnswer` verlässt den Server nicht, solange der Attempt `OPEN` ist.
  * Seit M0 war das ungetestet. Hier ist es geprüft — gegen eine echte
- * Datenbank (D-19), weil die Bedingung an der Statuszeile hängt.
+ * Datenbank (D-19), weil die Bedingung an der Statuszeile hängt. Der zweite
+ * Versuch (M2f) hat seine eigene Datei: `answer-attempt-retry.test.ts`.
  */
 
-const USER = "user-1";
-const ANDERER = "user-2";
-const TOPIC = "kombinatorik.permutation";
-
-/** Ein Template, das zu den angelegten Attempts passt. */
-const TEMPLATE = {
-  id: "aufg_00003",
-  version: 1,
-  topic: TOPIC,
-  difficulty: 1,
-  target_time_seconds: 60,
-  compute_ref: "kombinatorik.permutation.factorial",
-  answer_type: "integer",
-  param_spec: { n: { type: "int", min: 3, max: 8 } },
-  constraints: [],
-  question_text: "Auf wie viele Arten lassen sich {{n}} Personen anordnen?",
-  solution_text: "$${{n}}! = {{result}}$$",
-} as unknown as ValidatedTemplate;
-
-/** Die Uhr der Anfrage — in den Tests eine Konstante (D-20). */
-const NOW = new Date("2026-08-30T12:00:00.000Z");
-
-let database: TempDatabase;
-let prisma: PrismaClient;
-let sessionId: string;
-
-/**
- * Deps mit dem Standard-Template. `findTemplate` ist hier eine Attrappe.
- * `null` heißt: Es gibt kein Template mehr — nicht `undefined`, sonst greift
- * der Default-Parameter.
- */
-function deps(template: ValidatedTemplate | null = TEMPLATE): AnswerDeps {
-  return { prisma, findTemplate: (id) => (template?.id === id ? template : undefined) };
-}
-
-async function seedAttempt(
-  overrides: {
-    readonly status?: string;
-    readonly templateVersion?: number;
-    readonly userId?: string;
-    readonly expectedAnswer?: string;
-    readonly answerType?: string;
-  } = {},
-): Promise<string> {
-  const attempt = await prisma.attempt.create({
-    data: {
-      practiceSessionId: sessionId,
-      templateId: TEMPLATE.id,
-      templateVersion: overrides.templateVersion ?? TEMPLATE.version,
-      seed: `seed-${Math.random()}`,
-      params: { n: 6 },
-      questionText: "Auf wie viele Arten lassen sich 6 Personen anordnen?",
-      userId: overrides.userId ?? USER,
-      topic: TOPIC,
-      difficulty: 1,
-      expectedAnswer: overrides.expectedAnswer ?? "720",
-      answerType: overrides.answerType ?? "integer",
-      status: overrides.status ?? "OPEN",
-      createdAt: NOW,
-    },
-  });
-
-  return attempt.id;
-}
-
-function antwort(attemptId: string, answer: string) {
-  return { attemptId, userId: USER, answer, durationMs: 5000, now: NOW };
-}
-
-beforeEach(async () => {
-  database = createTempDatabase();
-  prisma = database.prisma;
-
-  await prisma.user.create({ data: { id: USER, email: "test@localhost", createdAt: NOW } });
-  await prisma.user.create({
-    data: { id: ANDERER, email: "anderer@localhost", createdAt: NOW },
-  });
-  const session = await prisma.practiceSession.create({ data: { userId: USER, startedAt: NOW } });
-  sessionId = session.id;
-});
-
-afterEach(async () => {
-  await database.destroy();
-});
+const fixture = setupAnswerFixture();
+const { deps, seedAttempt } = fixture;
 
 describe("answerAttempt — Invariante 2", () => {
   it("gibt bei unlesbarer Eingabe weder expectedAnswer noch solutionText preis", async () => {
@@ -119,7 +37,7 @@ describe("answerAttempt — Invariante 2", () => {
 
     await answerAttempt(deps(), antwort(id, "keine Ahnung"));
 
-    const attempt = await prisma.attempt.findUniqueOrThrow({ where: { id } });
+    const attempt = await fixture.prisma().attempt.findUniqueOrThrow({ where: { id } });
     expect(attempt.status).toBe("OPEN");
     expect(attempt.userAnswer).toBeNull();
     expect(attempt.answeredAt).toBeNull();
@@ -130,7 +48,7 @@ describe("answerAttempt — Invariante 2", () => {
 
     await answerAttempt(deps(), antwort(id, "keine Ahnung"));
 
-    const mastery = await prisma.topicMastery.findUnique({
+    const mastery = await fixture.prisma().topicMastery.findUnique({
       where: { userId_topic: { userId: USER, topic: TOPIC } },
     });
     expect(mastery).toBeNull();
@@ -147,7 +65,7 @@ describe("answerAttempt — Invariante 2", () => {
       });
     }
 
-    expect((await prisma.attempt.findUniqueOrThrow({ where: { id } })).status).toBe("OPEN");
+    expect((await fixture.prisma().attempt.findUniqueOrThrow({ where: { id } })).status).toBe("OPEN");
   });
 
   it("gibt die Lösung nicht heraus, wenn der Attempt einem anderen gehört", async () => {
@@ -178,10 +96,11 @@ describe("answerAttempt — beantworten", () => {
     expect(outcome.response).toHaveProperty("solutionText", "$$6! = 720$$");
   });
 
-  it("liefert bei falscher Antwort ebenfalls die Lösung — der Attempt ist geschlossen", async () => {
+  it("liefert nach der zweiten falschen Antwort die Lösung — der Attempt ist geschlossen", async () => {
     const id = await seedAttempt();
+    await answerAttempt(deps(), antwort(id, "42"));
 
-    const outcome = await answerAttempt(deps(), antwort(id, "42"));
+    const outcome = await answerAttempt(deps(), antwort(id, "43"));
 
     expect(outcome.kind).toBe("answered");
     if (outcome.kind !== "answered") return;
@@ -193,7 +112,7 @@ describe("answerAttempt — beantworten", () => {
 
     await answerAttempt(deps(), antwort(id, "720"));
 
-    const attempt = await prisma.attempt.findUniqueOrThrow({ where: { id } });
+    const attempt = await fixture.prisma().attempt.findUniqueOrThrow({ where: { id } });
     expect(attempt.status).toBe("ANSWERED");
     expect(attempt.userAnswer).toBe("720");
     expect(attempt.isCorrect).toBe(true);
@@ -205,7 +124,7 @@ describe("answerAttempt — beantworten", () => {
 
     await answerAttempt(deps(), antwort(id, "720"));
 
-    const mastery = await prisma.topicMastery.findUnique({
+    const mastery = await fixture.prisma().topicMastery.findUnique({
       where: { userId_topic: { userId: USER, topic: TOPIC } },
     });
     expect(mastery).toMatchObject({ attempts: 1, correct: 1, intervalDays: 2 });
@@ -259,10 +178,7 @@ describe("answerAttempt — gerundete Musterlösung", () => {
     round_to: 4,
   } as unknown as ValidatedTemplate;
 
-  const mitRundung = (): AnswerDeps => ({
-    prisma,
-    findTemplate: (id) => (MIT_RUNDUNG.id === id ? MIT_RUNDUNG : undefined),
-  });
+  const mitRundung = (): AnswerDeps => deps(MIT_RUNDUNG);
 
   it("liefert die gerundete Form neben dem exakten Wert", async () => {
     const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
@@ -279,10 +195,11 @@ describe("answerAttempt — gerundete Musterlösung", () => {
     });
   });
 
-  it("liefert sie auch bei falscher Antwort", async () => {
+  it("liefert sie auch nach zwei falschen Antworten", async () => {
     const id = await seedAttempt({ expectedAnswer: "46/91", answerType: "numeric" });
+    await answerAttempt(mitRundung(), antwort(id, "0,4000"));
 
-    const outcome = await answerAttempt(mitRundung(), antwort(id, "0,4000"));
+    const outcome = await answerAttempt(mitRundung(), antwort(id, "0,4001"));
 
     expect(outcome.kind).toBe("answered");
     if (outcome.kind !== "answered") return;
@@ -337,9 +254,10 @@ describe("answerAttempt — doppeltes Absenden", () => {
     expect(await answerAttempt(deps(), antwort(id, "720"))).toEqual({ kind: "already_answered" });
   });
 
-  it("gibt beim zweiten Absenden keine Lösung mehr heraus", async () => {
+  it("gibt nach dem Schließen keine Lösung mehr heraus", async () => {
     const id = await seedAttempt();
     await answerAttempt(deps(), antwort(id, "42"));
+    await answerAttempt(deps(), antwort(id, "43"));
 
     const zweite = await answerAttempt(deps(), antwort(id, "720"));
 
@@ -353,7 +271,7 @@ describe("answerAttempt — doppeltes Absenden", () => {
     await answerAttempt(deps(), antwort(id, "720"));
     await answerAttempt(deps(), antwort(id, "720"));
 
-    const mastery = await prisma.topicMastery.findUnique({
+    const mastery = await fixture.prisma().topicMastery.findUnique({
       where: { userId_topic: { userId: USER, topic: TOPIC } },
     });
     expect(mastery).toMatchObject({ attempts: 1, correct: 1 });

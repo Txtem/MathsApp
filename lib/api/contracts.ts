@@ -57,6 +57,11 @@ export type AnswerResponse =
       readonly parseError: "unparseable";
     }
   | {
+      /** Erste falsche Antwort: Die Aufgabe bleibt offen, der zweite Versuch folgt. */
+      readonly isCorrect: false;
+      readonly retry: true;
+    }
+  | {
       readonly isCorrect: boolean;
       /** Der exakte Wert in Speicherform: `"41"` oder `"46/91"`. */
       readonly expectedAnswer: string;
@@ -120,6 +125,10 @@ export const AnswerResponseSchema = z.union([
   z.strictObject({
     isCorrect: z.literal(false),
     parseError: z.literal("unparseable"),
+  }),
+  z.strictObject({
+    isCorrect: z.literal(false),
+    retry: z.literal(true),
   }),
   z.strictObject({
     isCorrect: z.boolean(),
