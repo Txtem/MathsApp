@@ -28,4 +28,8 @@ solution_text: |
   Kombination ohne Wiederholung, die Reihenfolge bzw. Anordnung zählt nicht:
   $$\binom{ {{n}} }{ {{k}} } = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge an, in der die Mitglieder gewählt werden? Kann jemand zweimal im Ausschuss sitzen? Werden alle gewählt oder nur eine Auswahl?"
+  - "Zähle zuerst so, als hätten die {{k}} Sitze im Ausschuss eine feste Reihenfolge. Wie oft hast du dann jeden Ausschuss gezählt?"
+
 tags: [kombination, ohne_wiederholung, ungeordnet]

@@ -78,4 +78,8 @@ solution_text: |
   {{wiederholungen}}.
   $$\frac{ {{n}}! }{ {{nenner}} } {{kuerzung}}= {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge der Buchstaben an? Kommt ein Buchstabe mehrfach vor? Werden alle Buchstaben verwendet?"
+  - "Vertausche in {{wort}} zwei gleiche Buchstaben: Ändert sich das Wort? Zähle erst so, als wären alle Buchstaben verschieden, und überlege, wie viele dieser Folgen gleich aussehen."
+
 tags: [permutation, mit_wiederholung]

@@ -32,4 +32,8 @@ solution_text: |
   Variation mit Wiederholung:
   $${{n}}^{ {{k}} } = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge der Ringe an? Darf eine Ziffer mehrfach vorkommen? Wird jeder Ring eingestellt?"
+  - "Jeder der {{k}} Ringe wird unabhängig von den anderen eingestellt. Wie viele Möglichkeiten hat ein einzelner Ring, und wie setzt du die Ringe zusammen?"
+
 tags: [variation, mit_wiederholung, geordnet]

@@ -28,4 +28,8 @@ solution_text: |
   Kombination mit Wiederholung:
   $$\binom{ {{n}}+{{k}}-1 }{ {{k}} } = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge der Kugeln an? Darf eine Sorte mehrfach vorkommen? Was genau unterscheidet zwei Bestellungen voneinander?"
+  - "Eine Bestellung ist nur dadurch festgelegt, wie viele Kugeln jeder Sorte dabei sind. Schreib sie als Reihe aus den {{k}} Kugeln und Trennstrichen zwischen den {{n}} Sorten: Wie viele Striche brauchst du, und auf wie viele Arten lassen sich Kugeln und Striche in so einer Reihe anordnen?"
+
 tags: [kombination, mit_wiederholung, ungeordnet]

@@ -47,4 +47,8 @@ solution_text: |
   Fakultäten der Farbgruppen.
   $$\frac{({{k1}} + {{k2}} + {{k3}})!}{ {{nenner}} } = \frac{ {{n}}! }{ {{nenner}} } = {{result}}$$
 
+hints:
+  - "Kommt es auf die Reihenfolge an? Lassen sich zwei rote Kugeln voneinander unterscheiden? Werden alle Kugeln aufgelegt oder nur eine Auswahl?"
+  - "Zähle zuerst so, als wären alle Kugeln verschieden, etwa nummeriert. Wie viele dieser Reihen sehen gleich aus, wenn man nur auf die Farben schaut?"
+
 tags: [permutation, mit_wiederholung]

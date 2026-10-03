@@ -45,4 +45,8 @@ solution_text: |
   Hypergeometrische Verteilung:
   $$P(X = {{hits}}) = \frac{\binom{ {{successes}} }{ {{hits}} } \cdot \binom{ {{population}}-{{successes}} }{ {{draws}}-{{hits}} }}{\binom{ {{population}} }{ {{draws}} }} = {{result}}$$
 
+hints:
+  - "Wird mit oder ohne Zurücklegen gezogen? Kommt es auf die Reihenfolge der gezogenen Kugeln an? Was ist hier ein günstiger Ausgang?"
+  - "Die Wahrscheinlichkeit ist günstige Züge geteilt durch alle möglichen. Ein günstiger Zug besteht aus zwei Teilen – den roten und den übrigen Kugeln. Zähle beide Teile getrennt und überlege, wie sie sich zu einem Zug zusammensetzen."
+
 tags: [hypergeometrisch, ohne_zuruecklegen]

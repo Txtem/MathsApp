@@ -28,4 +28,8 @@ solution_text: |
   Jedes Element ist entweder in der Teilmenge oder nicht:
   $$2^{ {{n}} } = {{result}}$$
 
+hints:
+  - "Was macht eine Teilmenge aus? Kommt es auf eine Reihenfolge an, und wie viele Elemente darf sie haben?"
+  - "Geh die {{n}} Elemente einzeln durch. Für jedes ist eine Entscheidung zu treffen – wie viele Möglichkeiten hat jede, und wie hängen die Entscheidungen zusammen?"
+
 tags: [teilmengen, potenzmenge]

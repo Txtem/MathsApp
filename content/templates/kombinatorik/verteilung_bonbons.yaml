@@ -27,4 +27,8 @@ solution_text: |
   Stars and Bars — {{n}} Sterne und {{k}}-1 Trennstriche:
   $$\binom{ {{n}}+{{k}}-1 }{ {{k}}-1 } = {{result}}$$
 
+hints:
+  - "Lassen sich die Bonbons unterscheiden? Die Kinder? Kommt es nur darauf an, wie viele Bonbons jedes Kind bekommt?"
+  - "Schreib jede Verteilung als Reihe aus den {{n}} Bonbons und Trennstrichen zwischen den Anteilen der {{k}} Kinder. Wie viele Striche brauchst du, und auf wie viele Arten lassen sich Bonbons und Striche in so einer Reihe anordnen?"
+
 tags: [verteilung, stars_and_bars]

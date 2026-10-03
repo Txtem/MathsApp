@@ -35,4 +35,8 @@ solution_text: |
   Über das Gegenereignis "keine rote Kugel":
   $$P(X \ge 1) = 1 - \frac{\binom{ {{population}}-{{successes}} }{ {{draws}} }}{\binom{ {{population}} }{ {{draws}} }} = {{result}}$$
 
+hints:
+  - "Wird mit oder ohne Zurücklegen gezogen? Welche Fälle fallen alle unter „mindestens eine rote Kugel“?"
+  - "„Mindestens eine“ zerfällt in viele Einzelfälle. Gibt es ein einfacheres Ereignis, das genau das Gegenteil beschreibt – und was weißt du über die Wahrscheinlichkeiten eines Ereignisses und seines Gegenteils?"
+
 tags: [hypergeometrisch, gegenereignis]
