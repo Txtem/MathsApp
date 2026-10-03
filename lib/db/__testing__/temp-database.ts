@@ -27,10 +27,11 @@ export interface TempDatabase {
   readonly destroy: () => Promise<void>;
 }
 
-export function createTempDatabase(): TempDatabase {
-  const directory = mkdtempSync(join(tmpdir(), "mathsapp-test-"));
-  const file = join(directory, "test.db").replaceAll("\\", "/");
-
+/**
+ * Die Ordnernamen aller Migrationen in Anwendungsreihenfolge. Exportiert für
+ * Tests, die eine einzelne Migration gegen vorhandene Zeilen prüfen.
+ */
+export function migrationNames(): string[] {
   const migrations = readdirSync(MIGRATIONS, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
@@ -41,11 +42,22 @@ export function createTempDatabase(): TempDatabase {
   if (migrations.length === 0) {
     throw new Error(`Keine Migrationen unter ${MIGRATIONS} gefunden.`);
   }
+  return migrations;
+}
+
+/** Das SQL einer Migration, so wie Prisma es anwendet. */
+export function migrationSql(name: string): string {
+  return readFileSync(join(MIGRATIONS, name, "migration.sql"), "utf8");
+}
+
+export function createTempDatabase(): TempDatabase {
+  const directory = mkdtempSync(join(tmpdir(), "mathsapp-test-"));
+  const file = join(directory, "test.db").replaceAll("\\", "/");
 
   const database = new Database(file);
   try {
-    for (const name of migrations) {
-      database.exec(readFileSync(join(MIGRATIONS, name, "migration.sql"), "utf8"));
+    for (const name of migrationNames()) {
+      database.exec(migrationSql(name));
     }
   } finally {
     database.close();

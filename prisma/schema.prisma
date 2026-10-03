@@ -63,10 +63,18 @@ model Attempt {
   transcript String? // M4
 
   // Urteil
-  status        String   @default("OPEN") // OPEN | ANSWERED | SKIPPED
+  // OPEN | ANSWERED | SKIPPED — SKIPPED heißt seit M2f „aufgegeben".
+  status        String   @default("OPEN")
   isCorrect     Boolean?
   reviewVerdict Json? // M4: LLM-Schritturteil
-  durationMs    Int?
+  durationMs    Int? // bis zur letzten bewerteten Antwort
+
+  // Versuche und Tipps (M2f). Den Ausgang leitet `classifyOutcome` aus
+  // status, isCorrect und tries ab — es gibt bewusst kein Feld `outcome`.
+  tries           Int     @default(0) // bewertete Versuche, 0–2; unlesbare zählen nicht
+  hintsUsed       Int     @default(0)
+  firstAnswer     String? // die falsche erste Antwort, falls es einen zweiten Versuch gab
+  firstDurationMs Int? // Zeit bis zur ersten bewerteten Antwort
 
   createdAt  DateTime
   answeredAt DateTime?
