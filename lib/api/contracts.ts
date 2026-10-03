@@ -75,6 +75,25 @@ export type AnswerResponse =
       readonly solutionText?: string;
     };
 
+/** `POST /api/attempt/[id]/hint` — der nächste Tipp. Nichts aus der Lösung. */
+export interface HintResponse {
+  readonly hint: string;
+  /** 0-basiert: der wievielte Tipp das ist. */
+  readonly index: number;
+  /** Wie viele Tipps das Template insgesamt hat. */
+  readonly total: number;
+}
+
+/**
+ * `POST /api/attempt/[id]/give-up` — erst jetzt ist der Attempt geschlossen,
+ * und die Lösung darf heraus.
+ */
+export interface GiveUpResponse {
+  readonly expectedAnswer: string;
+  readonly expectedRounded?: string;
+  readonly solutionText?: string;
+}
+
 /**
  * Baut die Antwort auf `/next`. Die Felder werden **einzeln** aus Attempt und
  * Template genommen, nie per Spread: So kann kein neues Spaltenfeld — und schon
@@ -137,5 +156,17 @@ export const AnswerResponseSchema = z.union([
     solutionText: z.string().optional(),
   }),
 ]);
+
+export const HintResponseSchema = z.strictObject({
+  hint: z.string().min(1),
+  index: z.number().int().nonnegative(),
+  total: z.number().int().positive(),
+});
+
+export const GiveUpResponseSchema = z.strictObject({
+  expectedAnswer: z.string().min(1),
+  expectedRounded: z.string().min(1).optional(),
+  solutionText: z.string().optional(),
+});
 
 export const CreateSessionResponseSchema = z.strictObject({ sessionId: z.string().min(1) });

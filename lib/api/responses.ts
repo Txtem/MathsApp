@@ -10,7 +10,13 @@ export type ApiErrorCode =
   | "not_found"
   | "already_answered"
   | "no_template"
-  | "forbidden";
+  | "forbidden"
+  /** Alle Tipps sind schon geöffnet. */
+  | "no_more_hints"
+  /** Aufgeben vor dem letzten Tipp — die Regel setzt der Server durch. */
+  | "hints_remaining"
+  /** Eine gleichzeitige Anfrage hat den Attempt inzwischen verändert. */
+  | "conflict";
 
 export interface ApiError {
   readonly error: ApiErrorCode;
@@ -22,6 +28,9 @@ const STATUS: Record<ApiErrorCode, number> = {
   forbidden: 403,
   not_found: 404,
   already_answered: 409,
+  no_more_hints: 409,
+  hints_remaining: 409,
+  conflict: 409,
   no_template: 422,
 };
 

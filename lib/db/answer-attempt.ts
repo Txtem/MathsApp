@@ -3,15 +3,13 @@ import {
   AnswerTypeSchema,
   AttemptStatusSchema,
   ExpectedAnswerSchema,
-  ParamsSchema,
 } from "@/lib/api/contracts";
 import type { ValidatedTemplate } from "@/lib/content/schema";
-import { toDecimalString } from "@/lib/engine/expr/rational";
-import { grade, toExpectedRational } from "@/lib/engine/grade";
-import { renderSolution } from "@/lib/engine/instantiate";
+import { grade } from "@/lib/engine/grade";
 import type { PrismaClient } from "@/lib/generated/prisma/client";
 
 import { closeAttempt, recordFirstMiss } from "./attempts";
+import { buildSolution, currentTemplate, roundedForm } from "./solution";
 
 /**
  * Was beim Beantworten einer Aufgabe passiert — die ganze Entscheidungskette,
@@ -98,8 +96,7 @@ export async function answerAttempt(
   // Das Template wird einmal geholt: Es liefert `round_to` für die Bewertung
   // und den Lösungstext. Passt die Version nicht mehr, gilt es als nicht
   // vorhanden — dann wird exakt bewertet und kein Lösungsweg gezeigt.
-  const template = deps.findTemplate(attempt.templateId);
-  const current = template?.version === attempt.templateVersion ? template : undefined;
+  const current = currentTemplate(deps.findTemplate, attempt);
 
   const verdict = grade(input.answer, expectedAnswer, answerType, {
     roundTo: current?.round_to,
@@ -145,40 +142,4 @@ export async function answerAttempt(
       ...buildSolution(current, attempt.params, expectedAnswer),
     },
   };
-}
-
-/**
- * Der Lösungstext wird aus den persistierten Parametern neu gerendert. Wurde das
- * Template seit dem Stellen der Aufgabe geändert, bleibt er weg — ein Text zu
- * einer anderen Version wäre schlechter als gar keiner.
- */
-/**
- * Bei `round_to` zusätzlich die gerundete Dezimalzahl — das, wonach die Aufgabe
- * gefragt hat. Der exakte Wert bleibt daneben stehen; beide zusammen sind die
- * Antwort auf die Beobachtung, dass die Lösung einen Bruch zeigte, während der
- * Aufgabentext eine gerundete Dezimalzahl verlangte.
- *
- * Gerundet wird hier und nicht im Browser, damit es dieselbe Funktion tut, die
- * auch die Bewertung rundet — zwei Rundungen könnten auseinanderlaufen.
- */
-function roundedForm(
-  template: ValidatedTemplate | undefined,
-  expectedAnswer: string,
-): { expectedRounded?: string } {
-  if (template?.round_to === undefined) return {};
-  return { expectedRounded: toDecimalString(toExpectedRational(expectedAnswer), template.round_to) };
-}
-
-function buildSolution(
-  template: ValidatedTemplate | undefined,
-  params: unknown,
-  expectedAnswer: string,
-): { solutionText?: string } {
-  if (!template) return {};
-
-  const parsedParams = ParamsSchema.safeParse(params);
-  if (!parsedParams.success) return {};
-
-  const solutionText = renderSolution(template, parsedParams.data, expectedAnswer);
-  return solutionText === undefined ? {} : { solutionText };
 }

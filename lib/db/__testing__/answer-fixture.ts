@@ -34,6 +34,16 @@ export const TEMPLATE = {
   solution_text: "$${{n}}! = {{result}}$$",
 } as unknown as ValidatedTemplate;
 
+/** Dasselbe Template mit drei Tipps; der zweite nennt einen Parameter. */
+export const MIT_TIPPS = {
+  ...TEMPLATE,
+  hints: [
+    "Kommt es auf die Reihenfolge an?",
+    "Für den ersten Platz gibt es {{n}} Möglichkeiten.",
+    "Für den zweiten Platz bleibt eine weniger.",
+  ],
+} as unknown as ValidatedTemplate;
+
 export interface SeedOverrides {
   readonly status?: string;
   readonly templateVersion?: number;

@@ -67,31 +67,84 @@ export async function closeAttempt(
 
     if (closed.count === 0) return false;
 
-    // Nutzer und Topic stehen auf dem Attempt selbst (D-18) — kein Umweg über
-    // Session und Template, und damit auch keine zweite Wahrheit. Die Felder
-    // für `countsAsSuccess` kommen aus der eben geschriebenen Zeile, nicht aus
-    // dem Lesen davor: `hintsUsed` kann sich dazwischen geändert haben.
-    const attempt = await tx.attempt.findUniqueOrThrow({
-      where: { id: input.attemptId },
-      select: {
-        userId: true,
-        topic: true,
-        status: true,
-        isCorrect: true,
-        tries: true,
-        hintsUsed: true,
-      },
-    });
-
-    await advanceTopic(tx, attempt.userId, attempt.topic, now, {
-      correct: attempt.isCorrect === true,
-      success: countsAsSuccess({
-        ...attempt,
-        status: AttemptStatusSchema.parse(attempt.status),
-      }),
-    });
-
+    await advanceFromClosedRow(tx, input.attemptId, now);
     return true;
+  });
+}
+
+export interface GiveUpInput {
+  readonly attemptId: string;
+  /**
+   * So viele Tipps müssen geöffnet sein — die Zahl der Tipps des Templates.
+   * Steht in der Bedingung des Updates, nicht in einer Prüfung davor: Die Regel
+   * „erst alle Tipps, dann die Lösung" setzt die Datenbankzeile durch, nicht
+   * ein Lesen, das schon veraltet sein kann.
+   */
+  readonly requiredHints: number;
+  /** Die Uhr der Anfrage. Pflicht, nicht optional — siehe D-20. */
+  readonly now: Date;
+}
+
+/**
+ * Aufgeben: Der Attempt wird `SKIPPED`, `answeredAt = now`, und der
+ * Themenfortschritt wird **als Misserfolg** fortgeschrieben — in derselben
+ * Transaktion (SPEC-M2f, D-3). Sonst wäre Aufgeben ein Ausgang aus der
+ * Statistik: Wer merkt, dass er es nicht kann, gibt auf, und das Thema gilt
+ * als gekonnt.
+ *
+ * `false` heißt: Der Attempt war nicht mehr offen, oder es waren nicht alle
+ * Tipps geöffnet. Der Aufrufer unterscheidet die beiden Fälle selbst.
+ */
+export async function giveUp(prisma: PrismaClient, input: GiveUpInput): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const closed = await tx.attempt.updateMany({
+      where: { id: input.attemptId, status: "OPEN", hintsUsed: { gte: input.requiredHints } },
+      data: { status: "SKIPPED", answeredAt: input.now },
+    });
+
+    if (closed.count === 0) return false;
+
+    await advanceFromClosedRow(tx, input.attemptId, input.now);
+    return true;
+  });
+}
+
+/**
+ * Schreibt den Themenfortschritt aus der eben geschlossenen Zeile fort.
+ *
+ * Nutzer und Topic stehen auf dem Attempt selbst (D-18) — kein Umweg über
+ * Session und Template, und damit auch keine zweite Wahrheit. Die Felder für
+ * `countsAsSuccess` kommen aus der geschriebenen Zeile, nicht aus einem Lesen
+ * davor: `hintsUsed` kann sich dazwischen geändert haben.
+ */
+async function advanceFromClosedRow(
+  tx: Prisma.TransactionClient,
+  attemptId: string,
+  now: Date,
+): Promise<void> {
+  const attempt = await tx.attempt.findUniqueOrThrow({
+    where: { id: attemptId },
+    select: { userId: true, topic: true, status: true, isCorrect: true, tries: true, hintsUsed: true },
+  });
+
+  const verdict = {
+    correct: attempt.isCorrect === true,
+    success: countsAsSuccess({ ...attempt, status: AttemptStatusSchema.parse(attempt.status) }),
+  };
+
+  const key = { userId_topic: { userId: attempt.userId, topic: attempt.topic } };
+
+  const current = await tx.topicMastery.findUnique({
+    where: key,
+    select: { attempts: true, correct: true, intervalDays: true },
+  });
+
+  const next = advanceMastery(current, verdict, now);
+
+  await tx.topicMastery.upsert({
+    where: key,
+    create: { userId: attempt.userId, topic: attempt.topic, ...next },
+    update: next,
   });
 }
 
@@ -123,27 +176,4 @@ export async function recordFirstMiss(
     data: { tries: 1, firstAnswer: input.userAnswer, firstDurationMs: input.durationMs },
   });
   return updated.count === 1;
-}
-
-async function advanceTopic(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  topic: string,
-  now: Date,
-  verdict: { readonly correct: boolean; readonly success: boolean },
-): Promise<void> {
-  const key = { userId_topic: { userId, topic } };
-
-  const current = await tx.topicMastery.findUnique({
-    where: key,
-    select: { attempts: true, correct: true, intervalDays: true },
-  });
-
-  const next = advanceMastery(current, verdict, now);
-
-  await tx.topicMastery.upsert({
-    where: key,
-    create: { userId, topic, ...next },
-    update: next,
-  });
 }
