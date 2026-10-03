@@ -1,5 +1,5 @@
 id: aufg_00005
-version: 1
+version: 2
 topic: kombinatorik.variation
 difficulty: 2
 target_time_seconds: 90
@@ -22,7 +22,7 @@ constraints:
 
 question_text: |
   Bei einem Wettlauf mit {{n}} Teilnehmerinnen werden die ersten {{k}} Plätze
-  vergeben. Wie viele verschiedene Reihenfolgen sind für das Treppchen möglich?
+  vergeben. Wie viele verschiedene Anordnungen sind für das Treppchen möglich?
 
 solution_text: |
   Variation ohne Wiederholung, die Reihenfolge bzw. Anordnung zählt:

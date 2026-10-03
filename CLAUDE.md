@@ -51,8 +51,7 @@ die naheliegende Variante nicht gewählt wurde.
   Compute-Funktionen liefern Anzeigewerte, damit Lösungswege eingesetzte Zahlen zeigen
   (D-29) — 1192 Tests grün
 - Offen: keine Tests für React-Komponenten (bräuchte jsdom + Testing Library, bewusst
-  zurückgestellt); `kombinatorik.verteilung` hat nur ein Template; „Reihenfolge" in den
-  Aufgabentexten wartet auf eine Formulierung aus dem Unterricht
+  zurückgestellt); `kombinatorik.verteilung` hat nur ein Template
 - Als Nächstes: **weiter üben.** Die Übungsphase läuft; M2e hat nur Reibung beseitigt, die
   dabei gestört hat. Was auffällt, kommt nach `BEOBACHTUNGEN.md`; was daraus geworden ist,
   steht in `IDEEN.md`. **Keinen neuen Meilenstein vorschlagen, solange das nicht gesagt
