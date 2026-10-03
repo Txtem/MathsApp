@@ -3,18 +3,28 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { answerFormatHint } from "@/components/answer-format";
-import { MathText } from "@/components/MathText";
 import {
-  type AnswerResponse,
+  type ClosedVerdict,
+  questionControls,
+  type QuestionState,
+  RETRY_NOTICE,
+  withHint,
+} from "@/components/question-controls";
+import {
   AnswerResponseSchema,
+  type GiveUpResponse,
+  GiveUpResponseSchema,
+  HintResponseSchema,
   type NextQuestionResponse,
   NextQuestionResponseSchema,
 } from "@/lib/api/contracts";
 
+import { QuestionForm } from "./question-form";
 import { VerdictPanel } from "./verdict-panel";
 
 /**
- * Der Aufgaben-Loop: Aufgabe holen, Antwort schicken, Urteil zeigen, von vorn.
+ * Der Aufgaben-Loop: Aufgabe holen, Antwort schicken (bei der ersten falschen
+ * ein zweiter Versuch), Tipps öffnen, notfalls aufgeben, Urteil zeigen.
  *
  * Die Lösung kennt diese Komponente erst, wenn der Server sie zusammen mit dem
  * Urteil schickt. Vorher steht sie nirgends im Zustand — es gibt also nichts,
@@ -26,14 +36,17 @@ type Phase =
   | {
       readonly kind: "question";
       readonly question: NextQuestionResponse;
+      readonly hints: QuestionState;
       readonly startedAt: number;
     }
   | {
       readonly kind: "verdict";
       /** Frage und eigene Antwort bleiben sichtbar, siehe M2e C-3. */
       readonly question: NextQuestionResponse;
-      readonly givenAnswer: string;
-      readonly verdict: Extract<AnswerResponse, { expectedAnswer: string }>;
+      readonly givenAnswer: string | null;
+      readonly verdict: ClosedVerdict;
+      readonly solution: GiveUpResponse;
+      readonly openedHints: readonly string[];
     }
   | { readonly kind: "empty" }
   | { readonly kind: "error"; readonly message: string };
@@ -41,6 +54,10 @@ type Phase =
 interface Stats {
   readonly answered: number;
   readonly correct: number;
+}
+
+function failed(cause: unknown): Phase {
+  return { kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" };
 }
 
 export function PracticeLoop({ sessionId }: { sessionId: string }) {
@@ -64,19 +81,27 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
 
       const parsed = NextQuestionResponseSchema.safeParse(await response.json());
       if (!parsed.success) throw new Error("Unerwartete Antwort des Servers");
+      const question = parsed.data;
 
       setAnswer("");
-      setNotice(
-        parsed.data.firstTryWrong ? "Der erste Versuch war falsch. Das ist dein zweiter." : null,
-      );
+      setNotice(null);
       // Bewusst so, kein Fehler: Liefert der Server nach einem Neuladen eine
       // schon begonnene Aufgabe erneut aus (SPEC-M2f, Schritt 4b), misst die
       // Stoppuhr nur ab dem Neuladen. Die Zeit davor kennt der Browser nicht
       // mehr, und der Server misst keine Dauer. `durationMs` fällt dann zu kurz
       // aus — hinnehmbar, weil Neuladen mitten in einer Aufgabe selten ist.
-      setPhase({ kind: "question", question: parsed.data, startedAt: Date.now() });
+      setPhase({
+        kind: "question",
+        question,
+        hints: {
+          hintsTotal: question.hintsTotal,
+          openedHints: question.openedHints,
+          firstTryWrong: question.firstTryWrong,
+        },
+        startedAt: Date.now(),
+      });
     } catch (cause) {
-      setPhase({ kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" });
+      setPhase(failed(cause));
     }
   }, [sessionId]);
 
@@ -113,7 +138,7 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
 
       if ("parseError" in parsed.data) {
         // Nicht dasselbe wie falsch: Die Aufgabe bleibt offen, es darf noch
-        // einmal getippt werden (Entscheidung E-04).
+        // einmal getippt werden, ohne einen Versuch zu verbrauchen (D-04).
         setNotice(
           `Das konnte ich nicht lesen. ${answerFormatHint(phase.question.answerType, phase.question.roundTo)}`,
         );
@@ -122,20 +147,92 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
 
       if ("retry" in parsed.data) {
         // Erste falsche Antwort: Die Aufgabe bleibt offen, die Lösung kennt
-        // diese Komponente weiterhin nicht. Die Stoppuhr läuft weiter — die
-        // Dauer beim Schließen ist die bis zur letzten Antwort.
-        setNotice("Das stimmt noch nicht. Du hast einen zweiten Versuch.");
+        // diese Komponente weiterhin nicht. Die Antwort bleibt im Feld stehen,
+        // damit ein Tippfehler korrigiert werden kann. Die Stoppuhr läuft
+        // weiter — die Dauer beim Schließen ist die bis zur letzten Antwort.
+        setNotice(RETRY_NOTICE);
+        setPhase({ ...phase, hints: { ...phase.hints, firstTryWrong: true } });
         return;
       }
 
-      const verdict = parsed.data;
+      const { isCorrect, ...solution } = parsed.data;
       setStats((current) => ({
         answered: current.answered + 1,
-        correct: current.correct + (verdict.isCorrect ? 1 : 0),
+        correct: current.correct + (isCorrect ? 1 : 0),
       }));
-      setPhase({ kind: "verdict", question: phase.question, givenAnswer: answer, verdict });
+      setPhase({
+        kind: "verdict",
+        question: phase.question,
+        givenAnswer: answer,
+        verdict: { kind: "answered", isCorrect, secondTry: phase.hints.firstTryWrong },
+        solution,
+        openedHints: phase.hints.openedHints,
+      });
     } catch (cause) {
-      setPhase({ kind: "error", message: cause instanceof Error ? cause.message : "Unbekannt" });
+      setPhase(failed(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function requestHint(): Promise<void> {
+    if (phase.kind !== "question" || busy) return;
+
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/attempt/${phase.question.attemptId}/hint`, {
+        method: "POST",
+      });
+      // 409: alle offen oder ein zweiter Klick war schneller — kein Fehler.
+      if (response.status === 409) return;
+      if (!response.ok) throw new Error(`Server antwortete mit ${response.status}`);
+
+      const parsed = HintResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Unerwartete Antwort des Servers");
+
+      const { hint, index } = parsed.data;
+      setPhase((current) =>
+        current.kind === "question"
+          ? { ...current, hints: withHint(current.hints, hint, index) }
+          : current,
+      );
+    } catch (cause) {
+      setPhase(failed(cause));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function giveUp(): Promise<void> {
+    if (phase.kind !== "question" || busy) return;
+    if (!questionControls(phase.hints).showGiveUp) return;
+
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/attempt/${phase.question.attemptId}/give-up`, {
+        method: "POST",
+      });
+      if (response.status === 409) {
+        // Der Server sieht noch ungeöffnete Tipps — er hat das letzte Wort.
+        setNotice("Erst alle Tipps öffnen, dann die Lösung.");
+        return;
+      }
+      if (!response.ok) throw new Error(`Server antwortete mit ${response.status}`);
+
+      const parsed = GiveUpResponseSchema.safeParse(await response.json());
+      if (!parsed.success) throw new Error("Unerwartete Antwort des Servers");
+
+      setStats((current) => ({ ...current, answered: current.answered + 1 }));
+      setPhase({
+        kind: "verdict",
+        question: phase.question,
+        givenAnswer: null,
+        verdict: { kind: "gave_up" },
+        solution: parsed.data,
+        openedHints: phase.hints.openedHints,
+      });
+    } catch (cause) {
+      setPhase(failed(cause));
     } finally {
       setBusy(false);
     }
@@ -165,47 +262,17 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
       ) : null}
 
       {phase.kind === "question" ? (
-        <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
-          <p className="text-sm text-zinc-500">
-            {phase.question.topic} · Schwierigkeit {phase.question.difficulty} · Richtzeit{" "}
-            {phase.question.targetTimeSeconds} s
-          </p>
-
-          <div className="text-2xl leading-relaxed text-zinc-900 dark:text-zinc-50">
-            <MathText text={phase.question.questionText} />
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <label htmlFor="answer" className="text-sm text-zinc-600 dark:text-zinc-400">
-              Deine Antwort
-            </label>
-            <input
-              id="answer"
-              value={answer}
-              onChange={(event) => setAnswer(event.target.value)}
-              autoFocus
-              autoComplete="off"
-              maxLength={200}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 font-mono text-lg text-zinc-900 outline-none focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:focus:border-zinc-300"
-            />
-            <p className="text-sm text-zinc-500">
-              {answerFormatHint(phase.question.answerType, phase.question.roundTo)}
-            </p>
-            {notice ? (
-              <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
-                {notice}
-              </p>
-            ) : null}
-          </div>
-
-          <button
-            type="submit"
-            disabled={busy || answer.trim() === ""}
-            className="self-start rounded-lg bg-zinc-900 px-5 py-3 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-40 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-200"
-          >
-            {busy ? "wird geprüft …" : "Antwort prüfen"}
-          </button>
-        </form>
+        <QuestionForm
+          question={phase.question}
+          hints={phase.hints}
+          answer={answer}
+          notice={notice}
+          busy={busy}
+          onAnswer={setAnswer}
+          onSubmit={(event) => void submit(event)}
+          onHint={() => void requestHint()}
+          onGiveUp={() => void giveUp()}
+        />
       ) : null}
 
       {phase.kind === "verdict" ? (
@@ -213,6 +280,8 @@ export function PracticeLoop({ sessionId }: { sessionId: string }) {
           question={phase.question}
           givenAnswer={phase.givenAnswer}
           verdict={phase.verdict}
+          solution={phase.solution}
+          openedHints={phase.openedHints}
           onNext={restart}
         />
       ) : null}
